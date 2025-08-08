@@ -15,25 +15,20 @@ export class UserService {
     async findByEmail(email: string) {
         return await this.UserModel.findOne({
             where: {
-                email: email
+                email: email,
             }
         })
     }
 
-    async validateLogin(loginData: LoginDto) {        
-        const alreadyUser = await this.findByEmail(loginData.email)        
+    async validateLogin(loginData: LoginDto) {
+        const alreadyUser = await this.findByEmail(loginData.email)
         if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!')
 
         const matchesPassword = alreadyUser.comparePassword(loginData.password)
+        if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
+        const userRaw = alreadyUser.toJSON()
 
-        if (!matchesPassword) {
-            throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
-        }
-
-        const dataWhithoutPassword = alreadyUser.getUserDataWhithoutPassword()
-        const accessToken =await this.JWTService.signAsync({uid:dataWhithoutPassword.id, role: dataWhithoutPassword.role})
-        
-        return { message: 'Đăng nhập thành công', accessToken}
+        return { uid: userRaw.id, role: userRaw.role }
     }
 
     async register(createUserDto: CreateUserDto) {

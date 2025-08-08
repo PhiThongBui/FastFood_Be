@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 
 @Controller('category')
 export class CategoryController {
@@ -16,8 +17,9 @@ export class CategoryController {
   @Patch('update/:id')
   updateCategory(@Body() updateCategoryDto: UpdateCategoryDto, @Param('id', ParseIntPipe) id: number) {
     return this.categoryService.updateCategory(updateCategoryDto, id)
-  }
+  } //
 
+  @UseGuards(JWTGuard)
   @Get('all')
   findAllCategories() {
     return this.categoryService.findAllCategories();

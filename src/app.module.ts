@@ -7,13 +7,14 @@ import { CategoryModule } from './modules/category/category.module';
 import { StartTimingMiddleware } from './common/middlewares/start-timing.middleware';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Add this line
     }),
-    
+
     SequelizeModule.forRootAsync({
       inject: [ConfigService,],
       useFactory: (config: ConfigService) => sequelizeConfig(config),
@@ -21,10 +22,20 @@ import { AuthModule } from './modules/auth/auth.module';
     CategoryModule,
     UserModule,
     AuthModule,
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('JWT_SCRECT'),
+        signOptions: {
+          expiresIn: configService.get('JWT_EXPIRESIN') as number
+        }
+      }),
+      global: true
+    })
   ]
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-      consumer.apply(StartTimingMiddleware).forRoutes('*');
+    consumer.apply(StartTimingMiddleware).forRoutes('*');
   }
- }
+}

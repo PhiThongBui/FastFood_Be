@@ -11,15 +11,7 @@ import { JwtModule } from '@nestjs/jwt';
   providers: [UserService],
   imports: [
     SequelizeModule.forFeature([User]),
-    JwtModule.registerAsync({
-      inject:[ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SCRECT'),
-        signOptions: {
-          expiresIn: '7d'
-        }
-      }),
-    })
+   
   ],
   exports: [UserService]
 })
