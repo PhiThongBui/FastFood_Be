@@ -10,7 +10,7 @@ import { LoginDto } from '@/modules/user/dto/login.dto';
 
 export enum ENUMROLE {
     ADMIN = 'ADMIN',
-    User = 'User',
+    User = 'USER',
 }
 
 @Table

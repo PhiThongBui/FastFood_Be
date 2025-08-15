@@ -3,13 +3,13 @@ import { Product } from './product.model';
 import { CartItems } from './cart-items.model';
 
 export enum PRODUCTVARIANTSIZE {
-    SMALL = 'SMALL',
-    MEDIUM = 'MEDIUM',
-    LARGE = 'LARGE',
+    SMALL = '15cm',
+    MEDIUM = '20cm',
+    LARGE = '25cm',
 }
 export enum PRODUCTVARIANTTYPE {
     THIN = 'Mỏng',
-    NORMAL = 'Bình Thường',
+    NORMAL = 'Bình thường',
 }
 
 @Table
