@@ -9,6 +9,7 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { SeederModule } from './modules/seeder/seeder.module';
+import { ProductModule } from './modules/product/product.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { SeederModule } from './modules/seeder/seeder.module';
       }),
       global: true
     }),
-    SeederModule
+    SeederModule,
+    ProductModule
   ]
 })
 export class AppModule implements NestModule {

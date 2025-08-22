@@ -1,4 +1,4 @@
-export { ProductVariant } from './product-variant.model';
+export { ProductVariant,PRODUCTVARIANTSIZE,PRODUCTVARIANTTYPE } from './product-variant.model';
 export { Category } from './category.model';
 export { User } from './user.model';
 export { Product } from './product.model';

@@ -50,7 +50,7 @@ export class CategoryService {
     }
 
     async findOneCategory(id: number) {
-        const result = await this.categoryModel.findByPk(id);
+        const result = await this.categoryModel.findByPk(id, {raw:true});
         if (!result) {
             throw new NotFoundException(`Category with id ${id} not found!!!`)
         }

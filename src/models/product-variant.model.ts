@@ -41,6 +41,7 @@ export class ProductVariant extends Model<ProductVariant> {
     modifiedPrice: number;
 
     @Column({
+        allowNull:  true,
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
@@ -53,11 +54,11 @@ export class ProductVariant extends Model<ProductVariant> {
         type: DataType.INTEGER,
     })
     productId: number;
-  
+
     @BelongsTo(() => Product)
     product: Product
 
     @HasMany(() => CartItems)
-cartItems: CartItems[];
+    cartItems: CartItems[];
 
 }

@@ -41,7 +41,7 @@ export class Product extends Model<Product> {
   imageUrl: string;
 
   @Column({
-    allowNull: false,
+    allowNull: true,
     defaultValue: true,
     type: DataType.BOOLEAN,
   })
