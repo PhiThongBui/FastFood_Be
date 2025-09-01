@@ -55,6 +55,14 @@ export const EnumRequired = (name: string, type: any) => applyDecorators(
     IsEnum(type),
     IsNotEmpty({ message: `${name} không được để trống` })
 )
+
+export const EnumNotRequired = (type: any) => applyDecorators(
+    ApiProperty({ required: false }),
+    IsEnum(type),
+    IsOptional()
+)
+
+
 export const ArrayNotRequired = (array: any) => applyDecorators(
     ApiProperty({ 
         required: false, 

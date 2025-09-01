@@ -31,6 +31,24 @@ export class UserService {
         return { uid: userRaw.id, role: userRaw.role }
     }
 
+    async createGoogleUser(googleUser: any) {
+        const newUser = new this.UserModel(googleUser)
+        return await newUser.save()
+    }
+
+    async updateGoogleId(userId: string, googleId: string) {
+        const updateGoogleId = await this.UserModel.update({ googleId }, { where: { id: userId } })
+
+
+        return await this.UserModel.findOne({ where: { id: userId } });
+    }
+
+    async updateRefreshToken(userId: string, refreshToken: string) {
+        await this.UserModel.update({ refreshToken }, { where: { id: userId } })
+
+        return await this.UserModel.findOne({ where: { id: userId } });
+    }
+
     async register(createUserDto: CreateUserDto) {
         const alreadyUser = await this.findByEmail(createUserDto.email)
         if (alreadyUser) throw new BadRequestException('Người dùng đã tồn tại!')

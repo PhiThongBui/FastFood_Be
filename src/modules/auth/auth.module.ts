@@ -8,10 +8,12 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { LocalAuthGuard } from './guards/local.guard';
 import { JWTGuard } from './guards/verifyjwt.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleAuthGuard } from './guards/google.guard';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, LocalAuthGuard, JWTGuard, JwtStrategy],
+  providers: [AuthService, LocalStrategy, LocalAuthGuard, JWTGuard, JwtStrategy, GoogleAuthGuard, GoogleStrategy],
   imports:[UserModule],
   exports:[JWTGuard]
 })

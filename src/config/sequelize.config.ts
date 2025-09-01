@@ -9,5 +9,6 @@ export const sequelizeConfig = (config: ConfigService) => ({
     password: config.get<string>('DB_PASSWORD'),
     database: config.get('DB_NAME'),
     autoLoadModels: true,
+    synchronize: true,
     models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address],
 })

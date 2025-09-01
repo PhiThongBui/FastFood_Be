@@ -1,10 +1,11 @@
-import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from 'sequelize-typescript';
+import { BeforeUpdate, BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from 'sequelize-typescript';
 import { Category } from './category.model';
 import { ProductVariant } from './product-variant.model';
 import { ProductIngredient } from './product-ingredient.model';
 import { OrderItems } from './order-items.model';
 import { CartItems } from './cart-items.model';
 import { Reviews } from './reviews.model';
+import { Helper } from '@/utils/helper';
 
 @Table
 export class Product extends Model<Product> {
@@ -64,21 +65,43 @@ export class Product extends Model<Product> {
   @BelongsTo(() => Category)
   category: Category
 
-  @HasMany(() => ProductVariant)
+  @HasMany(() => ProductVariant, {
+    onDelete: 'CASCADE',
+    hooks: false
+  })
   variants: ProductVariant[]
 
-  @HasMany(() => ProductIngredient)
+  @HasMany(() => ProductIngredient, {
+    onDelete: 'CASCADE',
+    hooks: false
+  })
   ingredients: ProductIngredient[]
 
 
-  @HasMany(() => OrderItems)
+  @HasMany(() => OrderItems, {
+    onDelete: 'CASCADE',
+    hooks: false
+  })
   orderItems: OrderItems
 
 
-  @HasMany(() => CartItems)
+  @HasMany(() => CartItems, {
+    onDelete: 'CASCADE',
+    hooks: false
+  })
   cartItems: CartItems
 
 
-  @HasMany(() => Reviews)
+  @HasMany(() => Reviews, {
+    onDelete: 'CASCADE',
+    hooks: false
+  })
   reviews: Reviews
+  @BeforeUpdate
+  static updateProduct(product: Product) {
+    if (product.changed('name')) {
+      const slug = Helper.converttoSlug(product.dataValues.name)
+      product.setDataValue('slug', slug)
+    }
+  }
 } 

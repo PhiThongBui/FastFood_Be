@@ -10,6 +10,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { SeederModule } from './modules/seeder/seeder.module';
 import { ProductModule } from './modules/product/product.module';
+import { ProductVariantModule } from './modules/product-variant/product-variant.module';
+import { ProductIngredientModule } from './modules/product-ingredient/product-ingredient.module';
+import { IngredientModule } from './modules/ingredient/ingredient.module';
 
 @Module({
   imports: [
@@ -35,7 +38,10 @@ import { ProductModule } from './modules/product/product.module';
       global: true
     }),
     SeederModule,
-    ProductModule
+    ProductModule,
+    ProductVariantModule,
+    ProductIngredientModule,
+    IngredientModule
   ]
 })
 export class AppModule implements NestModule {
