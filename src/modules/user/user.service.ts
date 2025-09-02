@@ -58,4 +58,17 @@ export class UserService {
             message: "Create User SuccessFully!"
         }
     }
+
+    async validateRefreshToken(id: number, refreshToken: string) {
+        return await this.UserModel.findOne({
+            where: {
+                id: id,
+                refreshToken: refreshToken
+            }
+        })
+    }
+
+    async removeRefreshToken(refreshToken: string) {
+        return await this.UserModel.update({ refreshToken: "" }, { where: { refreshToken: refreshToken } })
+    }
 }

@@ -5,12 +5,14 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionFilter } from './common/filter/all-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const logger = new Logger(bootstrap.name)
 
+  app.use(cookieParser());
   app.setGlobalPrefix('api/v1')
 
   app.useGlobalFilters(new AllExceptionFilter())
