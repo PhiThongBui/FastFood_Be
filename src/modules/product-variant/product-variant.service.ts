@@ -15,4 +15,18 @@ export class ProductVariantService {
       data: result
     }
   }
+
+  async existedProductVanriantDB(productId: number, size: string, type: string) {
+    return await this.modelProductVariant.findOne({
+      where: {
+        productId: productId,
+        size: size,
+        type: type
+      }
+    })
+  }
+
+  async findById(id: number) {
+    return await this.modelProductVariant.findByPk(id);
+  }
 } 

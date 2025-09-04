@@ -10,5 +10,7 @@ export const sequelizeConfig = (config: ConfigService) => ({
     database: config.get('DB_NAME'),
     autoLoadModels: true,
     synchronize: true,
+    logging: false, // Tắt SQL logging
+  benchmark: false,
     models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address],
 })

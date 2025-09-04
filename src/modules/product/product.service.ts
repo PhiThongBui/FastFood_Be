@@ -9,7 +9,7 @@ import { Helper } from '@/utils/helper';
 import { Op } from 'sequelize';
 import { filterProductDto } from './dto/filter-product.dto';
 import { ConfigService } from '@nestjs/config';
-import { raw } from 'express';
+import e, { raw } from 'express';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductVariantService } from '../product-variant/product-variant.service';
 import { IngredientService } from '../ingredient/ingredient.service';
@@ -47,7 +47,7 @@ export class ProductService {
                 {
                     model: this.modelProductVariant,
                     attributes: {
-                        exclude: ['createdAt', 'updatedAt','productId','isActive'],
+                        exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
                         include: [
                             [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
                         ]
@@ -104,6 +104,21 @@ export class ProductService {
             if (newProduct && newProduct.id || newProduct.dataValues.id) {
                 const productId = newProduct.id || newProduct.dataValues.id
 
+                const variantKeys = productDto.productVariants.map((v) => `${v.size}-${v.type}`)
+                const existedKeysVariant = new Set(variantKeys)
+
+                if (variantKeys.length !== existedKeysVariant.size) {
+                    throw new BadRequestException('Có một vài biến thể bị trùng lặp size và type')
+                }
+
+                for (const variant of productDto.productVariants) {
+                    const existedVariantDB = await this.productVariantService.existedProductVanriantDB(productId, variant.size, variant.type)
+
+                    if (existedVariantDB){
+                        throw new BadRequestException(`Variant với size "${variant.size}" và type "${variant.type}" đã tồn tại cho sản phẩm này!`)
+                    }                
+                }
+
                 const productVariants = productDto.productVariants.map((item) => (
                     {
                         ...item,
@@ -118,7 +133,7 @@ export class ProductService {
                 const productId = newProduct.id || newProduct.dataValues.id
 
                 const ingredientIds = productDto.productIngredients.map((ingredient) => ingredient.ingredientId)
-
+                const existedIdIngredients = new Set(ingredientIds)
 
                 // [Op.in] Nó tương đương với câu SQL:
                 // SELECT * FROM table WHERE column IN (1, 2, 3);
@@ -132,19 +147,26 @@ export class ProductService {
                 if (alreadyExisted.length <= 0) {
                     throw new BadRequestException('Có một vài món toping chưa được tìm thấy')
                 }
+                
+                const finalProductIngredient = new Map()
+                productDto.productIngredients.forEach((ingredients) => {
+                    const key = ingredients.ingredientId
 
-                const productIngredient = productDto.productIngredients.map((productIngredient) => (
-                    {
-                        ...productIngredient,
-                        productId
+                    if(finalProductIngredient.has(key)){
+                        const foundKey = finalProductIngredient.get(key)
+                        foundKey.quantity += ingredients.quantity
+                    }else{
+                        finalProductIngredient.set(key, {
+                            ...ingredients,
+                            productId
+                        })
                     }
-                ))
-
+                })                
+                const productIngredient = Array.from(finalProductIngredient.values())
                 await this.modelProductIngredient.bulkCreate(productIngredient as any, { transaction })
             }
 
             await transaction.commit()
-
             return {
                 message: 'Tạo sản phẩm thành công',
             }
@@ -203,7 +225,7 @@ export class ProductService {
                             quantity: productIngredientDto.quantity,
                             isDefault: productIngredientDto.isDefault,
                             ingredientId: productIngredientDto.ingredientId
-                        },{
+                        }, {
                             where: {
                                 id: productIngredientDto.id
                             }

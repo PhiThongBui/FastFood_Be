@@ -20,7 +20,7 @@ export class AuthService {
 
     async login({ uid, role }, response?: Response) {
         const accessToken = await this.JwtService.signAsync({ uid: uid, role: role }, {
-            expiresIn: '30s'
+            expiresIn: '1m'
         });
         const refreshToken = await this.JwtService.signAsync({ uid: uid, role: role }, {
             expiresIn: '7d'
@@ -53,8 +53,6 @@ export class AuthService {
         const decode = await this.JwtService.verifyAsync(cookies.refreshToken, {
             secret: this.configService.get('JWT_SECRET')
         });
-
-        console.log(decode);
 
         const matchesRefreshToken = await this.userService.validateRefreshToken(decode.uid, cookies.refreshToken);
         if (!matchesRefreshToken) throw new UnauthorizedException('RefreshToken not matches!');

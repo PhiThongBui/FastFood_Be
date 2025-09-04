@@ -33,7 +33,7 @@ export class CartItems extends Model<CartItems> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    ProductVariantId: number;
+    productVariantId: number;
     @BelongsTo(() => ProductVariant)
     productVariant: ProductVariant;
 

@@ -27,7 +27,7 @@ export class UserService {
         const matchesPassword = alreadyUser.comparePassword(loginData.password)
         if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
         const userRaw = alreadyUser.toJSON()
-
+        
         return { uid: userRaw.id, role: userRaw.role }
     }
 

@@ -11,10 +11,7 @@ export class ProductController {
   }
 
   @Post('/create')
-  async createProduct(@Body() createData:CreateProductDto){
-
-    console.log(createData);
-    
+  async createProduct(@Body() createData:CreateProductDto){    
     return this.productService.createProduct(createData)
   }
 
