@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
@@ -47,7 +47,12 @@ export class AuthController {
   }
 
   @Post('/reset-password')
-  resetPassword(@Body('password') password:string, @Body('token') token:string) {
+  resetPassword(@Body('password') password: string, @Body('token') token: string) {
     return this.authService.resetPassword(password, token);
+  }
+
+  @Put('/change-password')
+  changePassword(@Body('uid') uid: number, @Body('oldPassword') oldPassword: string, @Body('newPassword') newPassword: string, @Body('confirmPassword') confirmPassword: string) {
+    return this.authService.changePassword(uid, oldPassword, newPassword, confirmPassword);
   }
 }

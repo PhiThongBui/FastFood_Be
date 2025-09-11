@@ -1,6 +1,6 @@
 import { log, time } from 'node:console';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginDto } from '../user/dto/login.dto';
 import e, { Response, Request, response } from 'express';
@@ -131,6 +131,32 @@ export class AuthService {
         }
     }
 
+    async changePassword(uid: number, oldPassword: string, newPassword: string, confirmPassword: string) {
+        if (!uid) throw new UnauthorizedException('uid không hợp lệ!!!')
+        if (newPassword.length < 6) throw new UnauthorizedException('Mật khẩu phải ít nhất 6 ky tự!!!')
+
+        if (newPassword !== confirmPassword) throw new UnauthorizedException('Mật khẩu không khớp nhau!!!')
+
+        const userResponse = await this.userService.findUserById(uid)
+
+        const user = userResponse?.data
+        if (!user) throw new UnauthorizedException('Không tìm thấy user!!!')
+
+        const matchesPasssword: boolean = await user.comparePassword(oldPassword)
+
+        if (matchesPasssword) {
+            const hashedPassword: string = await bcrypt.hash(newPassword, 10)
+            await user.update({
+                password: hashedPassword,
+                passwordChangeAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+            })
+        }
+
+        return {
+            message: 'Đổi mật khẩu thành công!!!'
+        }
+    }
+
     async resetPassword(password: string, token: string) {
 
         const checkToken = crypto.createHash('sha256').update(token).digest('hex')
@@ -145,7 +171,7 @@ export class AuthService {
             password: hasedPassword,
             passwordResetToken: null,
             passwordResetExpires: null,
-            passwordChangeAt:new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+            passwordChangeAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
         });
 
         return {

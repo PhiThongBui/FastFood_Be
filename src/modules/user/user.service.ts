@@ -13,6 +13,15 @@ export class UserService {
         private readonly JWTService: JwtService
     ) { }
 
+
+    async findUserById(userId: number) {
+        const user = await this.UserModel.findByPk(userId)
+        return {
+            message: "Get User SuccessFully! ",
+            data: user
+        }
+    }
+
     async findByEmail(email: string) {
         return await this.UserModel.findOne({
             where: {
@@ -26,8 +35,6 @@ export class UserService {
         if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!')
 
         const matchesPassword =await alreadyUser.comparePassword(loginData.password)
-
-        console.log("matchesPassword", matchesPassword);
         
         if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
         const userRaw = alreadyUser.toJSON()
