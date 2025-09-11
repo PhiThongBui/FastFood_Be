@@ -8,6 +8,11 @@ import { StartTimingMiddleware } from './common/middlewares/start-timing.middlew
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
+
+import { MailerModule } from '@nestjs-modules/mailer'
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { join } from 'path';
+
 import { SeederModule } from './modules/seeder/seeder.module';
 import { ProductModule } from './modules/product/product.module';
 import { ProductVariantModule } from './modules/product-variant/product-variant.module';
@@ -21,9 +26,8 @@ import { CartModule } from './modules/cart/cart.module';
     ConfigModule.forRoot({
       isGlobal: true, // Add this line
     }),
-
     SequelizeModule.forRootAsync({
-      inject: [ConfigService,],
+      inject: [ConfigService],
       useFactory: (config: ConfigService) => sequelizeConfig(config),
     }),
     CategoryModule,
@@ -38,6 +42,32 @@ import { CartModule } from './modules/cart/cart.module';
         }
       }),
       global: true
+    }),
+
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        transport: {
+          host: configService.get<string>('MAIL_HOST'),
+          port: configService.get<number>('MAIL_PORT'),
+               secure: configService.get<string>('MAIL_SECURE') === 'true', // ép kiểu boolean
+
+          auth: {
+            user: configService.get('MAIL_USER'),
+            pass: configService.get('MAIL_PASSWORD'),
+          }
+        },
+        defaults: {
+          from: `"${configService.get('MAIL_DEFAULT_NAME')}" <${configService.get('MAIL_DEFAULT_EMAIL')}>`,
+        },
+        template: {
+          dir: join(process.cwd(), 'src/templates/email'),
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+      }),
     }),
     SeederModule,
     ProductModule,

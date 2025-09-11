@@ -1,16 +1,21 @@
+import { log, time } from 'node:console';
 import { JwtService } from '@nestjs/jwt';
 import { Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginDto } from '../user/dto/login.dto';
-import { Response, Request, response } from 'express';
+import e, { Response, Request, response } from 'express';
+import * as crypto from 'crypto'
+import * as bcrypt from 'bcryptjs'
 import { ConfigService } from '@nestjs/config';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly userService: UserService,
         private readonly JwtService: JwtService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly mailerService: MailerService
 
     ) { }
 
@@ -39,6 +44,7 @@ export class AuthService {
         }
 
         return {
+            message: 'Login successfully!!!',
             accessToken,
             refreshToken: response ? undefined : refreshToken // Không trả refreshToken nếu đã set cookie
         };
@@ -83,6 +89,67 @@ export class AuthService {
 
         return {
             message: 'Logout completed!!!'
+        }
+    }
+
+    async forgotPassWord(email: string) {
+        const verifyEmail = await this.userService.findByEmail(email)
+
+        if (!verifyEmail) throw new UnauthorizedException('Lỗi email forgot password!!!')
+
+        const passwordChangeToken = verifyEmail.createResetPasswordToken()
+
+        await verifyEmail.save()
+        const frontEndURL = this.configService.get('FRONTEND_URL')
+        const resetLink = `${frontEndURL}/reset-password/${passwordChangeToken}`
+
+        try {
+            await this.mailerService.sendMail({
+                to: email,
+                subject: `Đặt lại mật khẩu - ${this.configService.get('APP_NAME')}`,
+                template: 'reset-password',
+                context: {
+                    userName: verifyEmail?.dataValues?.name,
+                    userEmail: email,
+                    appName: this.configService.get('APP_NAME'),
+                    resetLink: resetLink,
+                    passwordChangeToken: passwordChangeToken,
+                    expiryTime: 5,
+                    supportEmail: this.configService.get('SUPPORT_EMAIL'),
+                    companyAddress: this.configService.get('COMPANY_ADDRESS'),
+                    companyPhone: this.configService.get('COMPANY_PHONE'),
+                    currentYear: new Date().getFullYear()
+                }
+            })
+
+
+            return {
+                message: 'Email đặt lại mật khẩu đã thực hiện thành công!!!'
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    async resetPassword(password: string, token: string) {
+
+        const checkToken = crypto.createHash('sha256').update(token).digest('hex')
+
+        const user = await this.userService.checkPwResetTokenAndExprised(checkToken)
+
+        if (!user) throw new UnauthorizedException('Reset password token is wrong!!!')
+
+        const hasedPassword = bcrypt.hashSync(password, 10)
+
+        await user.update({
+            password: hasedPassword,
+            passwordResetToken: null,
+            passwordResetExpires: null,
+            passwordChangeAt:new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+        });
+
+        return {
+            message: 'Reset Password SuccessFully!!!'
         }
     }
 

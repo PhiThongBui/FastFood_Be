@@ -1,10 +1,11 @@
-import { BeforeValidate, Column, DataType, HasMany, Model, Table } from 'sequelize-typescript';
+import { BeforeBulkUpdate, BeforeUpdate, BeforeValidate, Column, DataType, HasMany, Model, Table } from 'sequelize-typescript';
 import { Address } from './address.model';
 import { Order } from './order.model';
 import { Carts } from './carts.model';
 import { UserCoupons } from './user-coupons.model';
 import { Reviews } from './reviews.model';
 import * as bcrypt from 'bcryptjs'
+import * as crypto from 'crypto'
 import { CreateUserDto } from '@/modules/user/dto/register.dto';
 import { LoginDto } from '@/modules/user/dto/login.dto';
 import { Col } from 'sequelize/types/utils';
@@ -27,7 +28,7 @@ export class User extends Model<User> {
         type: DataType.STRING,
     })
     email: string;
-    
+
     @Column({
         allowNull: true,
         type: DataType.STRING,
@@ -92,20 +93,20 @@ export class User extends Model<User> {
         allowNull: true,
         type: DataType.STRING,
     })
-    passwordResetToken: string
+    passwordResetToken: string | null
 
+
+    @Column({
+        allowNull: true,
+        type: DataType.BIGINT,
+    })
+    passwordResetExpires: number | null
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    passwordResetExpires: string
-
-    @Column({
-        allowNull: true,
-        type: DataType.STRING,
-    })
-    passwordChangeAt: string
+    passwordChangeAt: string | null
 
     @HasMany(() => Address)
     addresses: Address[]
@@ -134,6 +135,7 @@ export class User extends Model<User> {
         }
     }
 
+
     comparePassword(password: string) {
         const passwordInDB = this.get('password')
         return bcrypt.compare(password, passwordInDB)
@@ -142,5 +144,18 @@ export class User extends Model<User> {
     getUserDataWhithoutPassword() {
         const { password, ...user } = this.get({ plain: true })
         return user
+    }
+
+    createResetPasswordToken() {
+        const resetToken = crypto.randomBytes(32).toString("hex")
+
+        const passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex")
+
+        const passwordResetExpires = Date.now() + 5 * 60 * 1000
+
+        this.setDataValue("passwordResetToken", passwordResetToken)
+        this.setDataValue("passwordResetExpires", passwordResetExpires)
+
+        return resetToken
     }
 }

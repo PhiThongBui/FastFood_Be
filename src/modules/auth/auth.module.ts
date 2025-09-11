@@ -10,11 +10,12 @@ import { JWTGuard } from './guards/verifyjwt.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleAuthGuard } from './guards/google.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, LocalAuthGuard, JWTGuard, JwtStrategy, GoogleAuthGuard, GoogleStrategy],
-  imports:[UserModule],
+  imports:[UserModule,MailerModule],
   exports:[JWTGuard]
 })
 export class AuthModule {}

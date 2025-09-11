@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { CreateUserDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class UserService {
@@ -24,7 +25,10 @@ export class UserService {
         const alreadyUser = await this.findByEmail(loginData.email)
         if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!')
 
-        const matchesPassword = alreadyUser.comparePassword(loginData.password)
+        const matchesPassword =await alreadyUser.comparePassword(loginData.password)
+
+        console.log("matchesPassword", matchesPassword);
+        
         if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
         const userRaw = alreadyUser.toJSON()
         
@@ -70,5 +74,16 @@ export class UserService {
 
     async removeRefreshToken(refreshToken: string) {
         return await this.UserModel.update({ refreshToken: "" }, { where: { refreshToken: refreshToken } })
+    }
+
+    async checkPwResetTokenAndExprised(passwordResetToken: string) {
+        return await this.UserModel.findOne({
+            where: {
+                passwordResetToken: passwordResetToken,
+                passwordResetExpires:{
+                    [Op.gt] : Date.now()
+                }
+            }
+        })
     }
 }

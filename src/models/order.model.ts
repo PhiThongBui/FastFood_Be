@@ -77,7 +77,7 @@ export class Order extends Model<Order> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    total: number;
+    finalTotal: number;
 
     @Column({
         allowNull: true,
@@ -104,7 +104,7 @@ export class Order extends Model<Order> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    AddressId: number
+    addressId: number
 
     @BelongsTo(() => Address)
     address: Address

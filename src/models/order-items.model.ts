@@ -12,21 +12,21 @@ export class OrderItems extends Model<OrderItems> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    OrderId: number;
+    orderId: number;
 
     @ForeignKey(() => Product)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    ProductId: number;
+    productId: number;
 
     @ForeignKey(() => ProductVariant)
     @Column({
         allowNull: true,
         type: DataType.INTEGER,
     })
-    ProductVariantId: number;
+    productVariantId: number;
 
     @BelongsTo(() => Order)
     order: Order;

@@ -11,7 +11,6 @@ import { JwtModule } from '@nestjs/jwt';
   providers: [UserService],
   imports: [
     SequelizeModule.forFeature([User]),
-   
   ],
   exports: [UserService]
 })

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
@@ -39,5 +39,15 @@ export class AuthController {
   @Get('/logout')
   logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     return this.authService.logout(req, res);
+  }
+
+  @Post('/forgot-password')
+  forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassWord(email);
+  }
+
+  @Post('/reset-password')
+  resetPassword(@Body('password') password:string, @Body('token') token:string) {
+    return this.authService.resetPassword(password, token);
   }
 }

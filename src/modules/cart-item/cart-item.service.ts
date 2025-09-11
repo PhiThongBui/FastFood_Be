@@ -6,8 +6,7 @@ import { CreateCartItemDto } from './dto/cart-item.dto';
 import { ProductService } from '../product/product.service';
 import { ProductVariantService } from '../product-variant/product-variant.service';
 import { CartService } from '../cart/cart.service';
-import e, { raw } from 'express';
-import { log } from 'node:console';
+
 
 @Injectable()
 export class CartItemService {
@@ -82,7 +81,7 @@ export class CartItemService {
         }
     }
 
-    async mergerCart(sessionId, userId) {
+    async mergerCart(sessionId:string, userId: number) {
         const transaction = await this.sequelize.transaction()
         try {
             const guestCart = await this.modelCarts.findOne({
@@ -164,4 +163,6 @@ export class CartItemService {
             throw error
         }
     }
+
+   
 }

@@ -32,15 +32,14 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
                 const startTime = request['startTime']
                 const endTime = Date.now();
                 const takenTime = endTime - startTime;
-                const formattedMessage =
-                    typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean'
-                        ? String(data)
-                        : (data !== null && data !== undefined && typeof data === 'object' && 'message' in data)
-                            ? (data as any).message
-                            : this.getDefaultMessage(method);
+
+                const formattedMessage = typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean'
+                    ? String(data)
+                    : (data !== null && data !== undefined && typeof data === 'object' && 'message' in data)
+                        ? (data as any).message
+                        : this.getDefaultMessage(method);
 
                 const formattedData = (item: any) => {
-
                     if (!item || typeof item !== 'object') {
                         // item là undefined, null, string, number, boolean, etc.
                         return item;
@@ -50,26 +49,34 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
                         return undefined
                     }
 
+                    if (item && typeof item === 'object' && item !== null && 'message' in item && Object.keys(item).length > 1) {
+                        const { message, ...rest } = item
+                        return rest
+                    }
                     //TH chỉ có data hoặc có message lẫn data
-                    if (item && typeof item === 'object' && item !== null && 'data' in item && Object.keys(item).length === 1 || (item !== null && 'data' in item && Object.keys(item).length === 2)) {                        
-                        return item?.data
+                    if (item && typeof item === 'object' && item !== null && 'data' in item && Object.keys(item).length === 1 || (item !== null && 'data' in item && Object.keys(item).length === 2)) {
+                        const { message, ...rest } = item
+
+                        return rest
                     }
 
                     if (item && typeof item === 'object' && item !== null && 'message' in item && Object.keys(item).length === 2) {
                         const { message, ...rest } = item
+
                         return rest
                     }
 
                     const serialize = (val: any) => typeof val?.toJSON === 'function' ? val.toJSON() : val;
 
                     if (Array.isArray(item)) {
+                        console.log("123456");
+
                         return item.map(serialize);
                     }
 
                     if (typeof item === 'object' && item !== null) {
                         return serialize(item);
                     }
-
                     return item;
                 }
                 const finalData = formattedData(data)
