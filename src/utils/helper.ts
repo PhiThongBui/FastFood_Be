@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { Request , Response} from "express";
+import { Request, Response } from "express";
 
 export class Helper {
     static converttoSlug(str: string): string {
@@ -21,13 +21,13 @@ export class Helper {
         return `guest_${timestamp}_${randomStr}`
     }
 
-    static getSessionIdFromRequest(req: Request){
+    static getSessionIdFromRequest(req: Request) {
         const cookie = req.cookies
-        if(!cookie || !cookie.sessionId) return null
+        if (!cookie || !cookie.sessionId) return null
         return cookie.sessionId
     }
 
-    static setSessionCookie(sessionId:string, res: Response){
+    static setSessionCookie(sessionId: string, res: Response) {
         res.cookie('sessionId', sessionId, {
             httpOnly: true,
             secure: true,
@@ -36,4 +36,10 @@ export class Helper {
         })
     }
 
+
+    static isEqualArray = (arr1: number[], arr2: number[]): boolean => {
+        if (arr1.length !== arr2.length) return false
+
+        return arr1.every((val, index) => val === arr2[index])
+    }
 }

@@ -29,7 +29,6 @@ export class CartItemController {
     let userId: number | null = null;
 
     const authHeader = req.headers?.authorization;
-    console.log("authHeader", authHeader);
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {

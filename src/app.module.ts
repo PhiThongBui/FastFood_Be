@@ -20,6 +20,7 @@ import { ProductIngredientModule } from './modules/product-ingredient/product-in
 import { IngredientModule } from './modules/ingredient/ingredient.module';
 import { CartItemModule } from './modules/cart-item/cart-item.module';
 import { CartModule } from './modules/cart/cart.module';
+import { CartItemIngredientModule } from './modules/cart-item-ingredient/cart-item-ingredient.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { CartModule } from './modules/cart/cart.module';
     IngredientModule,
     CartItemModule,
     CartModule,
+    CartItemIngredientModule,
   ]
 })
 export class AppModule implements NestModule {

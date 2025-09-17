@@ -10,6 +10,7 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         type: DataType.INTEGER,
     })
     cartItemId: number
+    
     @ForeignKey(() => Ingredient)
     @Column({
         allowNull: false,

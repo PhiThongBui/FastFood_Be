@@ -40,45 +40,43 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
                         : this.getDefaultMessage(method);
 
                 const formattedData = (item: any) => {
-                    if (!item || typeof item !== 'object') {
-                        // item là undefined, null, string, number, boolean, etc.
-                        return item;
-                    }
-                    //TH chỉ có message
-                    if (item && typeof item === 'object' && item !== null && 'message' in item && Object.keys(item).length === 1) {
-                        return undefined
-                    }
+                    if (!item || typeof item !== 'object') return item;
 
-                    if (item && typeof item === 'object' && item !== null && 'message' in item && Object.keys(item).length > 1) {
-                        const { message, ...rest } = item
-                        return rest
-                    }
-                    //TH chỉ có data hoặc có message lẫn data
-                    if (item && typeof item === 'object' && item !== null && 'data' in item && Object.keys(item).length === 1 || (item !== null && 'data' in item && Object.keys(item).length === 2)) {
-                        const { message, ...rest } = item
+                    const keys = Object.keys(item);
 
-                        return rest
+                    // chỉ có message
+                    if ('message' in item && keys.length === 1) {
+                        return undefined;
                     }
 
-                    if (item && typeof item === 'object' && item !== null && 'message' in item && Object.keys(item).length === 2) {
-                        const { message, ...rest } = item
-
-                        return rest
+                    // chỉ có data -> unwrap
+                    if ('data' in item && keys.length === 1) {
+                        return item.data;
                     }
 
-                    const serialize = (val: any) => typeof val?.toJSON === 'function' ? val.toJSON() : val;
+                    if ('data' in item && 'message' in item && (keys.length > 2 || keys.length === 2)) {
+                        return item.data;
+                    }
+
+                    // có message + field khác
+                    if ('message' in item && keys.length > 1) {
+                        const { message, ...rest } = item;
+                        return rest;
+                    }
 
                     if (Array.isArray(item)) {
-                        console.log("123456");
-
-                        return item.map(serialize);
+                        return item.map(val => typeof val?.toJSON === 'function' ? val.toJSON() : val);
                     }
 
-                    if (typeof item === 'object' && item !== null) {
-                        return serialize(item);
+                    if (typeof item.toJSON === 'function') {
+                        return item.toJSON();
                     }
+
                     return item;
-                }
+                };
+
+
+
                 const finalData = formattedData(data)
                 return {
                     success: true,
