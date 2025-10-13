@@ -26,7 +26,7 @@ export class OrderItems extends Model<OrderItems> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    productVariantId: number;
+    productVariantId?: number | null;
 
     @BelongsTo(() => Order)
     order: Order;

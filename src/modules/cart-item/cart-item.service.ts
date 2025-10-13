@@ -1,5 +1,6 @@
+import { actionUpdateCartItem } from './types/cartItem.type';
 import { log } from 'node:console';
-import { CartItems, CartItemsIngredient, Carts, Product, ProductIngredient, ProductVariant } from '@/models';
+import { CartItems, CartItemsIngredient, Carts, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -18,6 +19,7 @@ export class CartItemService {
         @InjectModel(CartItems) private readonly modelCartItems: typeof CartItems,
         @InjectModel(CartItemsIngredient) private readonly modelCartItemIngredient: typeof CartItemsIngredient,
         @InjectModel(Product) private readonly modelProduct: typeof Product,
+        @InjectModel(Ingredient) private readonly modelIngredient: typeof Ingredient,
         @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
         private readonly productService: ProductService,
@@ -49,8 +51,7 @@ export class CartItemService {
             const ingredientIds = ingredientId ?? []
             const matchingCartItem = await this.matchingCartItem(cart.id, productId, productVariantId, ingredientIds)
 
-            console.log("matchingCartItem", matchingCartItem );
-            
+
             if (matchingCartItem) {
 
                 await matchingCartItem.increment('quantity', {
@@ -82,7 +83,7 @@ export class CartItemService {
                     message: 'Đã tăng số lượng thành công!',
                     data: matchingCartItem
                 }
-            }else {
+            } else {
 
                 const newCartItem = await this.modelCartItems.create({
                     cartId: cart.id,
@@ -94,9 +95,9 @@ export class CartItemService {
                 })
 
 
-                if(ingredientIds.length > 0) {
-                    for(const id of ingredientIds) {
-                         await this.modelCartItemIngredient.create({
+                if (ingredientIds.length > 0) {
+                    for (const id of ingredientIds) {
+                        await this.modelCartItemIngredient.create({
                             cartItemId: newCartItem.id,
                             ingredientId: id,
                             quantity: quantity
@@ -120,6 +121,114 @@ export class CartItemService {
         }
     }
 
+    async increOrDecreQuantity(cartItemId: number, action: actionUpdateCartItem) {
+        const transaction = await this.sequelize.transaction()
+        try {
+            const cartItem = await this.modelCartItems.findByPk(cartItemId, {
+                transaction
+            })
+
+            if (!cartItem) {
+                throw new BadGatewayException('Giỏ hàng khóa chưa được tìm thấy!')
+            }
+
+            if (action === 'increment') {
+                await cartItem.increment('quantity', {
+                    by: 1,
+                    transaction
+                })
+
+                const cartItemIngredient = await this.modelCartItemIngredient.findAll({
+                    where: {
+                        cartItemId: cartItem.dataValues.id
+                    },
+                    transaction
+                })
+                if (cartItemIngredient.length > 0) {
+                    await Promise.all(cartItemIngredient.map(async (item) => {
+                        await item.increment('quantity', {
+                            by: 1,
+                            transaction
+                        })
+                    }))
+                }
+                await cartItem.reload({ transaction });
+
+                await transaction.commit()
+
+                return {
+                    message: 'Đã tăng số lượng thành công',
+                    data: cartItem
+                }
+            } else if (action === 'decrement') {
+
+                if (cartItem.dataValues.quantity <= 1) {
+                    await this.modelCartItemIngredient.destroy({ where: { cartItemId: cartItem.dataValues.id }, transaction })
+
+                    await cartItem.destroy({
+                        transaction
+                    })
+
+                    await transaction.commit()
+
+                    return {
+                        message: 'Đã xóa sản phẩm thành công'
+                    }
+                }
+                await cartItem.decrement('quantity', {
+                    by: 1,
+                    transaction
+                })
+
+                const cartItemIngredient = await this.modelCartItemIngredient.findAll({
+                    where: {
+                        cartItemId: cartItem.dataValues.id
+                    },
+                    transaction
+                })
+                if (cartItemIngredient.length > 0) {
+                    await Promise.all(cartItemIngredient.map(async (item) => {
+                        await item.decrement('quantity', {
+                            by: 1,
+                            transaction
+                        })
+                    }))
+                }
+                await cartItem.reload({ transaction });
+
+                await transaction.commit()
+
+                return {
+                    message: 'Đã tăng số lượng thành công',
+                    data: cartItem
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            await transaction.rollback()
+            throw error
+        }
+    }
+
+    async deleteCartItem(cartItemId: number) {
+        const transaction = await this.sequelize.transaction()
+        try {
+            await this.modelCartItems.destroy({
+                where: {
+                    id: cartItemId
+                },
+                transaction
+            })
+
+            return {
+                message: 'Đã xóa sản phẩm trong giỏ hàng'
+            }
+        } catch (error) {
+            console.log(error);
+            await transaction.rollback()
+            throw error
+        }
+    }
 
 
     // ========================================
@@ -135,9 +244,9 @@ export class CartItemService {
             where: {
                 cartId: cartId,
                 productId: productId,
-                productVariantId:  productVariantId
+                productVariantId: productVariantId
             }
-        })        
+        })
 
         if (matchesCartItem.length === 0 || !matchesCartItem) return null
 
@@ -149,21 +258,16 @@ export class CartItemService {
                     cartItemId: item.id
                 },
                 attributes: ['ingredientId']
-            })            
+            })
             const sortmatchesCartItemIngredient = [...matchesCartItemIngredient].map((ingredient) => ingredient.get('ingredientId')).sort((a, b) => a - b);
 
             if (Helper.isEqualArray(sortIngredientIds, sortmatchesCartItemIngredient)) {
-                return item            
+                return item
             }
         }
 
         return null
     }
-
-    /**
-     * So sánh 2 mảng có giống nhau không
-     */
-
 
 
     /**
@@ -281,5 +385,54 @@ export class CartItemService {
 
     async getCartItemsById(idCart: number) {
         return await this.modelCartItems.findByPk(idCart);
+    }
+
+    async getCartItemByCartId(cartId: number, transaction: any): Promise<any> {        
+        const cartItems = await this.modelCartItems.findAll({
+            where: {
+                cartId: cartId
+            },
+            include: [
+                {
+                    model: this.modelProduct,
+                    attributes: ['name', 'basePrice', 'imageUrl']
+                },
+                {
+                    model: this.modelProductVariant,
+                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice']
+                },
+                {
+                    model: this.modelCartItemIngredient,
+                    attributes: ['id', 'ingredientId', 'quantity'],
+                    include: [
+                        {
+                            model: this.modelIngredient,
+                            attributes: ['name', 'description', 'imageUrl', 'price']
+                        }
+                    ]
+                }
+            ],
+            transaction
+        })
+        const summary =  cartItems.map((item)=>{
+            const cartItem = item.toJSON();
+
+            const priceProduct = cartItem.productVariant.modifiedPrice ?? cartItem.product.basePrice;
+
+            const cartIngredient = cartItem.cartItemIngredients
+            let priceIngredient:number = 0
+            for(let ingredient of cartIngredient){
+                priceIngredient+= ingredient.ingredient.price * ingredient.quantity
+            }
+
+            return {
+                ...cartItem,
+                subTotal: (priceProduct + priceIngredient) * cartItem.quantity
+            }
+        })
+        return {
+            message: 'Lấy cartItem thanh cong',
+            data: summary
+        }
     }
 }

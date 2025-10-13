@@ -9,7 +9,6 @@ export enum ORDERSTATUS {
     PENDING = 'Đang chờ',
     DELIVERED = 'Đã giao hàng',
     CANCELLED = 'Đã hủy',
-    CONFIRMED = 'Đã xác nhận',
     PREPARING = 'Đang chuẩn bị',
     READY = 'Sẵn sàng',
 }
@@ -83,17 +82,17 @@ export class Order extends Model<Order> {
         allowNull: true,
         type: DataType.TEXT,
     })
-    notes: string;
+    notes: string | null;
 
 
     //Relation
 
     @ForeignKey(() => User)
     @Column({
-        allowNull: false,
+        allowNull: true,
         type: DataType.INTEGER,
     })
-    userId: number
+    userId: number | null
 
     @BelongsTo(() => User)
     user: User

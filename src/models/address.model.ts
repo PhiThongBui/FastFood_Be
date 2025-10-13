@@ -5,6 +5,17 @@ import { Order } from './order.model';
 @Table
 export class Address extends Model<Address> {
     @Column({
+        allowNull: false,
+        type: DataType.STRING,
+    })
+    recipientName: string; // <--- TÊN NGƯỜI NHẬN
+
+    @Column({
+        allowNull: false,
+        type: DataType.STRING,
+    })
+    recipientPhone: string; // <--- SỐ ĐIỆN THOẠI NGƯỜI NHẬN
+    @Column({
         allowNull: true,
         type: DataType.STRING,
     })
@@ -49,10 +60,10 @@ export class Address extends Model<Address> {
 
     @ForeignKey(() => User)
     @Column({
-        allowNull: false,
+        allowNull: true,
         type: DataType.INTEGER,
     })
-    userId: number;
+    userId: number | null;
 
     @BelongsTo(() => User)
     user: User

@@ -42,4 +42,41 @@ export class Helper {
 
         return arr1.every((val, index) => val === arr2[index])
     }
+
+    static readonly FEE_BRACKETS = [
+        {
+            maxDistance: 3, basePrice: 10000, perKmFee: 0
+        },
+        {
+            maxDistance: 5, basePrice: 20000, perKmFee: 4000
+        },
+        {
+            maxDistance: 10, basePrice: 35000, perKmFee: 8000
+        },
+        {
+            maxDistance: Infinity, basePrice: 50000, perKmFee: 10000
+        }
+    ]
+
+    static caculateDeliveryFee = (distance: number): number => {
+        for (const bracket of this.FEE_BRACKETS) {
+            if (distance <= bracket.maxDistance) {
+                const remainingKm = Math.max(0, distance - (bracket === this.FEE_BRACKETS[0] ? 0 : 3))
+
+                return bracket.basePrice + remainingKm * bracket.perKmFee
+            }
+
+        }
+        return this.FEE_BRACKETS[this.FEE_BRACKETS.length - 1].basePrice
+    }
+
+    static validateDeliveryDistance(distance: number, maxDistance: number = Number(process.env.MAX_DELIVERY_DISTANCE)): boolean {
+        return distance <= maxDistance;
+    }
+
+    static async generateOrderNumber(): Promise<string> {
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `ORD${timestamp}${random}`;
+    }
 }
