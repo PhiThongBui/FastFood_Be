@@ -1,8 +1,8 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
-import { IsArray, Max, Min } from "sequelize-typescript";
+import { IsBoolean, IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import {  Max, Min } from "sequelize-typescript";
 
 export const StringRequired = (name) => applyDecorators(
     ApiProperty({ required: true }),
@@ -73,3 +73,17 @@ export const ArrayNotRequired = (array: any) => applyDecorators(
     ValidateNested({ each: true }),
     Type(() => array),
 )
+
+export const DateRequired = (name:string) => applyDecorators(
+    ApiProperty({ required: true , format: 'date-time', type: String }),
+    Type(() => Date),
+    IsDate({ message: `${name} phải là 1 ngày` }),
+    IsNotEmpty({ message: `${name} không được để trống` })
+)
+
+export const DateNotRequired = applyDecorators(
+    ApiProperty({ required: false, type: String, format: 'date-time' }),
+    Type(() => Date),
+    IsOptional(),
+    IsDate({ message: `Ngày không hợp lệ` })
+);

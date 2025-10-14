@@ -24,6 +24,8 @@ import { CartItemIngredientModule } from './modules/cart-item-ingredient/cart-it
 import { AddressModule } from './modules/address/address.module';
 import { OrderModule } from './modules/order/order.module';
 import { OrderItemModule } from './modules/order-item/order-item.module';
+import { CartPreviewModule } from './modules/cart-preview/cart-preview.module';
+import { CouponModule } from './modules/coupon/coupon.module';
 
 @Module({
   imports: [
@@ -84,6 +86,8 @@ import { OrderItemModule } from './modules/order-item/order-item.module';
     AddressModule,
     OrderModule,
     OrderItemModule,
+    CartPreviewModule,
+    CouponModule,
   ]
 })
 export class AppModule implements NestModule {

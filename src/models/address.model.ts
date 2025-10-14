@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from 'sequelize-typescript';
+import { BelongsTo, Column, DataType, ForeignKey, HasMany, Index, Model, Table } from 'sequelize-typescript';
 import { User } from './user.model';
 import { Order } from './order.model';
 
@@ -58,12 +58,20 @@ export class Address extends Model<Address> {
     })
     isDefault: boolean;
 
+    @Index // Thêm index để tăng tốc độ truy vấn theo sessionId
+    @Column({
+        allowNull: true, 
+        type: DataType.STRING
+    })
+    sessionId: string | null;
+
     @ForeignKey(() => User)
     @Column({
         allowNull: true,
         type: DataType.INTEGER,
     })
     userId: number | null;
+
 
     @BelongsTo(() => User)
     user: User
