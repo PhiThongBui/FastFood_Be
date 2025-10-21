@@ -30,7 +30,7 @@ async function bootstrap() {
     .setTitle('FastFood APIs')
     .setDescription('Xây dựng API cho website bán đồ ăn nhanh')
     .setVersion('1.0')
-    .addTag('cats')
+    .addTag('NestJS', 'FastFood')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1', app, documentFactory);

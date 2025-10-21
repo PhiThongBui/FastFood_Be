@@ -7,9 +7,7 @@ export class AddressController {
   constructor(private readonly addressService: AddressService) {}
 
   @Post('/create')
-  async createAddress(@Body() address: CreateAddressDto) {
-    console.log(address);
-    
+  async createAddress(@Body() address: CreateAddressDto) {    
      return await this.addressService.createAddress(address)
   }
 }

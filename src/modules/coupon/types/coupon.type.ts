@@ -14,3 +14,12 @@ export type CreateOutputCoupon = {
         validTo: Date
     }
 }
+export type ValidateCoupon = {
+    message: string,
+    discount: number,
+    couponInfo: {
+        code: string
+        type: COUPONTYPE
+        value: number
+    }
+}

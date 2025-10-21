@@ -25,7 +25,7 @@ export class AuthService {
 
     async login({ uid, role }, response?: Response) {
         const accessToken = await this.JwtService.signAsync({ uid: uid, role: role }, {
-            expiresIn: '1m'
+            expiresIn: '5m'
         });
         const refreshToken = await this.JwtService.signAsync({ uid: uid, role: role }, {
             expiresIn: '7d'

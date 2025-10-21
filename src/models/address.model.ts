@@ -1,6 +1,7 @@
-import { BelongsTo, Column, DataType, ForeignKey, HasMany, Index, Model, Table } from 'sequelize-typescript';
+import { BeforeValidate, BelongsTo, Column, DataType, ForeignKey, HasMany, Index, Model, Table } from 'sequelize-typescript';
 import { User } from './user.model';
 import { Order } from './order.model';
+import { BadRequestException } from '@nestjs/common';
 
 @Table
 export class Address extends Model<Address> {
@@ -60,7 +61,7 @@ export class Address extends Model<Address> {
 
     @Index // Thêm index để tăng tốc độ truy vấn theo sessionId
     @Column({
-        allowNull: true, 
+        allowNull: true,
         type: DataType.STRING
     })
     sessionId: string | null;
@@ -79,4 +80,15 @@ export class Address extends Model<Address> {
     @HasMany(() => Order)
     orders: Order
 
+    @BeforeValidate
+    static validateCreateAddress(instance: Address) {        
+        const hasSessionId = !!instance.dataValues.sessionId;
+        const hasUserId = !!instance.dataValues.userId;
+        if (!hasSessionId && !hasUserId) {
+            throw new BadRequestException('Must have either sessionId or userId!');
+        }
+        if (hasSessionId && hasUserId) {
+            throw new BadRequestException('Cannot have both sessionId and userId');
+        }
+    }
 }

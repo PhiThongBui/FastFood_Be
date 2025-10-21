@@ -9,5 +9,6 @@ import { UserModule } from '../user/user.module';
   controllers: [CouponController],
   providers: [CouponService],
   imports:[SequelizeModule.forFeature([Coupons,User,UserCoupons]), UserModule],
+  exports:[CouponService]
 })
 export class CouponModule {}
