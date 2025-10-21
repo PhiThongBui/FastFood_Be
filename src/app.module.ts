@@ -26,12 +26,15 @@ import { OrderModule } from './modules/order/order.module';
 import { OrderItemModule } from './modules/order-item/order-item.module';
 import { CartPreviewModule } from './modules/cart-preview/cart-preview.module';
 import { CouponModule } from './modules/coupon/coupon.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { RedisService } from './modules/redis/redis.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Add this line
     }),
+    RedisModule,
     SequelizeModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => sequelizeConfig(config),
@@ -88,6 +91,9 @@ import { CouponModule } from './modules/coupon/coupon.module';
     OrderItemModule,
     CartPreviewModule,
     CouponModule,
+  ],
+  providers:[
+    RedisService
   ]
 })
 export class AppModule implements NestModule {
