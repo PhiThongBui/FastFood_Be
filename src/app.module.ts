@@ -28,6 +28,8 @@ import { CartPreviewModule } from './modules/cart-preview/cart-preview.module';
 import { CouponModule } from './modules/coupon/coupon.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
+import { SepayModule } from './modules/sepay/sepay.module';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 
 @Module({
   imports: [
@@ -91,6 +93,8 @@ import { RedisService } from './modules/redis/redis.service';
     OrderItemModule,
     CartPreviewModule,
     CouponModule,
+    SepayModule,
+    CheckoutModule,
   ],
   providers:[
     RedisService

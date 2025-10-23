@@ -15,7 +15,7 @@ export enum ORDERSTATUS {
 
 export enum PAYMENTMETHOD {
     CASH = 'Thanh toán khi nhận hàng',
-    ONLINE = 'Thanh toán online'
+    SEPAY = 'Chuyển khoản ngân hàng (SePay)'
 }
 
 export enum PAYMENTSTATUS {
@@ -84,6 +84,30 @@ export class Order extends Model<Order> {
     })
     notes: string | null;
 
+    // ⭐ THÊM CÁC TRƯỜNG MỚI
+    @Column({
+        allowNull: true,
+        type: DataType.STRING,
+    })
+    momoTransId: string | null;
+
+    @Column({
+        allowNull: true,
+        type: DataType.STRING,
+    })
+    momoRequestId: string | null;
+
+    @Column({
+        allowNull: true,
+        type: DataType.DATE,
+    })
+    paidAt: Date | null;
+
+    @Column({
+        allowNull: true,
+        type: DataType.TEXT,
+    })
+    cancelledReason: string | null;
 
     //Relation
 

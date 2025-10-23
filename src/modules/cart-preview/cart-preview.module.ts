@@ -11,6 +11,7 @@ import { CouponModule } from '../coupon/coupon.module';
 @Module({
   controllers: [CartPreviewController],
   providers: [CartPreviewService],
-  imports:[SequelizeModule.forFeature([CartItems, CartItemsIngredient,Product,ProductIngredient, ProductVariant, Ingredient, Address]), CartItemModule, CartModule, AddressModule, CouponModule]
+  imports:[SequelizeModule.forFeature([CartItems, CartItemsIngredient,Product,ProductIngredient, ProductVariant, Ingredient, Address]), CartItemModule, CartModule, AddressModule, CouponModule],
+  exports:[CartPreviewService]
 })
 export class CartPreviewModule {}

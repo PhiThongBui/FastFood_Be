@@ -29,6 +29,6 @@ import { RedisTestController } from './redis.controller';
         RedisService,
     ],
     controllers: [RedisTestController],
-    exports: [REDIS_CLIENT],
+    exports: [REDIS_CLIENT, RedisService],
 })
 export class RedisModule {}
