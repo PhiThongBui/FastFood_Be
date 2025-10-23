@@ -72,8 +72,6 @@ export class CartPreviewService {
                 0
             );
 
-            console.log("ingredientPrice", ingredientPrice);
-
             // Lấy giá của sản phẩm (ưu tiên giá của biến thể)
             const priceProduct: number = item.dataValues.productVariant.dataValues.modifiedPrice ?? item.dataValues.product.dataValues.basePrice;
 

@@ -32,44 +32,54 @@ export class SepayService {
         this.accountName = this.configService.get('SEPAY_ACCOUNT_NAME') as any;
         this.bankCode = this.configService.get('SEPAY_BANK_CODE') as any;
         this.apiToken = this.configService.get('SEPAY_API_TOKEN') as any;
-        this.apiEndpoint = 'https://my.sepay.vn/userapi';
+        this.apiEndpoint = 'https://my.sepay.vn/api/v1';
     }
 
     /**
      * ⭐ Tạo QR Code thanh toán
      */
    async createPayment(request: SepayPaymentRequest): Promise<SepayPaymentResponse> {
+    // ⭐ LOG REQUEST ĐẦY ĐỦ
+    this.logger.log(`Creating payment for order: ${request.orderNumber}`);
+    this.logger.log(`Amount: ${request.amount}`);
+    this.logger.log(`Order Info: ${request.orderInfo}`);
+    console.log("request",request);
+    
     const transferContent = this.generateTransferContent(request.orderNumber);
+    const bankId = this.getBankId(this.bankCode);
 
-    this.logger.log(`Creating Sepay QR for order: ${request.orderNumber}`);
     this.logger.debug(`Transfer content: ${transferContent}`);
-    this.logger.debug(`Bank code: ${this.bankCode}, Account: ${this.accountNumber}`);
+    this.logger.debug(`Bank ID: ${bankId}`);
+    this.logger.debug(`Account: ${this.accountNumber}`);
+    this.logger.debug(`Account Name: ${this.accountName}`);
 
     try {
-        const bankId = this.getBankId(this.bankCode);
-        
-        // ⭐ FIX: Sử dụng URL format đúng của VietQR
+        // ⭐ Tạo URL với params
         const qrUrl = `https://img.vietqr.io/image/${bankId}-${this.accountNumber}-compact.jpg`;
         
-        this.logger.debug(`QR URL: ${qrUrl}`);
+        const params = {
+            amount: request.amount,
+            addInfo: transferContent,
+            accountName: this.accountName
+        };
+
+        // ⭐ LOG URL ĐẦY ĐỦ
+        const fullUrl = `${qrUrl}?${new URLSearchParams(params as any).toString()}`;
+        this.logger.debug(`Full QR URL: ${fullUrl}`);
+        this.logger.debug(`Params: ${JSON.stringify(params)}`);
 
         const qrResponse = await axios.get(qrUrl, {
-            params: {
-                amount: request.amount,
-                addInfo: transferContent,
-                accountName: this.accountName
-            },
-            responseType: 'arraybuffer'  // ⭐ Nhận binary data
+            params: params,
+            responseType: 'arraybuffer'
         });
 
-        // Convert binary to base64
         const qrBase64 = Buffer.from(qrResponse.data, 'binary').toString('base64');
 
-        this.logger.log(`QR Code generated successfully for order: ${request.orderNumber}`);
+        this.logger.log(`✅ QR Code generated successfully`);
 
         return {
             qrCode: qrBase64,
-            qrDataURL: `data:image/jpeg;base64,${qrBase64}`,  // ⭐ JPEG không phải PNG
+            qrDataURL: `data:image/jpeg;base64,${qrBase64}`,
             bankAccount: this.accountNumber,
             bankName: this.getBankName(this.bankCode),
             accountName: this.accountName,
@@ -78,17 +88,19 @@ export class SepayService {
         };
 
     } catch (error) {
-        this.logger.error(`Sepay QR generation failed: ${error.message}`)
+        this.logger.error(`❌ QR generation failed: ${error.message}`);
         
-        // Log chi tiết để debug
         if (error.response) {
-            this.logger.error(`Response status: ${error.response.status}`);
-            this.logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+            this.logger.error(`Status: ${error.response.status}`);
+            this.logger.error(`Data: ${JSON.stringify(error.response.data)}`);
         }
         
         throw error;
     }
 }
+
+
+
 
     /**
      * ⭐ Sinh nội dung chuyển khoản duy nhất
@@ -193,4 +205,33 @@ export class SepayService {
             return null;
         }
     }
+
+
+    /**
+ * ⭐ Lấy danh sách giao dịch gần đây từ SePay API
+ */
+async getRecentTransactions(): Promise<any[]> {
+    try {
+                this.logger.debug(`Fetching transactions from: ${this.apiEndpoint}/transactions`);
+
+        const response = await axios.get(`${this.apiEndpoint}/transactions`, {
+            headers: {
+                'Authorization': `Bearer ${this.apiToken}`
+            },
+            params: {
+                limit: 50, // Lấy 50 giao dịch gần nhất
+                offset: 0
+            }
+        });
+
+        this.logger.debug(`Fetched ${response.data.transactions?.length || 0} transactions from SePay`)
+
+        return response.data.transactions || [];
+
+    } catch (error) {
+        this.logger.error(`Failed to fetch transactions: ${error.message}`);
+        return [];
+    }
+}
+
 }

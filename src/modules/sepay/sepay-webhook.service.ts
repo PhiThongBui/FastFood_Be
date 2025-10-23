@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order } from '@/models';
+import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
 import { RedisService } from '../redis/redis.service';
 import { SepayService } from './sepay.service';
-import {ORDERSTATUS,PAYMENTMETHOD,PAYMENTSTATUS } from '@/models/order.model'
+
 @Injectable()
 export class SepayWebhookService {
     private readonly logger = new Logger(SepayWebhookService.name);
@@ -15,93 +16,126 @@ export class SepayWebhookService {
     ) {}
 
     async processWebhook(webhookData: any) {
+        this.logger.debug(`[WEBHOOK DATA] ${JSON.stringify(webhookData)}`)
+
+        // ⭐ FIX: Map field names từ SePay format
         const {
             id: transactionId,
             gateway,
-            transaction_date,
-            account_number,
-            sub_account,
-            amount_in,
-            amount_out,
-            accumulated,
-            code,
-            transaction_content,
-            reference_number,
-            body
+            transactionDate,        // ← camelCase
+            accountNumber,          // ← camelCase
+            subAccount,
+            transferAmount,         // ← Thay vì amount_in
+            content,                // ← Thay vì transaction_content
+            referenceCode,          // ← Thay vì reference_number
+            description,
+            code
         } = webhookData;
 
-        // ⭐ BƯỚC 1: PARSE NỘI DUNG CHUYỂN KHOẢN
-        const orderNumber = this.sepayService.parseTransferContent(transaction_content);
+        // ⭐ PARSE NỘI DUNG
+        const orderNumber = this.sepayService.parseTransferContent(content);
 
         if (!orderNumber) {
-            this.logger.warn(`Invalid transfer content: ${transaction_content}`);
+            this.logger.warn(`[INVALID CONTENT] Cannot parse: ${content}`);
             return;
         }
 
-        this.logger.log(`Processing transaction for order: ${orderNumber}`);
+        this.logger.log(`[PROCESSING] Order: ${orderNumber}, Transaction: ${transactionId}`);
 
-        // ⭐ BƯỚC 2: DISTRIBUTED LOCK (Chống duplicate webhook)
-        const lockAcquired = await this.redisService.acquireLock(orderNumber);
+        // ⭐ DISTRIBUTED LOCK
+        const lockAcquired = await this.redisService.acquireLock(orderNumber, 60);
         
         if (!lockAcquired) {
-            this.logger.log(`Order ${orderNumber} is being processed by another instance`);
+            this.logger.log(`[LOCK FAILED] Order ${orderNumber} is being processed`);
             return;
         }
 
         try {
-            // ⭐ BƯỚC 3: TÌM ORDER
+            // ⭐ TÌM ORDER
             const order = await this.orderModel.findOne({
                 where: { orderNumber }
             });
 
             if (!order) {
-                this.logger.error(`Order not found: ${orderNumber}`);
+                this.logger.error(`[ORDER NOT FOUND] ${orderNumber}`);
                 return;
             }
 
-            // ⭐ BƯỚC 4: KIỂM TRA STATUS
+            // ⭐ CHECK STATUS
             if (order.paymentStatus === PAYMENTSTATUS.PAID) {
-                this.logger.log(`Order ${orderNumber} already paid`);
-                await this.redisService.releaseLock(orderNumber);
+                this.logger.log(`[ALREADY PAID] ${orderNumber}`);
                 return;
             }
 
-            // ⭐ BƯỚC 5: KIỂM TRA SỐ TIỀN
-            if (amount_in < order.finalTotal) {
+            // ⭐ VERIFY AMOUNT
+            if (transferAmount < order.finalTotal) {
                 this.logger.error(
-                    `Amount mismatch for order ${orderNumber}. Expected: ${order.finalTotal}, Received: ${amount_in}`
+                    `[AMOUNT MISMATCH] ${orderNumber} - Expected: ${order.finalTotal}, Received: ${transferAmount}`
                 );
-                // Có thể gửi thông báo cho admin
-                await this.redisService.releaseLock(orderNumber);
                 return;
             }
 
-            // ⭐ BƯỚC 6: CẬP NHẬT ORDER
+            this.logger.log(`[AMOUNT VERIFIED] ${orderNumber} - Amount: ${transferAmount}`);
+
+            // ⭐ UPDATE ORDER
             await order.update({
                 paymentStatus: PAYMENTSTATUS.PAID,
                 orderStatus: ORDERSTATUS.PREPARING,
-                momoTransId: transactionId,  // Lưu transaction ID của Sepay
-                paidAt: new Date(transaction_date)
+                momoTransId: transactionId.toString(),
+                paidAt: new Date(transactionDate)
             });
 
-            this.logger.log(`Order ${orderNumber} marked as PAID`);
+            this.logger.log(`[ORDER UPDATED] ${orderNumber} marked as PAID`);
 
-            // ⭐ BƯỚC 7: XÓA KHỎI REDIS PENDING LIST
+            // ⭐ XÓA KHỎI REDIS
             await this.redisService.removePendingOrder(orderNumber);
+            this.logger.log(`[REDIS REMOVED] ${orderNumber}`);
 
-            // ⭐ BƯỚC 8: PUBLISH NOTIFICATION (Gửi cho bếp)
+            // ⭐ PUBLISH NOTIFICATION
             await this.redisService.publishNewOrder({
                 orderId: order.id,
                 orderNumber: order.orderNumber,
                 finalTotal: order.finalTotal,
-                paidAt: order.paidAt
+                paidAt: order.paidAt,
+                userId: order.userId,
+                addressId: order.addressId
             });
 
-            this.logger.log(`Published new order notification for ${orderNumber}`);
+            this.logger.log(`[NOTIFICATION SENT] ${orderNumber}`);
 
+        } catch (error) {
+            this.logger.error(`[PROCESS ERROR] ${orderNumber}: ${error.message}`);
+            throw error;
+            
         } finally {
-            // ⭐ BƯỚC 9: RELEASE LOCK
             await this.redisService.releaseLock(orderNumber);
+            this.logger.log(`[LOCK RELEASED] ${orderNumber}`);
         }
+    }
+
+    /**
+     * ⭐ Check trạng thái thanh toán
+     */
+    async checkOrderStatus(orderNumber: string) {
+        const order = await this.orderModel.findOne({
+            where: { orderNumber },
+            attributes: ['id', 'orderNumber', 'orderStatus', 'paymentStatus', 'finalTotal', 'paidAt']
+        });
+
+        if (!order) {
+            return {
+                found: false,
+                orderNumber
+            };
+        }
+
+        return {
+            found: true,
+            orderNumber: order.orderNumber,
+            orderStatus: order.orderStatus,
+            paymentStatus: order.paymentStatus,
+            isPaid: order.paymentStatus === PAYMENTSTATUS.PAID,
+            paidAt: order.paidAt
+        };
     }
 }
