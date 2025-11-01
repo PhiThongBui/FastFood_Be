@@ -296,7 +296,7 @@ export class CartItemService {
             ),
             group: ['CartItems.id']
         });
-    }
+    };
 
 
 

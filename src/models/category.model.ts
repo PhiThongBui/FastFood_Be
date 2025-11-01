@@ -39,10 +39,16 @@ export class Category extends Model<Category> {
     isActive: boolean;
 
     //Relationship
-    @HasMany(() => Product)
+    @HasMany(() => Product,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     products: Product[]
 
-    @HasMany(() => Ingredient)
+    @HasMany(() => Ingredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     ingredients: Ingredient[]
 
 

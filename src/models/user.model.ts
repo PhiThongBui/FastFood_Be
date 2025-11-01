@@ -108,20 +108,35 @@ export class User extends Model<User> {
     })
     passwordChangeAt: string | null
 
-    @HasMany(() => Address)
+    @HasMany(() => Address,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     addresses: Address[]
 
-    @HasMany(() => Order)
+    @HasMany(() => Order,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     orders: Order[]
     //
 
-    @HasMany(() => Carts)
+    @HasMany(() => Carts,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     carts: Carts[]
 
-    @HasMany(() => UserCoupons)
+    @HasMany(() => UserCoupons,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     userCoupons: UserCoupons[]
 
-    @HasMany(() => Reviews)
+    @HasMany(() => Reviews,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     reviews: Reviews[]
 
 

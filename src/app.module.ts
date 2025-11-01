@@ -31,6 +31,8 @@ import { RedisService } from './modules/redis/redis.service';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.module';
+import { CronModule } from './modules/cron/cron.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -96,7 +98,9 @@ import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.m
     CouponModule,
     SepayModule,
     CheckoutModule,
-    WebsocketModule
+    WebsocketModule,
+    CronModule,
+    MailModule
   ],
   providers:[
     RedisService

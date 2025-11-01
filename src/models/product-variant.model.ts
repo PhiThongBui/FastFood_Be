@@ -58,7 +58,10 @@ export class ProductVariant extends Model<ProductVariant> {
     @BelongsTo(() => Product)
     product: Product
 
-    @HasMany(() => CartItems)
+    @HasMany(() => CartItems,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     cartItems: CartItems[];
 
 }

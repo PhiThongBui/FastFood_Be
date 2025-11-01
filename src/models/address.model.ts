@@ -77,7 +77,10 @@ export class Address extends Model<Address> {
     @BelongsTo(() => User)
     user: User
 
-    @HasMany(() => Order)
+    @HasMany(() => Order,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     orders: Order
 
     @BeforeValidate

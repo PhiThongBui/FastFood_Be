@@ -109,6 +109,11 @@ export class Order extends Model<Order> {
     })
     cancelledReason: string | null;
 
+    @Column({
+        type: DataType.DATE,
+        allowNull: true,
+    })
+    cancelledAt?: Date | null;
     //Relation
 
     @ForeignKey(() => User)

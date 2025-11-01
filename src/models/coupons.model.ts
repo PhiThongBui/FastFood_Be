@@ -81,6 +81,9 @@ export class Coupons extends Model<Coupons> {
 
     //relation
 
-    @HasMany(() => UserCoupons)
+    @HasMany(() => UserCoupons,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     userCoupons: UserCoupons[]
 }

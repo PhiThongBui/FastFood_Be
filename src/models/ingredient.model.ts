@@ -57,12 +57,21 @@ export class Ingredient extends Model<Ingredient> {
     @BelongsTo(() => Category)
     category: Category
 
-    @HasMany(() => ProductIngredient)
+    @HasMany(() => ProductIngredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     productIngredients: ProductIngredient
 
-    @HasMany(() => OrderItemIngredient)
+    @HasMany(() => OrderItemIngredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     orderItemIngredients: OrderItemIngredient
 
-    @HasMany(() => CartItemsIngredient)
+    @HasMany(() => CartItemsIngredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     cartItemIngredients: CartItemsIngredient
 }

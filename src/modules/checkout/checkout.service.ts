@@ -16,6 +16,7 @@ import { CartPreviewService } from '../cart-preview/cart-preview.service';
 import { RedisService } from '../redis/redis.service';
 import { CheckoutConfirmDto } from './dto/checkout-confirm.dto';
 import { SepayService } from '../sepay/sepay.service';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class CheckoutService {
@@ -137,10 +138,32 @@ export class CheckoutService {
                 }
             }
 
-            // ⭐ BƯỚC 7: DEACTIVATE CART
+            //⭐ Bước 7: Xóa item trong cartItem và cartItemIngredient
+            await this.cartItemsIngredientModel.destroy({
+                where: {
+                    id: {
+                        [Op.in]: dto.cartItemIds
+                    }
+                },
+                transaction
+            })
+
+            const deletedCount = await this.cartItemsModel.destroy({
+                where: {
+                    id: {
+                        [Op.in]: dto.cartItemIds
+                    },
+                    cartId
+                },
+                transaction
+            });
+
+            this.logger.log(`✅ Deleted ${deletedCount} cart items`);
+
+            // ⭐ BƯỚC 8: DEACTIVATE CART
             await cart.update({ isActive: false }, { transaction });
 
-            // ⭐ BƯỚC 8: COMMIT TRANSACTION
+            // ⭐ BƯỚC 9: COMMIT TRANSACTION
             await transaction.commit();
 
             this.logger.log(`Order ${orderNumber} created successfully`);
@@ -151,7 +174,7 @@ export class CheckoutService {
             throw error;
         }
 
-        // ⭐ BƯỚC 9: XỬ LÝ THANH TOÁN
+        // ⭐ BƯỚC 9A : XỬ LÝ THANH TOÁN
         if (dto.paymentMethod === PAYMENTMETHOD.SEPAY) {
             this.logger.log(`order: ${createdOrder}`);
             return await this.processSepayPayment(createdOrder);
@@ -171,7 +194,7 @@ export class CheckoutService {
     }
 
     /**
-     * ⭐ Xử lý thanh toán MoMo
+     * ⭐ Xử lý thanh toán SePay
      */
     private async processSepayPayment(order: Order) {
         try {

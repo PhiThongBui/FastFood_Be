@@ -47,7 +47,10 @@ export class CartItems extends Model<CartItems> {
 
     //relation
 
-    @HasMany(() => CartItemsIngredient)
+    @HasMany(() => CartItemsIngredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     cartItemIngredients: CartItemsIngredient[]
 
 }

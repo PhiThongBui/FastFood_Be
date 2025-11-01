@@ -46,6 +46,9 @@ export class OrderItems extends Model<OrderItems> {
 
     //relations
 
-    @HasMany(() => OrderItemIngredient)
+    @HasMany(() => OrderItemIngredient,{
+        onDelete: 'CASCADE',
+        hooks: false
+    })
     orderItemIngredients: OrderItemIngredient[];
 }

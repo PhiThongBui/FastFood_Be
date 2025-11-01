@@ -7,6 +7,6 @@ export const REDIS_KEYS = {
 };
 
 export const REDIS_CONFIG = {
-    ORDER_TTL_SECONDS: 1200, // 20 phút
+    ORDER_TTL_SECONDS: 300, // 20 phút
     LOCK_TTL_SECONDS: 60,    // 60 giây
 };
