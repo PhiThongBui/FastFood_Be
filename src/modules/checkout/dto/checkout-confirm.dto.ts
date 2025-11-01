@@ -10,8 +10,13 @@ export class TemporaryAddressDto {
     longitude: number;
 
     @IsString()
-    fullAddress: string;
+    @Type(() => String)
+    city: string;
 
+    @IsString()
+    @Type(() => String)
+    district: string;
+    
     @IsString()
     @IsOptional()
     recipientName?: string;

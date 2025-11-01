@@ -19,8 +19,12 @@ export class RedisService implements OnModuleDestroy {
         });
 
         this.client.on('connect', () => {
-            this.logger.log('✅ Redis Client Connected');
+            this.logger.log('Redis Client Connected');
         });
+
+        this.subscriber.on('connect', () => {
+            this.logger.log('Redis Subscriber Connected');
+        })
 
         this.subscriber.on('error', (err) => {
             this.logger.error(`Redis Subscriber Error: ${err.message}`);
@@ -30,6 +34,7 @@ export class RedisService implements OnModuleDestroy {
     onModuleDestroy() {
         this.client.disconnect();
         this.subscriber.disconnect();
+        this.logger.log('Redis clients disconnected');
     }
 
     // ==================== SORTED SET OPERATIONS ====================
@@ -57,11 +62,11 @@ export class RedisService implements OnModuleDestroy {
      */
     async removePendingOrder(orderNumber: string): Promise<number> {
         const removed = await this.client.zrem(REDIS_KEYS.PENDING_ORDERS, orderNumber);
-        
+
         if (removed) {
             this.logger.log(`Removed pending order: ${orderNumber}`);
         }
-        
+
         return removed;
     }
 
@@ -89,9 +94,9 @@ export class RedisService implements OnModuleDestroy {
      */
     async getOrderExpiry(orderNumber: string): Promise<Date | null> {
         const score = await this.client.zscore(REDIS_KEYS.PENDING_ORDERS, orderNumber);
-        
+
         if (!score) return null;
-        
+
         return new Date(parseInt(score) * 1000);
     }
 
@@ -114,7 +119,7 @@ export class RedisService implements OnModuleDestroy {
         );
 
         const acquired = result === 'OK';
-        
+
         if (acquired) {
             this.logger.debug(`🔒 Lock acquired: ${lockKey}`);
         } else {
@@ -139,11 +144,21 @@ export class RedisService implements OnModuleDestroy {
      * ⭐ Publish thông báo đơn hàng mới
      */
     async publishNewOrder(orderData: any): Promise<void> {
-        const message = JSON.stringify(orderData);
-        
-        await this.client.publish(REDIS_KEYS.NEW_ORDERS_CHANNEL, message);
-        
-        this.logger.log(`📢 Published new order: ${orderData.orderId || orderData.orderNumber}`);
+        try {
+            const message = JSON.stringify(orderData);
+
+            const subscriberCount = await this.client.publish(
+                REDIS_KEYS.NEW_ORDERS_CHANNEL,
+                message,
+            );
+
+            this.logger.log(
+                `📢 Published new order: ${orderData.orderNumber} (${subscriberCount} subscribers)`
+            );
+        } catch (error) {
+            this.logger.error(`Failed to publish order: ${error.message}`);
+            throw error;
+        }
     }
 
     /**
@@ -151,7 +166,7 @@ export class RedisService implements OnModuleDestroy {
      * @param callback - Function xử lý khi nhận message
      */
     async subscribeNewOrders(callback: (orderData: any) => void): Promise<void> {
-        await this.subscriber.subscribe(REDIS_KEYS.NEW_ORDERS_CHANNEL);
+        await this.subscriber.subscribe(REDIS_KEYS.NEW_ORDERS_CHANNEL); // nhận tất cả message được publish lên channel 'new_orders'.
 
         this.subscriber.on('message', (channel, message) => {
             if (channel === REDIS_KEYS.NEW_ORDERS_CHANNEL) {
@@ -165,6 +180,54 @@ export class RedisService implements OnModuleDestroy {
         });
 
         this.logger.log(`👂 Subscribed to ${REDIS_KEYS.NEW_ORDERS_CHANNEL}`);
+    }
+
+    async unsubscribeNewOrders(): Promise<void> {
+        await this.subscriber.unsubscribe(REDIS_KEYS.NEW_ORDERS_CHANNEL);
+        this.logger.log(`Unsubscribed from ${REDIS_KEYS.NEW_ORDERS_CHANNEL}`);
+    }
+
+
+    /**
+   * ⭐ Generic subscribe method (cho các channels khác)
+   */
+
+    async subscribeChannel(
+        channel: string,
+        callback: (message: string) => void
+    ): Promise<void> {
+        try {
+            await this.subscriber.subscribe(channel);
+
+            this.subscriber.on('message', (ch, message) => {
+                if (ch === channel) {
+                    callback(message);
+                }
+            });
+
+            this.logger.log(`👂 Subscribed to channel: ${channel}`);
+        } catch (error) {
+            this.logger.error(`Failed to subscribe to ${channel}: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * ⭐ Generic publish method
+     */
+    async publishToChannel(channel: string, data: any): Promise<number> {
+        try {
+            const message = typeof data === 'string' ? data : JSON.stringify(data);
+            const subscriberCount = await this.client.publish(channel, message);
+
+            this.logger.debug(
+                `📢 Published to ${channel} (${subscriberCount} subscribers)`
+            );
+
+            return subscriberCount;
+        } catch (error) {
+            this.logger.error(`Failed to publish to ${channel}: ${error.message}`);
+            throw error;
+        }
     }
 
     // ==================== GENERAL KEY-VALUE ====================
@@ -207,5 +270,48 @@ export class RedisService implements OnModuleDestroy {
      */
     getClient(): Redis {
         return this.client;
+    }
+
+
+    /**
+     * Set với object (tự động JSON.stringify)
+     */
+    async setObject(key: string, value: any, ttlSeconds?: number): Promise<void> {
+        const jsonString = JSON.stringify(value);
+        await this.set(key, jsonString, ttlSeconds);
+    }
+
+    /**
+     * Get và parse object
+     */
+    async getObject<T>(key: string): Promise<T | null> {
+        const value = await this.get(key);
+        if (!value) return null;
+        
+        try {
+            return JSON.parse(value) as T;
+        } catch (error) {
+            this.logger.error(`Failed to parse JSON from key ${key}: ${error.message}`);
+            return null;
+        }
+    }
+    /**
+     * ⭐ Expose subscriber client
+     */
+    getSubscriber(): Redis {
+        return this.subscriber;
+    }
+
+    /**
+     * ⭐ Health check
+     */
+    async ping(): Promise<boolean> {
+        try {
+            const result = await this.client.ping();
+            return result === 'PONG';
+        } catch (error) {
+            this.logger.error(`Redis ping failed: ${error.message}`);
+            return false;
+        }
     }
 }

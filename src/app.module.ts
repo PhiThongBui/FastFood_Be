@@ -30,6 +30,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
+import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
     CouponModule,
     SepayModule,
     CheckoutModule,
+    WebsocketModule
   ],
   providers:[
     RedisService

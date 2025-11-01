@@ -93,12 +93,12 @@ export class SepayWebhookService {
 
             // ⭐ PUBLISH NOTIFICATION
             await this.redisService.publishNewOrder({
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                finalTotal: order.finalTotal,
-                paidAt: order.paidAt,
-                userId: order.userId,
-                addressId: order.addressId
+                orderId: order.dataValues.id,
+                orderNumber: order.dataValues.orderNumber,
+                finalTotal: order.dataValues.finalTotal,
+                paidAt: order.dataValues.paidAt,
+                userId: order.dataValues.userId,
+                addressId: order.dataValues.addressId
             });
 
             this.logger.log(`[NOTIFICATION SENT] ${orderNumber}`);

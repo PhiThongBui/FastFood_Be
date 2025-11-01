@@ -141,7 +141,7 @@ export class CartPreviewService {
         const subTotal = cartPrev.data.totalAmount
         const finalTotal = subTotal + deliveryFee - discount;        
         return {
-            message: 'Cart preview generated successfully.',
+            message: 'Cart checkout generated successfully.',
             data: {
                 items: cartPrev.data.items || [],
                 subtotal: subTotal,

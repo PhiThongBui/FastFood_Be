@@ -43,7 +43,6 @@ export class SepayService {
     this.logger.log(`Creating payment for order: ${request.orderNumber}`);
     this.logger.log(`Amount: ${request.amount}`);
     this.logger.log(`Order Info: ${request.orderInfo}`);
-    console.log("request",request);
     
     const transferContent = this.generateTransferContent(request.orderNumber);
     const bankId = this.getBankId(this.bankCode);
