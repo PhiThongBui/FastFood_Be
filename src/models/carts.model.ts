@@ -19,13 +19,6 @@ export class Carts extends Model<Carts> {
     })
     sessionId: string;
 
-    @Column({
-        allowNull: false,
-        defaultValue: true,
-        type: DataType.BOOLEAN,
-    })
-    isActive: boolean;
-
     @BelongsTo(() => User)
     user: User
 

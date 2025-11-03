@@ -64,7 +64,7 @@ export class SepayWebhookService {
             // ⭐ CHECK STATUS
             if (order.paymentStatus === PAYMENTSTATUS.PAID) {
                 this.logger.log(`[ALREADY PAID] ${orderNumber}`);
-                return;
+                return
             }
 
             // ⭐ VERIFY AMOUNT

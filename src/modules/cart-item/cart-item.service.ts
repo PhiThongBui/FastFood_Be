@@ -306,7 +306,6 @@ export class CartItemService {
             const guestCart = await this.modelCarts.findOne({
                 where: {
                     sessionId: sessionId,
-                    isActive: true
                 },
                 include: [
                     {

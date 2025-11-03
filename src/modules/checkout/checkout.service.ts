@@ -49,7 +49,7 @@ export class CheckoutService {
 
             // ⭐ BƯỚC 2: LOCK CART (FOR UPDATE)
             const cart = await this.cartsModel.findOne({
-                where: { id: cartId, userId, isActive: true },
+                where: { id: cartId, userId },
                 lock: transaction.LOCK.UPDATE,
                 transaction
             });
@@ -141,7 +141,7 @@ export class CheckoutService {
             //⭐ Bước 7: Xóa item trong cartItem và cartItemIngredient
             await this.cartItemsIngredientModel.destroy({
                 where: {
-                    id: {
+                    cartItemId: {
                         [Op.in]: dto.cartItemIds
                     }
                 },
@@ -151,17 +151,15 @@ export class CheckoutService {
             const deletedCount = await this.cartItemsModel.destroy({
                 where: {
                     id: {
-                        [Op.in]: dto.cartItemIds
+                        [Op.in]: dto.cartItemIds,
                     },
                     cartId
                 },
                 transaction
             });
 
-            this.logger.log(`✅ Deleted ${deletedCount} cart items`);
+            this.logger.log(`✅ Deleted ${deletedCount} cart items`)
 
-            // ⭐ BƯỚC 8: DEACTIVATE CART
-            await cart.update({ isActive: false }, { transaction });
 
             // ⭐ BƯỚC 9: COMMIT TRANSACTION
             await transaction.commit();

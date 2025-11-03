@@ -4,6 +4,8 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Order, ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
 import { RedisService } from '../redis/redis.service';
 import { MailService } from '../mail/mail.service';
+import { UserService } from '../user/user.service';
+import { User } from '@/models';
 
 @Injectable()
 export class OrderCancellationService {
@@ -11,8 +13,10 @@ export class OrderCancellationService {
 
     constructor(
         @InjectModel(Order) private orderModel: typeof Order,
+        @InjectModel(User) private userModel: typeof User,
         private readonly redisService: RedisService,
-        private readonly mailService: MailService
+        private readonly mailService: MailService,
+        private readonly userService: UserService
     ) { }
 
     /**
@@ -153,9 +157,16 @@ export class OrderCancellationService {
      */
     private async sendCancellationEmail(order: Order): Promise<void> {
         try {
+
+            const userId = order.dataValues.userId;
+            let user: any = null;
+            if (userId !== null) {
+                user = await this.userModel.findByPk(userId);
+                // Rest of your code...
+            }
             // Lấy user email
-            const userEmail = order.dataValues.user?.email;
-            const userName = order.dataValues.user?.name || 'Khách hàng';
+            const userEmail = user?.dataValues.email || '';
+            const userName = user?.dataValues.name || '';
 
             if (!userEmail) {
                 this.logger.warn(`No email found for order ${order.dataValues.orderNumber}`);

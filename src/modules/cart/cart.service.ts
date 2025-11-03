@@ -15,7 +15,6 @@ export class CartService {
         let cart = await this.modelCarts.findOne({
             where: {
                 userId: userId,
-                isActive: true
             },
             transaction: transaction
         })
@@ -31,7 +30,6 @@ export class CartService {
         let cart = await this.modelCarts.findOne({
             where: {
                 sessionId: sessionId,
-                isActive: true
             },
             transaction: transaction
         })

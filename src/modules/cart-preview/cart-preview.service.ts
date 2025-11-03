@@ -76,7 +76,7 @@ export class CartPreviewService {
             const priceProduct: number = item.dataValues.productVariant.dataValues.modifiedPrice ?? item.dataValues.product.dataValues.basePrice;
 
             // Tính tổng tiền cho một dòng sản phẩm (subtotal)
-            subtotal = (priceProduct + ingredientPrice) * item.dataValues.quantity;
+            subtotal += (priceProduct + ingredientPrice) * item.dataValues.quantity;
 
             // Định dạng lại danh sách thành phần thêm
             const ingredientItems = item.dataValues.cartItemIngredients.map((ing) => ({
