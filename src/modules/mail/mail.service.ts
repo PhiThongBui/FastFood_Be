@@ -64,6 +64,40 @@ export class MailService {
         }
     }
 
+
+    async sendVerificationEmail(email: string, name: string, otp: string) {
+    const appName = this.configService.get('APP_NAME');
+    const supportEmail = this.configService.get('SUPPORT_EMAIL');
+    const companyAddress = this.configService.get('COMPANY_ADDRESS');
+    const companyPhone = this.configService.get('COMPANY_PHONE');
+    const currentYear = new Date().getFullYear();
+    const expiryTime = 5; // 5 phút
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: `Xác thực tài khoản - ${appName}`,
+        template: 'verifyRegistation',
+        context: {
+          appName,
+          userName: name,
+          userEmail: email,
+          otp,
+          expiryTime,
+          supportEmail,
+          companyAddress,
+          companyPhone,
+          currentYear,
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      return false;
+    }
+  }
+
     /**
      * ⭐ Helper: Format datetime
      */

@@ -10,6 +10,4 @@ export class CreateCategoryDto {
     @NumberNotRequired
     sortOrder?: number;
 
-    @BooleanNotRequired
-    isActive?: boolean
 }

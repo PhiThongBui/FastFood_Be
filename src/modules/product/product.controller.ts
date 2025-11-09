@@ -3,6 +3,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { filterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { ApiResponse } from '@nestjs/swagger';
 
 @Controller('product')
 export class ProductController {
@@ -11,6 +12,7 @@ export class ProductController {
   }
 
   @Post('/create')
+  @ApiResponse({ status: 201, description: 'Tạo user thành công.' })
   async createProduct(@Body() createData:CreateProductDto){    
     return this.productService.createProduct(createData)
   }

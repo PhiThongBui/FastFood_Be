@@ -31,6 +31,17 @@ async function bootstrap() {
     .setDescription('Xây dựng API cho website bán đồ ăn nhanh')
     .setVersion('1.0')
     .addTag('NestJS', 'FastFood')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Nhập token vào đây (VD: Bearer eyJhbGci...)',
+        in: 'header',
+      },
+      'access-token', // 👈 tên định danh auth
+    )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1', app, documentFactory);

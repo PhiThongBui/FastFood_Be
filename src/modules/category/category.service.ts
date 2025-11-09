@@ -13,6 +13,13 @@ export class CategoryService {
     constructor(
         @InjectModel(Category) private categoryModel: typeof Category
     ) { }
+    async findById(id: number) {
+        const result = await this.categoryModel.findByPk(id)
+        if (!result) {
+            throw new NotFoundException(`Category with id ${id} not found!!!`)
+        }
+        return result
+    }
 
     async createCategory(createCategoryDto: CreateCategoryDto) {
         const alreadyExitsted = await this.categoryModel.findOne({
@@ -29,8 +36,9 @@ export class CategoryService {
         const isUpdateCategory = await this.categoryModel.findByPk(id)
         if (!isUpdateCategory) throw new BadRequestException(`Không tìm thấy category với id = ${id} để update`)
 
-        await isUpdateCategory.update(updateCategoryDto)
-
+       const updated = await isUpdateCategory.update(updateCategoryDto)
+        console.log("updated", updated);
+        
         return { message: 'Danh mục đã được cập nhật' }
     }
     async findAllCategories() {
@@ -57,7 +65,9 @@ export class CategoryService {
 
         return result
     }
-    async deleteCategory(id: number) { //xóa cứng
+    async delHardCategory(id: number) { //xóa cứng
+        const isUpdateCategory = await this.categoryModel.findByPk(id)
+        if (!isUpdateCategory) throw new BadRequestException(`Không tìm thấy category với id = ${id} để xóa`)
         await this.categoryModel.destroy({
             where: { id }, cascade: true
         })
@@ -65,7 +75,7 @@ export class CategoryService {
     }
 
 
-    async delCategory(id: number) { //xoas mềm
+    async delSoftCategory(id: number) { //xoas mềm
         const isUpdateCategory = await this.categoryModel.findByPk(id)
         if (!isUpdateCategory) throw new BadRequestException(`Không tìm thấy category với id = ${id} để xóa`)
         await isUpdateCategory.update({ isActive: false })

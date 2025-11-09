@@ -6,6 +6,7 @@ import {  Max, Min } from "sequelize-typescript";
 
 export const StringRequired = (name) => applyDecorators(
     ApiProperty({ required: true }),
+    Type(() => String),
     IsString({ message: `${name} là bắt buộc` }),
     IsNotEmpty({ message: `${name} không được để trống` })
 )
@@ -14,6 +15,7 @@ export const StringNotRequired = applyDecorators(
     ApiProperty({
         required: false
     }),
+    Type(() => String),
     IsString(),
     IsOptional(),
 )

@@ -33,6 +33,7 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
 import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.module';
 import { CronModule } from './modules/cron/cron.module';
 import { MailModule } from './modules/mail/mail.module';
+import { ComboModule } from './modules/combo/combo.module';
 
 @Module({
   imports: [
@@ -99,8 +100,9 @@ import { MailModule } from './modules/mail/mail.module';
     SepayModule,
     CheckoutModule,
     WebsocketModule,
-    CronModule,
-    MailModule
+    // CronModule,
+    MailModule,
+    ComboModule
   ],
   providers:[
     RedisService

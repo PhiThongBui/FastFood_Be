@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác Thực Tài Khoản - {{appName}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .message {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        
+        .otp-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+        }
+        
+        .otp-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .otp-code {
+            font-size: 42px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .expiry-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .expiry-info .time {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0c5460;
+        }
+        
+        .security-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .security-info h3 {
+            color: #856404;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .security-info ul {
+            color: #856404;
+            font-size: 14px;
+            margin-left: 20px;
+        }
+        
+        .security-info li {
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .footer p {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .otp-code {
+                font-size: 32px;
+                letter-spacing: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>{{appName}}</h1>
+            <p class="subtitle">Xác thực tài khoản</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Xin chào {{userName}},
+            </div>
+            
+            <div class="message">
+                <p>Cảm ơn bạn đã đăng ký tài khoản tại <strong>{{appName}}</strong>!</p>
+                <p>Để hoàn tất quá trình đăng ký, vui lòng sử dụng mã OTP bên dưới:</p>
+            </div>
+            
+            <div class="otp-container">
+                <div class="otp-label">Mã xác thực của bạn</div>
+                <div class="otp-code">{{otp}}</div>
+            </div>
+            
+            <div class="expiry-info">
+                <p>⏰ Mã này sẽ hết hạn sau:</p>
+                <div class="time">{{expiryTime}} phút</div>
+            </div>
+            
+            <div class="security-info">
+                <h3>⚠️ Lưu ý bảo mật</h3>
+                <ul>
+                    <li>Không chia sẻ mã OTP này với bất kỳ ai</li>
+                    <li>Mã chỉ có thể sử dụng một lần duy nhất</li>
+                    <li>Nếu bạn không yêu cầu xác thực này, vui lòng bỏ qua email</li>
+                </ul>
+            </div>
+            
+            <div class="message">
+                <p>Nếu cần hỗ trợ, liên hệ: <strong>{{supportEmail}}</strong></p>
+                <p>Trân trọng,<br>Đội ngũ {{appName}}</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Email tự động, vui lòng không trả lời.</p>
+            <p><strong>{{appName}}</strong></p>
+            <p>{{companyAddress}}</p>
+            <p>{{companyPhone}} | {{supportEmail}}</p>
+            <p>© {{currentYear}} {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
