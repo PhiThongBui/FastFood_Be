@@ -9,23 +9,30 @@ import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Lấy ConfigService từ AppModule ra để dùng chuẩn hơn
+  const configService = app.get(ConfigService);
+  const logger = new Logger(bootstrap.name);
 
-  const logger = new Logger(bootstrap.name)
+  // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
+  // Cho phép Frontend gọi vào Backend
+  app.enableCors({
+    origin: ['https://fast-food-fe-eosin.vercel.app/homepage'], // Cho phép tất cả các domain (hoặc điền mảng ['https://vercel-app.com'])
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true, // Cho phép gửi cookie/token
+  });
 
   app.use(cookieParser());
-  app.setGlobalPrefix('api/v1')
+  app.setGlobalPrefix('api/v1');
 
-  app.useGlobalFilters(new AllExceptionFilter())
+  app.useGlobalFilters(new AllExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // xóa các fields dư trong payload,
-    forbidNonWhitelisted: true, // báo lỗi ra postmman
-    // transform: true , // chuyển đổi dữ liệu object thành instance của DTO
-  }))
+    whitelist: true, 
+    forbidNonWhitelisted: true, 
+  }));
   app.useGlobalInterceptors(new TransformInterceptor());
 
-
-  //Swagger
-
+  // Swagger Setup
   const config = new DocumentBuilder()
     .setTitle('FastFood APIs')
     .setDescription('Xây dựng API cho website bán đồ ăn nhanh')
@@ -40,15 +47,20 @@ async function bootstrap() {
         description: 'Nhập token vào đây (VD: Bearer eyJhbGci...)',
         in: 'header',
       },
-      'access-token', // 👈 tên định danh auth
+      'access-token',
     )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1', app, documentFactory);
 
-  logger.log(`📚 Swagger documentation available at: http://localhost:${process.env.PORT}/api/v1`);
-  const configService = new ConfigService();
-  await app.listen(configService.get('PORT') ?? 3000);
-  console.log(`Application is running on port ${process.env.PORT ?? 3000}`);
+  // Lấy PORT từ biến môi trường (Koyeb sẽ set cái này là 8000)
+  const port = configService.get<number>('PORT') || 3000;
+
+  // --- 2. QUAN TRỌNG: THÊM '0.0.0.0' ---
+  // Nếu không có '0.0.0.0', Koyeb sẽ báo lỗi Health Check Failed
+  await app.listen(port, '0.0.0.0');
+
+  logger.log(`Application is running on port: ${port}`);
+  logger.log(`Swagger documentation available at: /api/v1`); 
 }
 bootstrap();

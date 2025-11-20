@@ -34,6 +34,7 @@ import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.m
 import { CronModule } from './modules/cron/cron.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ComboModule } from './modules/combo/combo.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -102,7 +103,8 @@ import { ComboModule } from './modules/combo/combo.module';
     WebsocketModule,
     // CronModule,
     MailModule,
-    ComboModule
+    ComboModule,
+    PricingModule
   ],
   providers:[
     RedisService

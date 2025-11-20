@@ -39,14 +39,19 @@ export class ProductVariant extends Model<ProductVariant> {
         type: DataType.INTEGER,
     })
     modifiedPrice: number;
-
+  @Column({
+        allowNull: false,
+        defaultValue: false,
+        type: DataType.BOOLEAN,
+    })
+    isComboItem: boolean;
     @Column({
-        allowNull:  true,
+        allowNull: true,
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
     isActive: boolean;
-
+  
     //relations
     @ForeignKey(() => Product)
     @Column({
@@ -58,7 +63,7 @@ export class ProductVariant extends Model<ProductVariant> {
     @BelongsTo(() => Product)
     product: Product
 
-    @HasMany(() => CartItems,{
+    @HasMany(() => CartItems, {
         onDelete: 'CASCADE',
         hooks: false
     })

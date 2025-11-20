@@ -1,7 +1,7 @@
 import { log } from 'node:console';
 import { Sequelize } from 'sequelize-typescript';
 import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CategoryService } from '../category/category.service';
@@ -14,6 +14,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductVariantService } from '../product-variant/product-variant.service';
 import { IngredientService } from '../ingredient/ingredient.service';
 import { ProductIngredientService } from '../product-ingredient/product-ingredient.service';
+import { ResponseProductDetailDto } from './dto/getOne.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class ProductService {
@@ -41,7 +43,7 @@ export class ProductService {
 
         return result
     }
-    async findOneProductById(id: number) {
+    async findOneProductById(id: number): Promise<ResponseProductDetailDto> {
         const result = await this.modelProduct.findByPk(id, {
             include: [
                 {
@@ -50,29 +52,26 @@ export class ProductService {
                         exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
                         include: [
                             [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
-                        ]
-                    }
+                        ],
+                    },
                 },
                 {
                     model: this.modelProductIngredient,
-                    attributes: {
-                        exclude: ['createdAt', 'updatedAt', 'productId'],
-                    },
-                    include: [
-                        {
-                            model: this.modelIngredient,
-                            attributes: ['name', 'description', 'imageUrl', 'price']
-                        }
-                    ]
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'productId'] },
+                    include: [{ model: this.modelIngredient, attributes: ['name', 'description', 'imageUrl', 'price'] }],
                 },
-                {
-                    model: this.modelCategory,
-                    attributes: ['name', 'slug']
-                }
-            ]
-            , attributes: ['name', 'slug', 'description', 'basePrice', 'imageUrl']
-        })
-        return result
+                { model: this.modelCategory, attributes: ['name', 'slug'] },
+            ],
+            attributes: ['name', 'slug', 'description', 'basePrice', 'imageUrl'],
+        });
+
+        if (!result) throw new NotFoundException('Không tìm thấy sản phẩm');
+        const data = plainToInstance(ResponseProductDetailDto, result.get({ plain: true }), {
+            excludeExtraneousValues: true,
+        });
+        console.log(data);
+
+        return data
     }
     async createProduct(productDto: CreateProductDto) {
         const transaction = await this.sequelize.transaction()
@@ -101,7 +100,7 @@ export class ProductService {
 
             const newProduct = await this.modelProduct.create(payload as any, { transaction })
 
-            if (newProduct && newProduct.id || newProduct.dataValues.id) {
+            if (newProduct && newProduct.dataValues.id && productDto.productVariants && productDto.productVariants.length > 0) {
                 const productId = newProduct.id || newProduct.dataValues.id
 
                 const variantKeys = productDto.productVariants.map((v) => `${v.size}-${v.type}`)
@@ -114,9 +113,9 @@ export class ProductService {
                 for (const variant of productDto.productVariants) {
                     const existedVariantDB = await this.productVariantService.existedProductVanriantDB(productId, variant.size, variant.type)
 
-                    if (existedVariantDB){
+                    if (existedVariantDB) {
                         throw new BadRequestException(`Variant với size "${variant.size}" và type "${variant.type}" đã tồn tại cho sản phẩm này!`)
-                    }                
+                    }
                 }
 
                 const productVariants = productDto.productVariants.map((item) => (
@@ -129,7 +128,7 @@ export class ProductService {
             }
 
 
-            if (newProduct && newProduct.id || newProduct.dataValues.id) {
+            if (newProduct && newProduct.dataValues.id && productDto.productIngredients && productDto.productIngredients.length > 0) {
                 const productId = newProduct.id || newProduct.dataValues.id
 
                 const ingredientIds = productDto.productIngredients.map((ingredient) => ingredient.ingredientId)
@@ -147,21 +146,21 @@ export class ProductService {
                 if (alreadyExisted.length <= 0) {
                     throw new BadRequestException('Có một vài món toping chưa được tìm thấy')
                 }
-                
+
                 const finalProductIngredient = new Map()
                 productDto.productIngredients.forEach((ingredients) => {
                     const key = ingredients.ingredientId
 
-                    if(finalProductIngredient.has(key)){
+                    if (finalProductIngredient.has(key)) {
                         const foundKey = finalProductIngredient.get(key)
                         foundKey.quantity += ingredients.quantity
-                    }else{
+                    } else {
                         finalProductIngredient.set(key, {
                             ...ingredients,
                             productId
                         })
                     }
-                })                
+                })
                 const productIngredient = Array.from(finalProductIngredient.values())
                 await this.modelProductIngredient.bulkCreate(productIngredient as any, { transaction })
             }

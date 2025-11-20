@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
+import { AfterCreate, AfterDestroy, AfterUpdate, BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
 import { Combo } from './combo.model';
 import { ProductVariant } from './product-variant.model';
 import { Product } from './product.model';
@@ -47,4 +47,36 @@ export class ComboItem extends Model<ComboItem> {
     type: DataType.INTEGER,
   })
   quantity: number;
+
+
+  // Hook tự động cập nhật ProductVariant
+    @AfterCreate
+    @AfterUpdate
+    static async updateVariantFlag(item: ComboItem) {
+        if (item.productVariantId) {
+            await ProductVariant.update(
+                { isComboItem: true }, // Tên cờ của bạn
+                { where: { id: item.productVariantId } }
+            );
+        }
+    }
+
+    // Hook khi xóa ComboItem
+    @AfterDestroy
+    static async removeVariantFlag(item: ComboItem) {
+        if (item.productVariantId) {
+            // Kiểm tra xem variant này còn ở trong combo nào khác không
+            const otherItems = await ComboItem.count({
+                where: { productVariantId: item.productVariantId }
+            });
+
+            // Nếu không còn, set cờ về false
+            if (otherItems === 0) {
+                await ProductVariant.update(
+                    { isComboItem: false },
+                    { where: { id: item.productVariantId } }
+                );
+            }
+        }
+    }
 }
