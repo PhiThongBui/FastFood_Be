@@ -1,6 +1,5 @@
 # 1. Dùng Node.js bản nhẹ nhất
-FROM node:18-alpine
-
+FROM node:18
 # 2. Tạo thư mục chứa code trong container
 WORKDIR /app
 
