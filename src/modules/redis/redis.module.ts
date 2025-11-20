@@ -5,17 +5,31 @@ import { REDIS_CLIENT } from './redis.constants';
 import { RedisService } from './redis.service';
 import { RedisTestController } from './redis.controller';
 
-@Global() // ⭐ Để sử dụng RedisService ở mọi nơi mà không cần import module
+@Global()
 @Module({
     imports: [ConfigModule],
     providers: [
         {
             provide: REDIS_CLIENT,
             useFactory: (configService: ConfigService) => {
+                const host = configService.get('REDIS_HOST') || 'localhost';
+                const port = configService.get('REDIS_PORT') || 6379;
+                const password = configService.get('REDIS_PASSWORD') || undefined;
+
+                // Kiểm tra xem có đang chạy ở localhost không
+                const isLocal = host === 'localhost';
+
                 return new Redis({
-                    host: configService.get('REDIS_HOST') || 'localhost',
-                    port: configService.get('REDIS_PORT') || 6379,
-                    password: configService.get('REDIS_PASSWORD') || undefined,
+                    host: host,
+                    port: port,
+                    password: password,
+                    
+                    // --- THÊM ĐOẠN NÀY (QUAN TRỌNG CHO UPSTASH) ---
+                    tls: isLocal ? undefined : {
+                        rejectUnauthorized: false // Bỏ qua lỗi chứng chỉ (giúp kết nối mượt hơn)
+                    },
+                    // ----------------------------------------------
+
                     retryStrategy: (times) => {
                         // Retry mỗi 3 giây, tối đa 5 phút
                         const delay = Math.min(times * 3000, 5 * 60 * 1000);
