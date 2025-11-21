@@ -43,9 +43,8 @@ export class UserService {
 
     async validateLogin(loginData: LoginDto) {
         const alreadyUser = await this.findByEmail(loginData.email)
-        if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!')
-
-        if(!alreadyUser.isEmailVerified) throw new BadRequestException('Email chưa được xác thực!')
+        if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!');            
+        if(!alreadyUser.dataValues.isEmailVerified) throw new BadRequestException('Email chưa được xác thực!')
         const matchesPassword = await alreadyUser.comparePassword(loginData.password)
 
         if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc khẩu không chính xác')
