@@ -3,7 +3,7 @@ import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('category')
 export class CategoryController {
@@ -27,6 +27,7 @@ export class CategoryController {
 
   @UseGuards(JWTGuard)
   @Get('all')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Lấy tất cả danh mục' })
   findAllCategories() {
     return this.categoryService.findAllCategories();
@@ -35,7 +36,6 @@ export class CategoryController {
 
   @Get('one/:id')
   @ApiOperation({ summary: 'Lấy danh mục theo id' })
-
   findOneCategory(@Param('id') id: number) {
     return this.categoryService.findOneCategory(id);
   }

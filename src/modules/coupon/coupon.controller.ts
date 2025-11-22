@@ -3,6 +3,7 @@ import { CouponService } from './coupon.service';
 import { CreateCouponDto } from './dto/createCoupon.dto';
 import { CreateOutputCoupon } from './types/coupon.type';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('coupon')
 export class CouponController {
@@ -15,6 +16,7 @@ export class CouponController {
 
   @Post('save-coupon')
   @UseGuards(JWTGuard)
+  @ApiBearerAuth('access-token')
   async saveCoupon(@Body() saveCouponDto: { userId: number; couponId: number }): Promise<void> {
     return this.couponService.saveCoupon(saveCouponDto.userId, saveCouponDto.couponId);
   }

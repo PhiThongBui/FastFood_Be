@@ -11,6 +11,7 @@ import { User } from '@/models';
 import { actionUpdateCartItem } from './types/cartItem.type';
 import { CartService } from '../cart/cart.service';
 import { Sequelize } from 'sequelize-typescript';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('cart-item')
 export class CartItemController {
@@ -73,6 +74,7 @@ export class CartItemController {
 
   @Get('/mergecart')
   @UseGuards(JWTGuard)
+  @ApiBearerAuth('access-token')
   async mergeCart(@Req() req: Request, @Res({ passthrough: true }) _res: Response) {
 
     const sessionId = Helper.getSessionIdFromRequest(req)
