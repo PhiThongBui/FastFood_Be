@@ -9,7 +9,7 @@ import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Lấy ConfigService từ AppModule ra để dùng chuẩn hơn
   const configService = app.get(ConfigService);
   const logger = new Logger(bootstrap.name);
@@ -17,18 +17,22 @@ async function bootstrap() {
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
   app.enableCors({
-    origin: ['https://fast-food-fe-eosin.vercel.app/homepage'], // Cho phép tất cả các domain (hoặc điền mảng ['https://vercel-app.com'])
+    origin: [
+      'https://fast-food-fe-eosin.vercel.app',
+      'http://localhost:3000'
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // Cho phép gửi cookie/token
+    credentials: true,
   });
+
 
   app.use(cookieParser());
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalFilters(new AllExceptionFilter());
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, 
-    forbidNonWhitelisted: true, 
+    whitelist: true,
+    forbidNonWhitelisted: true,
   }));
   app.useGlobalInterceptors(new TransformInterceptor());
 
@@ -61,6 +65,6 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   logger.log(`Application is running on port: ${port}`);
-  logger.log(`Swagger documentation available at: /api/v1`); 
+  logger.log(`Swagger documentation available at: /api/v1`);
 }
 bootstrap();
