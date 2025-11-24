@@ -13,4 +13,6 @@ export { CartItemsIngredient } from './cart-items-ingredient.model';
 export { Reviews } from './reviews.model';
 export { UserCoupons } from './user-coupons.model';
 export { Coupons } from './coupons.model';
+export { Combo } from './combo.model';
+export { ComboItem } from './combo-item.model';
 export { Address } from './address.model';

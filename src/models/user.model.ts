@@ -80,7 +80,7 @@ export class User extends Model<User> {
     @Column({
         allowNull: true,
         type: DataType.ENUM(...Object.values(AuthProvider)),
-        unique: true
+        defaultValue: AuthProvider.LOCAL
     })
     authProvider: AuthProvider
 

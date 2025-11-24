@@ -2,11 +2,28 @@ import { Module } from '@nestjs/common';
 import { SeederService } from './seeder.service';
 import { SeederController } from './seeder.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
-import {  Category, Ingredient, Product, ProductIngredient, ProductVariant, User } from '@/models';
+import {  Address, CartItems, CartItemsIngredient, Carts, Category, Combo, ComboItem, Coupons, Ingredient, Order, OrderItemIngredient, OrderItems, Product, ProductIngredient, ProductVariant, Reviews, User, UserCoupons } from '@/models';
 
 @Module({
   controllers: [SeederController],
   providers: [SeederService],
-  imports:[SequelizeModule.forFeature([User,Category,Product,ProductIngredient,ProductVariant,Ingredient])]
+  imports:[SequelizeModule.forFeature([Address, 
+    Category, 
+    Ingredient, 
+    Product, 
+    ProductIngredient, 
+    ProductVariant, 
+    User,
+    Combo,
+    ComboItem,
+    Coupons,
+    UserCoupons,
+    Carts,
+    CartItems,
+    CartItemsIngredient,
+    Order,
+    OrderItems,
+    OrderItemIngredient,
+    Reviews])]
 })
 export class SeederModule {}

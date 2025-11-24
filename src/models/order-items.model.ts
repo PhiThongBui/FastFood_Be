@@ -4,6 +4,7 @@ import { Order } from './order.model';
 import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
+import { Combo } from './combo.model';
 
 @Table
 export class OrderItems extends Model<OrderItems> {
@@ -27,6 +28,17 @@ export class OrderItems extends Model<OrderItems> {
         type: DataType.INTEGER,
     })
     productVariantId?: number | null;
+
+    @ForeignKey(() => Combo)
+    @Column({
+        allowNull: true, // Null nghĩa là mua món lẻ, có giá trị là mua combo
+        type: DataType.INTEGER,
+    })
+    comboId: number | null;
+
+    @BelongsTo(() => Combo)
+    combo: Combo;
+
 
     @BelongsTo(() => Order)
     order: Order;

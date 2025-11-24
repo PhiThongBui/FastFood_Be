@@ -16,6 +16,7 @@ import { IngredientService } from '../ingredient/ingredient.service';
 import { ProductIngredientService } from '../product-ingredient/product-ingredient.service';
 import { ResponseProductDetailDto } from './dto/getOne.dto';
 import { plainToInstance } from 'class-transformer';
+import { GetProductFeaturedDto } from './dto/getProductFeatured';
 
 @Injectable()
 export class ProductService {
@@ -303,5 +304,30 @@ export class ProductService {
         return {
             message: 'Xóa sản phẩm thành công'
         }
+    }
+
+    async getProductFeatured(): Promise<GetProductFeaturedDto[]> {
+        const result = await this.modelProduct.findAll({
+            where: {
+                isFeatured: true,
+                isActive: true
+            },
+            attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl'],
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
+                        include: [
+                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
+                        ],                       
+                    },
+                    
+                }
+            ],
+            order: [['createdAt', 'DESC']],
+        })
+
+        return result.map((product) => plainToInstance(GetProductFeaturedDto, product.get({ plain: true }), { excludeExtraneousValues: true }))
     }
 }

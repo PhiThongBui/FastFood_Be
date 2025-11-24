@@ -3,7 +3,8 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { filterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { GetProductFeaturedDto } from './dto/getProductFeatured';
 
 @Controller('product')
 export class ProductController {
@@ -14,33 +15,41 @@ export class ProductController {
   @Post('/create')
   @ApiOperation({ summary: 'Tạo sản phẩm với biến thể và toping(ingredient)' })
   @ApiResponse({ status: 201, description: 'Tạo sản phẩm th thành công.' })
-  async createProduct(@Body() createData:CreateProductDto){    
+  async createProduct(@Body() createData: CreateProductDto) {
     return this.productService.createProduct(createData)
   }
 
   @Get('/getone/:id')
-  async getOneProduct(@Param('id') id:number){
+  async getOneProduct(@Param('id') id: number) {
     return await this.productService.findOneProductById(id)
   }
 
   @Get('/getall')
-  async getAllProduct(@Query() filterSearch:filterProductDto){
+  async getAllProduct(@Query() filterSearch: filterProductDto) {
     return await this.productService.findAllProducts(filterSearch)
   }
 
   @Delete('/softdelete/:id')
-  async softDeleteProduct(@Param('id') id:number){
+  async softDeleteProduct(@Param('id') id: number) {
     return await this.productService.softDeteleProduct(id)
   }
 
   @Delete('/harddelete/:id')
-  async hardDeleteProduct(@Param('id') id:number){
+  async hardDeleteProduct(@Param('id') id: number) {
     return await this.productService.hardDeleteProduct(id)
   }
 
   @Put('/update/:id')
-  async updateProduct(@Param('id') id:number, @Body() updateData:UpdateProductDto){
+  async updateProduct(@Param('id') id: number, @Body() updateData: UpdateProductDto) {
     return await this.productService.updateProduct(id, updateData)
   }
-  
+
+  @Get('/getfeatured')
+  @ApiOperation({ summary: 'Lay danh sach san pham featured' })
+  @ApiResponse({ status: 200, description: 'Lay danh sach san pham featured' })
+  @ApiResponse({ status: 404, description: 'Khong tim thay san pham featured' })
+  async getProductFeatured() {
+    return await this.productService.getProductFeatured()
+  }
+
 }

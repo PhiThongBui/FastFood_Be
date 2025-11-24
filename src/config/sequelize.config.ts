@@ -1,4 +1,6 @@
 import { Address, CartItems, CartItemsIngredient, Carts, Category, Coupons, Ingredient, Order, OrderItemIngredient, OrderItems, Product, ProductIngredient, ProductVariant, Reviews, User, UserCoupons } from "@/models";
+import { ComboItem } from "@/models/combo-item.model";
+import { Combo } from "@/models/combo.model";
 import { ConfigService } from "@nestjs/config";
 
 export const sequelizeConfig = (config: ConfigService) => {
@@ -20,6 +22,6 @@ export const sequelizeConfig = (config: ConfigService) => {
             rejectUnauthorized: false, 
         }
     },
-    models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address],
+    models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address, Combo, ComboItem],
   }
 }

@@ -3,6 +3,7 @@ import { Carts } from './carts.model';
 import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { CartItemsIngredient } from './cart-items-ingredient.model';
+import { Combo } from './combo.model';
 
 @Table
 export class CartItems extends Model<CartItems> {
@@ -37,6 +38,15 @@ export class CartItems extends Model<CartItems> {
     @BelongsTo(() => ProductVariant)
     productVariant: ProductVariant;
 
+    @ForeignKey(() => Combo)
+    @Column({
+        allowNull: true, // Null nghĩa là mua món lẻ, có giá trị là mua combo
+        type: DataType.INTEGER,
+    })
+    comboId: number | null;
+
+    @BelongsTo(() => Combo)
+    combo: Combo;
 
     @Column({
         defaultValue: 1,
