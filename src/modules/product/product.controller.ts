@@ -5,6 +5,8 @@ import { filterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ApiOkResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
+import { Serialize } from '@/common/interceptors/serialize.interceptor';
+import { BestSellerDto } from './dto/bestSeller.dto';
 
 @Controller('product')
 export class ProductController {
@@ -45,11 +47,20 @@ export class ProductController {
   }
 
   @Get('/getfeatured')
+  @Serialize(GetProductFeaturedDto)
   @ApiOperation({ summary: 'Lay danh sach san pham featured' })
   @ApiResponse({ status: 200, description: 'Lay danh sach san pham featured' })
   @ApiResponse({ status: 404, description: 'Khong tim thay san pham featured' })
   async getProductFeatured() {
     return await this.productService.getProductFeatured()
+  }
+
+  @Get('/best-seller')
+  @ApiOperation({ summary: 'Lay danh sach san pham best seller' })
+  @ApiResponse({ status: 200, description: 'Lay danh sach san pham best seller' })
+  @ApiResponse({ status: 404, description: 'Khong tim thay san pham best seller' })
+  async getProductBestSeller() {
+    return await this.productService.getBestSellerProduct()
   }
 
 }

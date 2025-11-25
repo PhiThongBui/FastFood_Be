@@ -1,6 +1,6 @@
 import { log } from 'node:console';
 import { Sequelize } from 'sequelize-typescript';
-import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
+import { Category, Combo, ComboItem, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -17,6 +17,7 @@ import { ProductIngredientService } from '../product-ingredient/product-ingredie
 import { ResponseProductDetailDto } from './dto/getOne.dto';
 import { plainToInstance } from 'class-transformer';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
+import { ORDERSTATUS } from '@/models/order.model';
 
 @Injectable()
 export class ProductService {
@@ -24,6 +25,10 @@ export class ProductService {
         @InjectModel(Product) private readonly modelProduct: typeof Product,
         @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
+        @InjectModel(Order) private readonly modelOrder: typeof Order,
+        @InjectModel(Combo) private readonly modelCombo: typeof Combo,
+        @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
+        @InjectModel(OrderItems) private readonly modelOrderItems: typeof OrderItems,
         @InjectModel(Ingredient) private readonly modelIngredient: typeof Ingredient,
         @InjectModel(Category) private readonly modelCategory: typeof Category,
         private readonly configService: ConfigService,
@@ -306,28 +311,165 @@ export class ProductService {
         }
     }
 
-    async getProductFeatured(): Promise<GetProductFeaturedDto[]> {
-        const result = await this.modelProduct.findAll({
+    // async getProductFeatured(): Promise<GetProductFeaturedDto[]> {
+    //     const result = await this.modelProduct.findAll({
+    //         where: {
+    //             isFeatured: true,
+    //             isActive: true
+    //         },
+    //         attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl'],
+    //         include: [
+    //             {
+    //                 model: this.modelProductVariant,
+    //                 attributes: {
+    //                     exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
+    //                     include: [
+    //                         [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
+    //                     ],                       
+    //                 },
+
+    //             }
+    //         ],
+    //         order: [['createdAt', 'DESC']],
+    //     })
+
+    //     return result.map((product) => plainToInstance(GetProductFeaturedDto, product.get({ plain: true }), { excludeExtraneousValues: true }))
+    // }
+
+    async getProductFeatured() { // Lưu ý: Return type lúc này trả về Model Sequelize, không phải DTO
+        return this.modelProduct.findAll({
             where: {
                 isFeatured: true,
                 isActive: true
             },
-            attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl'],
+            // Bỏ attributes liệt kê dài dòng đi, Sequelize sẽ Select All
             include: [
                 {
+                    model: this.modelProductVariant,
+                    // Vẫn cần include attribute tính toán nếu bạn dùng SQL Literal
+                    attributes: {
+                        include: [
+                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
+                        ],
+                        // Không cần exclude dài dòng nữa, Interceptor sẽ lo
+                    },
+                }
+            ],
+            order: [['createdAt', 'DESC']],
+        });
+        // KHÔNG return result.map(...) nữa, cứ trả nguyên Model ra
+    }
+
+
+    async getBestSellerProduct() {
+        // =================================================================
+        // BƯỚC 1: GIỮ NGUYÊN (Logic tính toán Top ID không đổi)
+        // =================================================================
+        const [topProducts, topCombos] = await Promise.all([
+            this.modelOrderItems.findAll({
+                attributes: ['productId', [Sequelize.fn('SUM', Sequelize.col('quantity')), 'totalSold']],
+                where: { comboId: null },
+                include: [{ model: this.modelOrder, attributes: [], where: { orderStatus: ORDERSTATUS.DELIVERED } }],
+                group: ['productId'],
+                order: [[Sequelize.literal('"totalSold"'), 'DESC']],
+                limit: 2,
+                raw: true,
+            }),
+            this.modelOrderItems.findAll({
+                attributes: ['comboId', [Sequelize.fn('SUM', Sequelize.col('quantity')), 'totalSold']],
+                where: { comboId: { [Op.ne]: null } },
+                include: [{ model: this.modelOrder, attributes: [], where: { orderStatus: ORDERSTATUS.DELIVERED } }],
+                group: ['comboId'],
+                order: [[Sequelize.literal('"totalSold"'), 'DESC']],
+                limit: 1,
+                raw: true,
+            })
+        ]);
+
+        const productIds = topProducts.map(p => p.productId);
+        const comboIds = topCombos.map(c => c.comboId);
+
+        // =================================================================
+        // BƯỚC 2: QUERY CHI TIẾT (ĐÃ UPDATE)
+        // =================================================================
+        const [fullProducts, fullCombos] = await Promise.all([
+            // 1. Query Product lẻ (Giữ nguyên logic của bạn)
+            this.modelProduct.findAll({
+                where: { id: { [Op.in]: productIds }, isActive: true },
+                attributes: { exclude: ['createdAt', 'updatedAt', 'isActive'] },
+                include: [{
                     model: this.modelProductVariant,
                     attributes: {
                         exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
                         include: [
                             [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
-                        ],                       
-                    },
-                    
-                }
-            ],
-            order: [['createdAt', 'DESC']],
-        })
+                        ]
+                    }
+                }]
+            }),
 
-        return result.map((product) => plainToInstance(GetProductFeaturedDto, product.get({ plain: true }), { excludeExtraneousValues: true }))
+            // 2. Query Combo (UPDATE: Lấy thêm Items -> Product -> Variant)
+            // 2. Query Combo (UPDATE: Đã thêm logic tính toán variantPrice)
+            // 2. Query Combo (UPDATE: Sửa cấu trúc Include để tính toán đúng)
+            this.modelCombo.findAll({
+                where: { id: { [Op.in]: comboIds }, isActive: true },
+                attributes: ['id', 'name', 'slug', 'price', 'imageUrl', 'description'],
+                include: [
+                    {
+                        model: this.modelComboItem,
+                        as: 'items', // ⚠️ Kiểm tra model Combo: @HasMany(() => ComboItem) items;
+                        attributes: ['id', 'quantity'],
+                        include: [
+                            // 1. Lấy thông tin Product (để lấy basePrice)
+                            {
+                                model: this.modelProduct,
+                                as: 'product', // Khớp với @BelongsTo trong ComboItem
+                                attributes: ['id', 'name', 'slug', 'basePrice', 'imageUrl', 'description'],
+                            },
+                            // 2. Lấy thông tin Variant CỤ THỂ (để lấy modifiedPrice)
+                            // Đặt ngang hàng với Product, không lồng bên trong
+                            {
+                                model: this.modelProductVariant,
+                                as: 'productVariant', // Khớp với @BelongsTo trong ComboItem
+                                attributes: {
+                                    exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
+                                    include: [
+                                        // LOGIC TÍNH TOÁN
+                                        // items -> product (Lấy basePrice)
+                                        // items -> productVariant (Lấy modifiedPrice)
+                                        [
+                                            this.sequelize.literal(
+                                                `"items->product"."basePrice" + "items->productVariant"."modifiedPrice"`
+                                            ),
+                                            'variantPrice'
+                                        ]
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            })
+        ]);
+
+        // =================================================================
+        // BƯỚC 3: SẮP XẾP VÀ TRẢ VỀ (GIỮ NGUYÊN)
+        // =================================================================
+        const sortedProducts = topProducts.map(top => {
+            const detail = fullProducts.find(p => p.id === top.productId);
+            if (!detail) return null;
+            return detail.get({ plain: true });
+        }).filter(Boolean);
+
+        const sortedCombos = topCombos.map(top => {
+            const detail = fullCombos.find(c => c.id === top.comboId);
+            if (!detail) return null;
+            return detail.get({ plain: true });
+        }).filter(Boolean);
+
+        return {
+            product: sortedProducts,
+            combo: sortedCombos
+        };
     }
 }
