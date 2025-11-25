@@ -18,6 +18,7 @@ import { ResponseProductDetailDto } from './dto/getOne.dto';
 import { plainToInstance } from 'class-transformer';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { ORDERSTATUS } from '@/models/order.model';
+import { filterPizzaDto } from './dto/filter-pizza.dto';
 
 @Injectable()
 export class ProductService {
@@ -296,6 +297,77 @@ export class ProductService {
             data: result.rows,
         }
     }
+
+    // Backend - productController hoặc service
+    async findPizzaProducts(filterSearch: filterPizzaDto) {
+        // Force categoryId = 1 for pizza
+        const pizzaFilter = {
+            ...filterSearch,
+            categoryId: 1  // Override categoryId to always be 1
+        }
+
+        const { name, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder, minPrice, maxPrice } = pizzaFilter
+        const whereClause: Record<string, any> = {}
+
+        if (name !== undefined) {
+            whereClause.name = {
+                [Op.iLike]: `%${name}%`
+            }
+        }
+
+        // Always filter by categoryId = 1 for pizza
+        whereClause.categoryId = 1
+
+        if (isFeatured !== undefined) whereClause.isFeatured = isFeatured
+        whereClause.isActive = true
+
+        const currentPage = Number(page || 1)
+        const limitPage = Number(limit || this.configService.get('LIMIT_PAGE') || 10)
+        const offsetPage = Number(currentPage - 1) * limitPage
+
+        if (minPrice !== undefined || maxPrice !== undefined) {
+            whereClause.basePrice = {}
+            if (minPrice !== undefined) whereClause.basePrice[Op.gte] = minPrice
+            if (maxPrice !== undefined) whereClause.basePrice[Op.lte] = maxPrice
+        }
+
+        let orderClause: any[]
+
+        if (sortBy !== undefined) {
+            orderClause = [[sortBy, sortOrder || "DESC"]]
+        } else {
+            orderClause = [["createdAt", "DESC"]]
+        }
+
+        const result = await this.modelProduct.findAndCountAll({
+            where: whereClause,
+            limit: limitPage,
+            offset: offsetPage,
+            order: orderClause,
+            attributes:{
+                exclude: ['isActive','categoryId'],
+            },
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'isActive', 'productId'],
+                        include: [
+                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
+                        ]
+                    },
+                },
+            ]
+        })
+
+        return {
+            totalRecords: result.count,
+            page: currentPage,
+            numberData: result.rows.length,
+            data: result.rows,
+        }
+    }
+
     async softDeteleProduct(id: number) {
         await this.modelProduct.update({ isActive: false }, { where: { id } })
         return {

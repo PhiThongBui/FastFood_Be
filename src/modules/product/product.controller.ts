@@ -7,6 +7,7 @@ import { ApiOkResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { Serialize } from '@/common/interceptors/serialize.interceptor';
 import { BestSellerDto } from './dto/bestSeller.dto';
+import { filterPizzaDto } from './dto/filter-pizza.dto';
 
 @Controller('product')
 export class ProductController {
@@ -29,6 +30,14 @@ export class ProductController {
   @Get('/getall')
   async getAllProduct(@Query() filterSearch: filterProductDto) {
     return await this.productService.findAllProducts(filterSearch)
+  }
+
+  @Get('/get-all-pizza')
+  @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
+  @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
+  @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
+  async getAllPizza(@Query() filterSearch: filterPizzaDto) {
+    return await this.productService.findPizzaProducts(filterSearch)
   }
 
   @Delete('/softdelete/:id')
@@ -56,6 +65,7 @@ export class ProductController {
   }
 
   @Get('/best-seller')
+  @Serialize(BestSellerDto)
   @ApiOperation({ summary: 'Lay danh sach san pham best seller' })
   @ApiResponse({ status: 200, description: 'Lay danh sach san pham best seller' })
   @ApiResponse({ status: 404, description: 'Khong tim thay san pham best seller' })
