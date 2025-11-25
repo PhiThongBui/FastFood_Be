@@ -1,4 +1,3 @@
-import { log } from 'node:console';
 import { Sequelize } from 'sequelize-typescript';
 import { Category, Combo, ComboItem, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
@@ -9,14 +8,12 @@ import { Helper } from '@/utils/helper';
 import { Op } from 'sequelize';
 import { filterProductDto } from './dto/filter-product.dto';
 import { ConfigService } from '@nestjs/config';
-import e, { raw } from 'express';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductVariantService } from '../product-variant/product-variant.service';
 import { IngredientService } from '../ingredient/ingredient.service';
 import { ProductIngredientService } from '../product-ingredient/product-ingredient.service';
 import { ResponseProductDetailDto } from './dto/getOne.dto';
 import { plainToInstance } from 'class-transformer';
-import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { ORDERSTATUS } from '@/models/order.model';
 import { filterPizzaDto } from './dto/filter-pizza.dto';
 
@@ -303,60 +300,84 @@ export class ProductService {
         // Force categoryId = 1 for pizza
         const pizzaFilter = {
             ...filterSearch,
-            categoryId: 1  // Override categoryId to always be 1
+            categoryId: 1  // Override to always be 1
         }
 
-        const { name, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder, minPrice, maxPrice } = pizzaFilter
-        const whereClause: Record<string, any> = {}
+        const {
+            name,
+            isFeatured,
+            page,
+            limit,
+            sortBy,
+            sortOrder,
+            minPrice,
+            maxPrice
+        } = pizzaFilter
 
+        const whereClause: Record<string, any> = {
+            categoryId: 1,  // ✅ Chỉ lấy pizza (category 1)
+            isActive: true   // ✅ Chỉ lấy product active
+        }
+
+        // Search by name
         if (name !== undefined) {
             whereClause.name = {
                 [Op.iLike]: `%${name}%`
             }
         }
 
-        // Always filter by categoryId = 1 for pizza
-        whereClause.categoryId = 1
+        // Filter by isFeatured
+        if (isFeatured !== undefined) {
+            whereClause.isFeatured = isFeatured
+        }
 
-        if (isFeatured !== undefined) whereClause.isFeatured = isFeatured
-        whereClause.isActive = true
-
-        const currentPage = Number(page || 1)
-        const limitPage = Number(limit || this.configService.get('LIMIT_PAGE') || 10)
-        const offsetPage = Number(currentPage - 1) * limitPage
-
+        // Price range filter
         if (minPrice !== undefined || maxPrice !== undefined) {
             whereClause.basePrice = {}
-            if (minPrice !== undefined) whereClause.basePrice[Op.gte] = minPrice
-            if (maxPrice !== undefined) whereClause.basePrice[Op.lte] = maxPrice
+            if (minPrice !== undefined) {
+                whereClause.basePrice[Op.gte] = minPrice
+            }
+            if (maxPrice !== undefined) {
+                whereClause.basePrice[Op.lte] = maxPrice
+            }
         }
 
-        let orderClause: any[]
+        // Pagination
+        const currentPage = Number(page || 1)
+        const limitPage = Number(limit || this.configService.get('LIMIT_PAGE') || 10)
+        const offsetPage = (currentPage - 1) * limitPage
 
-        if (sortBy !== undefined) {
-            orderClause = [[sortBy, sortOrder || "DESC"]]
-        } else {
-            orderClause = [["createdAt", "DESC"]]
-        }
+        // Sorting
+        const orderField = sortBy || 'createdAt'
+        const orderDirection = sortOrder || 'DESC'
 
         const result = await this.modelProduct.findAndCountAll({
             where: whereClause,
             limit: limitPage,
             offset: offsetPage,
-            order: orderClause,
-            attributes:{
-                exclude: ['isActive','categoryId'],
+            order: [[orderField, orderDirection]],
+            distinct: true, // ✅ Quan trọng: Đảm bảo count đúng khi có include
+            attributes: {
+                exclude: ['isActive', 'categoryId'],
+                // ✅ Phải include field dùng trong ORDER BY nếu nó bị exclude
+                ...(orderField === 'createdAt' && { include: ['createdAt'] })
             },
             include: [
                 {
                     model: this.modelProductVariant,
+                    as: 'variants', // ✅ Đảm bảo alias đúng
                     attributes: {
                         exclude: ['createdAt', 'updatedAt', 'isActive', 'productId'],
                         include: [
-                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
+                            [
+                                this.sequelize.literal(
+                                    '"Product"."basePrice" + "variants"."modifiedPrice"'
+                                ),
+                                'variantPrice'
+                            ]
                         ]
-                    },
-                },
+                    }
+                }
             ]
         })
 
@@ -364,9 +385,10 @@ export class ProductService {
             totalRecords: result.count,
             page: currentPage,
             numberData: result.rows.length,
-            data: result.rows,
+            data: result.rows
         }
     }
+
 
     async softDeteleProduct(id: number) {
         await this.modelProduct.update({ isActive: false }, { where: { id } })
@@ -382,31 +404,6 @@ export class ProductService {
             message: 'Xóa sản phẩm thành công'
         }
     }
-
-    // async getProductFeatured(): Promise<GetProductFeaturedDto[]> {
-    //     const result = await this.modelProduct.findAll({
-    //         where: {
-    //             isFeatured: true,
-    //             isActive: true
-    //         },
-    //         attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl'],
-    //         include: [
-    //             {
-    //                 model: this.modelProductVariant,
-    //                 attributes: {
-    //                     exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
-    //                     include: [
-    //                         [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
-    //                     ],                       
-    //                 },
-
-    //             }
-    //         ],
-    //         order: [['createdAt', 'DESC']],
-    //     })
-
-    //     return result.map((product) => plainToInstance(GetProductFeaturedDto, product.get({ plain: true }), { excludeExtraneousValues: true }))
-    // }
 
     async getProductFeatured() { // Lưu ý: Return type lúc này trả về Model Sequelize, không phải DTO
         return this.modelProduct.findAll({
