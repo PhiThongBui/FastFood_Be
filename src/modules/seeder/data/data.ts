@@ -525,80 +525,117 @@ export const products = [
 ];
 
 export const productVariants = [
-  // Pizza Phô Mai (productId: 1)
-  { name: 'Nhỏ (15cm) Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 1 },
-  { name: 'Trung (20cm) Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 1 },
-  { name: 'Lớn (25cm) Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 1 },
+  // ============================================================
+  // GROUP 1: PIZZA (Sinh đủ 2 loại đế: Mỏng & Bình thường cho mọi size)
+  // Quy tắc giá: 15cm (+0), 20cm (+15k), 25cm (+25k)
+  // ============================================================
 
-  // Pizza Hải Sản (productId: 2)
-  { name: 'Nhỏ (15cm) Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 2 },
-  { name: 'Trung (20cm) Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 2 },
-  { name: 'Lớn (25cm) Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 2 },
+  // --- Pizza Phô Mai (productId: 1) ---
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 1 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 1 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 1 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 1 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 1 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 1 },
 
-  // Pizza Pepperoni (productId: 3)
-  { name: 'Nhỏ (15cm) Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 3 },
-  { name: 'Trung (20cm) Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 3 },
-  { name: 'Lớn (25cm) Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 3 },
+  // --- Pizza Hải Sản (productId: 2) ---
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 2 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 2 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 2 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 2 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 2 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 2 },
 
-  // Pizza 4 Loại Thịt (productId: 4)
-  { name: 'Nhỏ (15cm) Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 4 },
-  { name: 'Trung (20cm) Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 4 },
-  { name: 'Lớn (25cm) Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 4 },
+  // --- Pizza Pepperoni (productId: 3) ---
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 3 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 3 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 3 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 3 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 3 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 3 },
 
-  // Burger Bò (productId: 5)
-  { name: 'Thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 5 },
-  { name: 'Lớn', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: true, isActive: true, productId: 5 },
-  { name: 'Siêu lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: false, isActive: true, productId: 5 },
+  // --- Pizza 4 Loại Thịt (productId: 4) ---
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 4 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 4 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 4 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 4 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 4 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 4 },
 
-  // Burger Gà (productId: 6)
-  { name: 'Thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 6 },
-  { name: 'Lớn', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: true, isActive: true, productId: 6 },
-  { name: 'Siêu lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: false, isActive: true, productId: 6 },
+  // ============================================================
+  // GROUP 2: BURGER (Chỉ có type Bình thường)
+  // Quy tắc giá: 15cm (+0), 20cm (+12k), 25cm (+20k)
+  // ============================================================
 
-  // Burger Phô Mai (productId: 7)
-  { name: 'Thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 7 },
-  { name: 'Lớn', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 7 },
-  { name: 'Siêu lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: true, isActive: true, productId: 7 },
+  // --- Burger Bò (productId: 5) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 5 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: true, isActive: true, productId: 5 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: false, isActive: true, productId: 5 },
 
-  // Mỳ Ý Bò Bằm (productId: 8)
-  { name: 'Nhỏ', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 8 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 8 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 8 },
+  // --- Burger Gà (productId: 6) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 6 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: true, isActive: true, productId: 6 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: false, isActive: true, productId: 6 },
 
-  // Mỳ Ý Sốt Kem (productId: 9)
-  { name: 'Nhỏ', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 9 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 9 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 9 },
+  // --- Burger Phô Mai (productId: 7) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 7 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: true, isActive: true, productId: 7 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 20000, isComboItem: false, isActive: true, productId: 7 },
 
-  // Mỳ Ý Hải Sản (productId: 10)
-  { name: 'Nhỏ', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 10 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 10 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 10 },
+  // ============================================================
+  // GROUP 3: MỲ Ý (Chỉ có type Bình thường)
+  // Quy tắc giá: 15cm (+0), 20cm (+10k), 25cm (+18k)
+  // ============================================================
 
-  // Pepsi (productId: 11)
-  { name: 'Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 11 },
-  { name: 'Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 8000, isComboItem: false, isActive: true, productId: 11 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 11 },
+  // --- Mỳ Ý Bò Bằm (productId: 8) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 8 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 8 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 8 },
 
-  // Nước Cam Ép (productId: 12)
-  { name: 'Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 12 },
-  { name: 'Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 8000, isComboItem: false, isActive: true, productId: 12 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 12 },
+  // --- Mỳ Ý Sốt Kem (productId: 9) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 9 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 9 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 9 },
 
-  // Khoai Tây Chiên (productId: 13)
-  { name: 'Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 13 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 13 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 13 },
+  // --- Mỳ Ý Hải Sản (productId: 10) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 10 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 10000, isComboItem: false, isActive: true, productId: 10 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 18000, isComboItem: false, isActive: true, productId: 10 },
 
-  // Gà Viên Chiên (productId: 14)
-  { name: 'Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 14 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 14 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 14 },
+  // ============================================================
+  // GROUP 4: ĐỒ UỐNG (Chỉ có type Bình thường)
+  // Quy tắc giá: 15cm (+0), 20cm (+8k), 25cm (+15k)
+  // ============================================================
 
-  // Cà Phê Đen (productId: 15)
-  { name: 'Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: false, isActive: true, productId: 15 },
-  { name: 'Thường', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 15 },
-  { name: 'Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 15 },
+  // --- Pepsi (productId: 11) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 11 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 8000, isComboItem: false, isActive: true, productId: 11 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 11 },
+
+  // --- Nước Cam Ép (productId: 12) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 12 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 8000, isComboItem: false, isActive: true, productId: 12 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 12 },
+
+  // ============================================================
+  // GROUP 5: MÓN PHỤ (Chỉ có type Bình thường)
+  // Quy tắc giá: 15cm (+0), 20cm (+7k), 25cm (+12k)
+  // ============================================================
+
+  // --- Khoai Tây Chiên (productId: 13) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 13 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 13 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 13 },
+
+  // --- Gà Viên Chiên (productId: 14) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 14 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 14 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 14 },
+
+  // --- Cà Phê Đen (productId: 15) ---
+  { name: 'Cỡ Nhỏ', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 15 },
+  { name: 'Cỡ Vừa', size: '20cm', type: 'Bình thường', modifiedPrice: 7000, isComboItem: false, isActive: true, productId: 15 },
+  { name: 'Cỡ Lớn', size: '25cm', type: 'Bình thường', modifiedPrice: 12000, isComboItem: false, isActive: true, productId: 15 },
 ];
 
 export const productIngredients = [
