@@ -34,7 +34,6 @@ export class ProductIngredientService {
         return await this.modelProductIngredient.findAll(
             {
                 where: {
-                    isDefault: true,
                     productId
                 },
                 attributes: ['id','isDefault'],
