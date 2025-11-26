@@ -1,4 +1,4 @@
-import { ProductIngredient } from '@/models';
+import { Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
@@ -6,7 +6,11 @@ import { Op } from 'sequelize';
 @Injectable()
 export class ProductIngredientService {
     constructor(
-        @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient
+        @InjectModel(Product) private readonly modelProduct: typeof Product,
+        @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
+        @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
+        @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
+
     ) { }
 
     async existedProductIngredient(productIngredientsId: number[]) {
@@ -24,5 +28,23 @@ export class ProductIngredientService {
         if (idNotExsited.length > 0) {
             throw new BadRequestException(`ProductIngredient with id ${idNotExsited} not found!!!`);
         }
+    }
+
+    async getIngredientDefaultById(productId: number) {
+        return await this.modelProductIngredient.findAll(
+            {
+                where: {
+                    isDefault: true,
+                    productId
+                },
+                attributes: ['id','isDefault'],
+                include: [
+                    {
+                        model: this.ingredientModel,
+                        attributes: ['name', 'imageUrl', 'price' , 'isRequired']
+                    }
+                ]
+            }
+        );
     }
 }

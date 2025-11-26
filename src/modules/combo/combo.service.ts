@@ -120,37 +120,13 @@ export class ComboService {
                     model: this.comboItemModel,
                     as: 'items',
                     attributes: {
-                        exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId']
+                        exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId', 'quantity']
                     },
                     include: [
                         {
                             model: this.productModel,
-                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],
-                            include: [
-                                {
-                                    model: this.productIngredientModel,
-                                    attributes: ['id', 'quantity', 'isDefault'],
-                                    include: [
-                                        {
-                                            model: this.ingredientModel,
-                                            attributes: ['id', 'name', 'description', 'imageUrl', 'price', 'isRequired']
-                                        }
-                                    ]
-                                }
-                            ],
+                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],                          
                         },
-                        {
-                            model: this.productVariantModel,
-                            attributes: ['id', 'name', 'size', 'type', 'modifiedPrice',
-                                [
-                                    Sequelize.literal(
-                                        '("items->product"."basePrice" + "items->productVariant"."modifiedPrice")'
-                                    ),
-                                    'variantPrice'
-                                ]
-                            ]
-                        },
-
                     ]
                 }
             ]

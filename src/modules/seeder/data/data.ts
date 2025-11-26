@@ -825,80 +825,156 @@ export const productVariants = [
 ];
 
 export const productIngredients = [
-  // Pizza Phô Mai (productId: 1) - 3 ingredients
+  // Pizza Phô Mai (productId: 1) - 3 ingredients gốc + 5 mới
   { productId: 1, ingredientId: 1, isDefault: true, quantity: 2 },
-  { productId: 1, ingredientId: 10, isDefault: true, quantity: 1 },
+  { productId: 1, ingredientId: 10, isDefault: false, quantity: 1 },
   { productId: 1, ingredientId: 15, isDefault: false, quantity: 1 },
-
-  // Pizza Hải Sản (productId: 2) - 3 ingredients
-  { productId: 2, ingredientId: 1, isDefault: true, quantity: 1 },
-  { productId: 2, ingredientId: 3, isDefault: true, quantity: 1 },
-  { productId: 2, ingredientId: 14, isDefault: true, quantity: 1 },
-
-  // Pizza Pepperoni (productId: 3) - 3 ingredients
-  { productId: 3, ingredientId: 1, isDefault: true, quantity: 1 },
-  { productId: 3, ingredientId: 2, isDefault: true, quantity: 2 },
-  { productId: 3, ingredientId: 9, isDefault: false, quantity: 1 },
-
-  // Pizza 4 Loại Thịt (productId: 4) - 3 ingredients
-  { productId: 4, ingredientId: 2, isDefault: true, quantity: 1 },
-  { productId: 4, ingredientId: 4, isDefault: true, quantity: 1 },
-  { productId: 4, ingredientId: 5, isDefault: true, quantity: 1 },
-
-  // Burger Bò (productId: 5) - 3 ingredients
-  { productId: 5, ingredientId: 4, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 1
+  { productId: 1, ingredientId: 24, isDefault: false, quantity: 1 },
+  { productId: 1, ingredientId: 5, isDefault: false, quantity: 3 },
+  { productId: 1, ingredientId: 2, isDefault: false, quantity: 3 },
+  { productId: 1, ingredientId: 17, isDefault: true, quantity: 3 },
+  { productId: 1, ingredientId: 11, isDefault: false, quantity: 1 },
+  // Pizza Hải Sản (productId: 2) - 3 ingredients gốc + 5 mới
+  { productId: 2, ingredientId: 1, isDefault: false, quantity: 1 },
+  { productId: 2, ingredientId: 3, isDefault: false, quantity: 1 },
+  { productId: 2, ingredientId: 14, isDefault: false, quantity: 1 },
+  // Thêm mới cho productId 2
+  { productId: 2, ingredientId: 2, isDefault: false, quantity: 3 },
+  { productId: 2, ingredientId: 5, isDefault: false, quantity: 3 },
+  { productId: 2, ingredientId: 9, isDefault: true, quantity: 1 },
+  { productId: 2, ingredientId: 10, isDefault: true, quantity: 3 },
+  { productId: 2, ingredientId: 20, isDefault: false, quantity: 1 },
+  // Pizza Pepperoni (productId: 3) - 3 ingredients gốc + 5 mới
+  { productId: 3, ingredientId: 1, isDefault: false, quantity: 1 },
+  { productId: 3, ingredientId: 2, isDefault: false, quantity: 2 },
+  { productId: 3, ingredientId: 9, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 3
+  { productId: 3, ingredientId: 11, isDefault: false, quantity: 2 },
+  { productId: 3, ingredientId: 14, isDefault: true, quantity: 1 },
+  { productId: 3, ingredientId: 8, isDefault: false, quantity: 1 },
+  { productId: 3, ingredientId: 3, isDefault: false, quantity: 2 },
+  { productId: 3, ingredientId: 17, isDefault: false, quantity: 2 },
+  // Pizza 4 Loại Thịt (productId: 4) - 3 ingredients gốc + 5 mới
+  { productId: 4, ingredientId: 2, isDefault: false, quantity: 1 },
+  { productId: 4, ingredientId: 4, isDefault: false, quantity: 1 },
+  { productId: 4, ingredientId: 5, isDefault: false, quantity: 1 },
+  // Thêm mới cho productId 4
+  { productId: 4, ingredientId: 15, isDefault: false, quantity: 3 },
+  { productId: 4, ingredientId: 23, isDefault: false, quantity: 2 },
+  { productId: 4, ingredientId: 12, isDefault: true, quantity: 3 },
+  { productId: 4, ingredientId: 14, isDefault: false, quantity: 3 },
+  { productId: 4, ingredientId: 3, isDefault: true, quantity: 3 },
+  // Burger Bò (productId: 5) - 3 ingredients gốc + 5 mới
+  { productId: 5, ingredientId: 4, isDefault: false, quantity: 1 },
   { productId: 5, ingredientId: 13, isDefault: true, quantity: 1 },
-  { productId: 5, ingredientId: 17, isDefault: true, quantity: 1 },
-
-  // Burger Gà (productId: 6) - 3 ingredients
-  { productId: 6, ingredientId: 16, isDefault: true, quantity: 1 },
-  { productId: 6, ingredientId: 17, isDefault: true, quantity: 1 },
-  { productId: 6, ingredientId: 12, isDefault: true, quantity: 1 },
-
-  // Burger Phô Mai (productId: 7) - 3 ingredients
-  { productId: 7, ingredientId: 11, isDefault: true, quantity: 2 },
-  { productId: 7, ingredientId: 10, isDefault: false, quantity: 1 },
+  { productId: 5, ingredientId: 17, isDefault: false, quantity: 1 },
+  // Thêm mới cho productId 5
+  { productId: 5, ingredientId: 8, isDefault: false, quantity: 2 },
+  { productId: 5, ingredientId: 18, isDefault: false, quantity: 1 },
+  { productId: 5, ingredientId: 3, isDefault: false, quantity: 2 },
+  { productId: 5, ingredientId: 2, isDefault: false, quantity: 2 },
+  { productId: 5, ingredientId: 5, isDefault: true, quantity: 1 },
+  // Burger Gà (productId: 6) - 3 ingredients gốc + 5 mới
+  { productId: 6, ingredientId: 16, isDefault: false, quantity: 1 },
+  { productId: 6, ingredientId: 17, isDefault: false, quantity: 1 },
+  { productId: 6, ingredientId: 12, isDefault: false, quantity: 1 },
+  // Thêm mới cho productId 6
+  { productId: 6, ingredientId: 13, isDefault: true, quantity: 3 },
+  { productId: 6, ingredientId: 7, isDefault: true, quantity: 3 },
+  { productId: 6, ingredientId: 14, isDefault: false, quantity: 1 },
+  { productId: 6, ingredientId: 9, isDefault: false, quantity: 2 },
+  { productId: 6, ingredientId: 21, isDefault: false, quantity: 3 },
+  // Burger Phô Mai (productId: 7) - 3 ingredients gốc + 5 mới
+  { productId: 7, ingredientId: 11, isDefault: false, quantity: 2 },
+  { productId: 7, ingredientId: 10, isDefault: true, quantity: 1 },
   { productId: 7, ingredientId: 9, isDefault: false, quantity: 1 },
-
-  // Mỳ Ý Bò Bằm (productId: 8) - 3 ingredients
+  // Thêm mới cho productId 7
+  { productId: 7, ingredientId: 1, isDefault: false, quantity: 1 },
+  { productId: 7, ingredientId: 21, isDefault: false, quantity: 2 },
+  { productId: 7, ingredientId: 8, isDefault: false, quantity: 2 },
+  { productId: 7, ingredientId: 7, isDefault: true, quantity: 1 },
+  { productId: 7, ingredientId: 14, isDefault: false, quantity: 1 },
+  // Mỳ Ý Bò Bằm (productId: 8) - 3 ingredients gốc + 5 mới
   { productId: 8, ingredientId: 2, isDefault: true, quantity: 1 },
-  { productId: 8, ingredientId: 5, isDefault: true, quantity: 1 },
-  { productId: 8, ingredientId: 7, isDefault: true, quantity: 1 },
-
-  // Mỳ Ý Sốt Kem (productId: 9) - 3 ingredients
+  { productId: 8, ingredientId: 5, isDefault: false, quantity: 1 },
+  { productId: 8, ingredientId: 7, isDefault: false, quantity: 1 },
+  // Thêm mới cho productId 8
+  { productId: 8, ingredientId: 24, isDefault: false, quantity: 1 },
+  { productId: 8, ingredientId: 19, isDefault: false, quantity: 3 },
+  { productId: 8, ingredientId: 16, isDefault: false, quantity: 3 },
+  { productId: 8, ingredientId: 18, isDefault: true, quantity: 3 },
+  { productId: 8, ingredientId: 8, isDefault: false, quantity: 2 },
+  // Mỳ Ý Sốt Kem (productId: 9) - 3 ingredients gốc + 5 mới
   { productId: 9, ingredientId: 15, isDefault: true, quantity: 1 },
-  { productId: 9, ingredientId: 12, isDefault: true, quantity: 1 },
-  { productId: 9, ingredientId: 9, isDefault: false, quantity: 1 },
-
-  // Mỳ Ý Hải Sản (productId: 10) - 3 ingredients
-  { productId: 10, ingredientId: 4, isDefault: true, quantity: 1 },
-  { productId: 10, ingredientId: 6, isDefault: true, quantity: 1 },
+  { productId: 9, ingredientId: 12, isDefault: false, quantity: 1 },
+  { productId: 9, ingredientId: 9, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 9
+  { productId: 9, ingredientId: 8, isDefault: false, quantity: 1 },
+  { productId: 9, ingredientId: 5, isDefault: false, quantity: 3 },
+  { productId: 9, ingredientId: 20, isDefault: false, quantity: 3 },
+  { productId: 9, ingredientId: 19, isDefault: false, quantity: 3 },
+  { productId: 9, ingredientId: 3, isDefault: false, quantity: 2 },
+  // Mỳ Ý Hải Sản (productId: 10) - 3 ingredients gốc + 5 mới
+  { productId: 10, ingredientId: 4, isDefault: false, quantity: 1 },
+  { productId: 10, ingredientId: 6, isDefault: false, quantity: 1 },
   { productId: 10, ingredientId: 11, isDefault: true, quantity: 1 },
-
-  // Pepsi (productId: 11) - 3 ingredients
+  // Thêm mới cho productId 10
+  { productId: 10, ingredientId: 16, isDefault: false, quantity: 3 },
+  { productId: 10, ingredientId: 23, isDefault: false, quantity: 3 },
+  { productId: 10, ingredientId: 18, isDefault: false, quantity: 3 },
+  { productId: 10, ingredientId: 20, isDefault: true, quantity: 1 },
+  { productId: 10, ingredientId: 12, isDefault: false, quantity: 2 },
+  // Pepsi (productId: 11) - 3 ingredients gốc + 5 mới
   { productId: 11, ingredientId: 5, isDefault: true, quantity: 1 },
   { productId: 11, ingredientId: 8, isDefault: false, quantity: 1 },
   { productId: 11, ingredientId: 12, isDefault: false, quantity: 1 },
-
-  // Nước Cam Ép (productId: 12) - 3 ingredients
+  // Thêm mới cho productId 11
+  { productId: 11, ingredientId: 7, isDefault: false, quantity: 3 },
+  { productId: 11, ingredientId: 18, isDefault: false, quantity: 3 },
+  { productId: 11, ingredientId: 1, isDefault: false, quantity: 3 },
+  { productId: 11, ingredientId: 4, isDefault: true, quantity: 1 },
+  { productId: 11, ingredientId: 11, isDefault: false, quantity: 1 },
+  // Nước Cam Ép (productId: 12) - 3 ingredients gốc + 5 mới
   { productId: 12, ingredientId: 4, isDefault: false, quantity: 1 },
-  { productId: 12, ingredientId: 7, isDefault: true, quantity: 1 },
+  { productId: 12, ingredientId: 7, isDefault: false, quantity: 1 },
   { productId: 12, ingredientId: 9, isDefault: false, quantity: 1 },
-
-  // Khoai Tây Chiên (productId: 13) - 3 ingredients
-  { productId: 13, ingredientId: 13, isDefault: true, quantity: 1 },
-  { productId: 13, ingredientId: 12, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 12
+  { productId: 12, ingredientId: 21, isDefault: true, quantity: 2 },
+  { productId: 12, ingredientId: 6, isDefault: false, quantity: 1 },
+  { productId: 12, ingredientId: 20, isDefault: true, quantity: 2 },
+  { productId: 12, ingredientId: 1, isDefault: false, quantity: 1 },
+  { productId: 12, ingredientId: 23, isDefault: false, quantity: 3 },
+  // Khoai Tây Chiên (productId: 13) - 3 ingredients gốc + 5 mới
+  { productId: 13, ingredientId: 13, isDefault: false, quantity: 1 },
+  { productId: 13, ingredientId: 12, isDefault: false, quantity: 1 },
   { productId: 13, ingredientId: 11, isDefault: false, quantity: 1 },
-
-  // Gà Viên Chiên (productId: 14) - 3 ingredients
-  { productId: 14, ingredientId: 13, isDefault: true, quantity: 1 },
-  { productId: 14, ingredientId: 15, isDefault: true, quantity: 1 },
-  { productId: 14, ingredientId: 16, isDefault: false, quantity: 1 },
-
-  // Cà Phê Đen (productId: 15) - 3 ingredients
-  { productId: 15, ingredientId: 11, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 13
+  { productId: 13, ingredientId: 3, isDefault: false, quantity: 1 },
+  { productId: 13, ingredientId: 14, isDefault: true, quantity: 3 },
+  { productId: 13, ingredientId: 19, isDefault: false, quantity: 2 },
+  { productId: 13, ingredientId: 8, isDefault: true, quantity: 1 },
+  { productId: 13, ingredientId: 16, isDefault: false, quantity: 3 },
+  // Gà Viên Chiên (productId: 14) - 3 ingredients gốc + 5 mới
+  { productId: 14, ingredientId: 13, isDefault: false, quantity: 1 },
+  { productId: 14, ingredientId: 15, isDefault: false, quantity: 1 },
+  { productId: 14, ingredientId: 16, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 14
+  { productId: 14, ingredientId: 10, isDefault: false, quantity: 3 },
+  { productId: 14, ingredientId: 14, isDefault: false, quantity: 1 },
+  { productId: 14, ingredientId: 3, isDefault: false, quantity: 1 },
+  { productId: 14, ingredientId: 24, isDefault: false, quantity: 2 },
+  { productId: 14, ingredientId: 12, isDefault: true, quantity: 3 },
+  // Cà Phê Đen (productId: 15) - 3 ingredients gốc + 5 mới
+  { productId: 15, ingredientId: 11, isDefault: false, quantity: 1 },
   { productId: 15, ingredientId: 3, isDefault: false, quantity: 1 },
-  { productId: 15, ingredientId: 8, isDefault: false, quantity: 1 },
+  { productId: 15, ingredientId: 8, isDefault: true, quantity: 1 },
+  // Thêm mới cho productId 15
+  { productId: 15, ingredientId: 21, isDefault: false, quantity: 1 },
+  { productId: 15, ingredientId: 10, isDefault: true, quantity: 1 },
+  { productId: 15, ingredientId: 22, isDefault: false, quantity: 1 },
+  { productId: 15, ingredientId: 1, isDefault: false, quantity: 2 },
+  { productId: 15, ingredientId: 4, isDefault: false, quantity: 1 },
 ];
 
 
