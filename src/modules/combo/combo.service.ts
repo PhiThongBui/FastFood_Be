@@ -3,7 +3,7 @@ import { Combo } from '@/models/combo.model';
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateComboDto } from './dto/create-combo.dto';
-import { Category, Product, ProductVariant } from '@/models';
+import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { CategoryService } from '../category/category.service';
 import { Helper } from '@/utils/helper';
 import { Sequelize } from 'sequelize-typescript';
@@ -18,6 +18,8 @@ export class ComboService {
         @InjectModel(Category) private readonly categoryModel: typeof Category,
         @InjectModel(Product) private readonly productModel: typeof Product,
         @InjectModel(ProductVariant) private readonly productVariantModel: typeof ProductVariant,
+        @InjectModel(ProductIngredient) private readonly productIngredientModel: typeof ProductIngredient,
+        @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
         private readonly categoryService: CategoryService,
         private readonly transaction: Sequelize
     ) { }
@@ -117,29 +119,29 @@ export class ComboService {
                 {
                     model: this.comboItemModel,
                     as: 'items',
-                    attributes: ['id', 'quantity', 'productId', 'productVariantId'],
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId']
+                    },
                     include: [
                         {
                             model: this.productModel,
-                            as: 'product',
-                            attributes: [
-                                'id',
-                                'name',
-                                'slug',
-                                'basePrice',
-                                'description',
-                                'imageUrl'
-                            ]
+                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],
+                            include: [
+                                {
+                                    model: this.productIngredientModel,
+                                    attributes: ['id', 'quantity', 'isDefault'],
+                                    include: [
+                                        {
+                                            model: this.ingredientModel,
+                                            attributes: ['id', 'name', 'description', 'imageUrl', 'price', 'isRequired']
+                                        }
+                                    ]
+                                }
+                            ],
                         },
                         {
                             model: this.productVariantModel,
-                            as: 'productVariant',
-                            attributes: [
-                                'id',
-                                'name',
-                                'size',
-                                'type',
-                                'modifiedPrice',
+                            attributes: ['id', 'name', 'size', 'type', 'modifiedPrice',
                                 [
                                     Sequelize.literal(
                                         '("items->product"."basePrice" + "items->productVariant"."modifiedPrice")'
@@ -147,7 +149,8 @@ export class ComboService {
                                     'variantPrice'
                                 ]
                             ]
-                        }
+                        },
+
                     ]
                 }
             ]

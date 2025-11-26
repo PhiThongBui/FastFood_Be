@@ -364,6 +364,16 @@ export class ProductService {
             },
             include: [
                 {
+                    model: this.modelProductIngredient,
+                    attributes: ['id', 'quantity', 'isDefault'],
+                    include: [
+                        {
+                            model: this.modelIngredient,
+                            attributes: ['id', 'name', 'description', 'imageUrl', 'price', 'isRequired']
+                        }
+                    ]
+                },
+                {
                     model: this.modelProductVariant,
                     as: 'variants', // ✅ Đảm bảo alias đúng
                     attributes: {

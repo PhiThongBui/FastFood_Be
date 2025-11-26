@@ -13,7 +13,6 @@ import {
 // ==================== QUERY DTO ====================
 export class GetAllComboQueryDto {
   @ApiPropertyOptional({ 
-    example: 1, 
     description: 'Số trang (bắt đầu từ 1)',
     minimum: 1 
   })
@@ -24,7 +23,6 @@ export class GetAllComboQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({ 
-    example: 10, 
     description: 'Số lượng item mỗi trang',
     minimum: 1 
   })
@@ -35,7 +33,6 @@ export class GetAllComboQueryDto {
   limit?: number = 10;
 
   @ApiPropertyOptional({ 
-    example: 'name', 
     description: 'Trường để sắp xếp',
     enum: ['name', 'price', 'createdAt']
   })
@@ -47,7 +44,6 @@ export class GetAllComboQueryDto {
   sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional({ 
-    example: 'DESC', 
     description: 'Thứ tự sắp xếp',
     enum: ['ASC', 'DESC']
   })
@@ -59,7 +55,6 @@ export class GetAllComboQueryDto {
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
 
   @ApiPropertyOptional({ 
-    example: 'pizza', 
     description: 'Tìm kiếm theo tên hoặc mô tả' 
   })
   @IsOptional()
@@ -67,7 +62,6 @@ export class GetAllComboQueryDto {
   search?: string;
 
   @ApiPropertyOptional({ 
-    example: true, 
     description: 'Lọc combo nổi bật' 
   })
   @IsOptional()

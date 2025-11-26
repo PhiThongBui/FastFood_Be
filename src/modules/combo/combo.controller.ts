@@ -22,7 +22,6 @@ export class ComboController {
     description: 'Danh sách combo',
     type: GetAllComboResponseDto
   })
-  @Serialize(GetAllComboResponseDto)
   async getAllCombos(@Query() query: GetAllComboQueryDto) {
     return this.comboService.getAllCombos(query);
   }

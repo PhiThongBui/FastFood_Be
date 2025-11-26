@@ -4,13 +4,13 @@ import { ComboController } from './combo.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Combo } from '@/models/combo.model';
 import { ComboItem } from '@/models/combo-item.model';
-import { Category, Product, ProductVariant } from '@/models';
+import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { CategoryService } from '../category/category.service';
 import { CategoryModule } from '../category/category.module';
 
 @Module({
   controllers: [ComboController],
   providers: [ComboService],
-  imports: [SequelizeModule.forFeature([Combo, ComboItem, Category, Product, ProductVariant]), CategoryModule],
+  imports: [SequelizeModule.forFeature([Combo, ComboItem, Category, Product, ProductVariant, ProductIngredient, Ingredient]), CategoryModule],
 })
 export class ComboModule {}
