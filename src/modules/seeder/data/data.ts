@@ -663,6 +663,91 @@ export const productVariants = [
   { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 4 },
   { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 4 },
 
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 16 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 16 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 16 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 16 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 16 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 16 },
+
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 5 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 5 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 5 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 5 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 5 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 5 },
+
+  // productId: 6
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 6 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 6 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 6 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 6 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 6 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 6 },
+
+  // productId: 7
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 7 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 7 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 7 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 7 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 7 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 7 },
+
+  // productId: 8
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 8 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 8 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 8 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 8 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 8 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 8 },
+
+  // productId: 9
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 9 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 9 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 9 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 9 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 9 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 9 },
+
+  // productId: 10
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 10 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 10 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 10 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 10 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 10 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 10 },
+
+  // productId: 11
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 11 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 11 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 11 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 11 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 11 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 11 },
+
+  // productId: 12
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 12 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 12 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 12 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 12 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 12 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 12 },
+
+  // productId: 13
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 13 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 13 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 13 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 13 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 13 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 13 },
+
+  // productId: 14
+  { name: 'Nhỏ (15cm) - Đế Mỏng', size: '15cm', type: 'Mỏng', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 14 },
+  { name: 'Nhỏ (15cm) - Đế Bình thường', size: '15cm', type: 'Bình thường', modifiedPrice: 0, isComboItem: true, isActive: true, productId: 14 },
+  { name: 'Trung (20cm) - Đế Mỏng', size: '20cm', type: 'Mỏng', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 14 },
+  { name: 'Trung (20cm) - Đế Bình thường', size: '20cm', type: 'Bình thường', modifiedPrice: 15000, isComboItem: false, isActive: true, productId: 14 },
+  { name: 'Lớn (25cm) - Đế Mỏng', size: '25cm', type: 'Mỏng', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 14 },
+  { name: 'Lớn (25cm) - Đế Bình thường', size: '25cm', type: 'Bình thường', modifiedPrice: 25000, isComboItem: false, isActive: true, productId: 14 },
   // ============================================================
   // GROUP 2: BURGER (Chỉ có type Bình thường)
   // Quy tắc giá: 15cm (+0), 20cm (+12k), 25cm (+20k)
