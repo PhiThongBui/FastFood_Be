@@ -6,8 +6,7 @@ import {
   IsInt, 
   IsOptional, 
   IsString, 
-  Min, 
-  IsBoolean 
+  Min 
 } from 'class-validator';
 
 // ==================== QUERY DTO ====================
@@ -20,7 +19,7 @@ export class GetAllComboQueryDto {
   @Type(() => Number)
   @IsInt({ message: 'Page phải là số nguyên' })
   @Min(1, { message: 'Page phải lớn hơn 0' })
-  page?: number = 1;
+  page?: number;
 
   @ApiPropertyOptional({ 
     description: 'Số lượng item mỗi trang',
@@ -30,7 +29,7 @@ export class GetAllComboQueryDto {
   @Type(() => Number)
   @IsInt({ message: 'Limit phải là số nguyên' })
   @Min(1, { message: 'Limit phải lớn hơn 0' })
-  limit?: number = 10;
+  limit?: number;
 
   @ApiPropertyOptional({ 
     description: 'Trường để sắp xếp',
@@ -60,14 +59,6 @@ export class GetAllComboQueryDto {
   @IsOptional()
   @IsString({ message: 'Search phải là chuỗi ký tự' })
   search?: string;
-
-  @ApiPropertyOptional({ 
-    description: 'Lọc combo nổi bật' 
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean({ message: 'isFeatured phải là boolean' })
-  isFeatured?: boolean;
 }
 
 // ==================== RESPONSE DTO ====================
@@ -208,17 +199,20 @@ export class PaginationMetaDto {
   @Expose()
   total: number;
 
-  @ApiProperty({ example: 1, description: 'Trang hiện tại' })
+  @ApiPropertyOptional({ example: 1, description: 'Trang hiện tại (nếu có phân trang)' })
   @Expose()
-  page: number;
+  @IsOptional()
+  page?: number;
 
-  @ApiProperty({ example: 10, description: 'Số item mỗi trang' })
+  @ApiPropertyOptional({ example: 10, description: 'Số item mỗi trang (nếu có phân trang)' })
   @Expose()
-  limit: number;
+  @IsOptional()
+  limit?: number;
 
-  @ApiProperty({ example: 5, description: 'Tổng số trang' })
+  @ApiPropertyOptional({ example: 5, description: 'Tổng số trang (nếu có phân trang)' })
   @Expose()
-  totalPages: number;
+  @IsOptional()
+  totalPages?: number;
 }
 
 // Final Response DTO

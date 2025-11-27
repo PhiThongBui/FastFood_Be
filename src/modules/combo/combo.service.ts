@@ -81,51 +81,49 @@ export class ComboService {
     }
 
     async getAllCombos(query: GetAllComboQueryDto) {
-        const {
-            page = 1,
-            limit = 10,
-            sortBy = 'createdAt',
-            sortOrder = 'DESC',
-            search,
-            isFeatured
-        } = query;
+    const {
+        page,
+        limit,
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+        search
+    } = query;
 
+    const hasPagination = page !== undefined && limit !== undefined;
+
+    // Build where conditions
+    const where: any = {
+        isActive: true
+    };
+
+    if (search) {
+        where[Op.or] = [
+            { name: { [Op.iLike]: `%${search}%` } },
+            { description: { [Op.iLike]: `%${search}%` } }
+        ];
+    }
+
+    // Build query options
+    const queryOptions: any = {
+        where,
+        order: [[sortBy, sortOrder]],
+        attributes: {
+            exclude: ['categoryId', 'isFeatured']
+        },
+        distinct: true,
+    };
+
+    if (hasPagination) {
         const offset = (page - 1) * limit;
+        queryOptions.limit = limit;
+        queryOptions.offset = offset;
+    }
 
-        // Build where conditions
-        const where: any = {
-            isActive: true
-        };
+    const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
+    const plainCombos = combos.map(combo => combo.get({ plain: true }));
 
-        if (search) {
-            where[Op.or] = [
-                { name: { [Op.iLike]: `%${search}%` } },
-                { description: { [Op.iLike]: `%${search}%` } }
-            ];
-        }
-
-        if (isFeatured !== undefined) {
-            where.isFeatured = isFeatured;
-        }
-
-        // Query combos with nested includes
-        const { count, rows: combos } = await this.comboModel.findAndCountAll({
-            where,
-            limit,
-            offset,
-            order: [[sortBy, sortOrder]],
-            attributes: {
-                exclude: ['categoryId','isFeatured']
-            },
-            distinct: true, // Quan trọng khi có include để count đúng
-        });
-
-        // Transform to plain objects
-        const plainCombos = combos.map(combo => combo.get({ plain: true }));
-
-        // Calculate pagination metadata
+    if (hasPagination) {
         const totalPages = Math.ceil(count / limit);
-
         return {
             data: plainCombos,
             meta: {
@@ -136,6 +134,15 @@ export class ComboService {
             }
         };
     }
+
+    return {
+        data: plainCombos,
+        meta: {
+            total: count
+        }
+    };
+}
+
 
     async getComboById(id: number) {
         return await this.comboModel.findByPk(id,{
