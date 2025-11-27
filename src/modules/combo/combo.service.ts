@@ -114,22 +114,10 @@ export class ComboService {
             limit,
             offset,
             order: [[sortBy, sortOrder]],
+            attributes: {
+                exclude: ['categoryId','isFeatured']
+            },
             distinct: true, // Quan trọng khi có include để count đúng
-            include: [
-                {
-                    model: this.comboItemModel,
-                    as: 'items',
-                    attributes: {
-                        exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId', 'quantity']
-                    },
-                    include: [
-                        {
-                            model: this.productModel,
-                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],                          
-                        },
-                    ]
-                }
-            ]
         });
 
         // Transform to plain objects
@@ -147,5 +135,41 @@ export class ComboService {
                 totalPages
             }
         };
+    }
+
+    async getComboById(id: number) {
+        return await this.comboModel.findByPk(id,{
+            attributes: {
+                exclude: ['categoryId','isFeatured']
+            },
+            include:[
+                {
+                    model: this.comboItemModel,
+                    as: 'items',
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId', 'quantity']
+                    },
+                    include: [
+                        {
+                            model: this.productModel,
+                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],
+                            include: [
+                                {
+                                    model: this.productIngredientModel,
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId'] },
+                                    include: [{ model: this.ingredientModel, attributes: ['name', 'description', 'imageUrl', 'price'] }]
+                                }
+                            ]                          
+                        },
+                        {
+                            model: this.productVariantModel,
+                            attributes:{
+                                exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
+                            }
+                        }
+                    ]
+                }
+            ]
+        })
     }
 }

@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Param } from '@nestjs/common';
 import { ComboService } from './combo.service';
 import { CreateComboDto } from './dto/create-combo.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { GetAllComboQueryDto, GetAllComboResponseDto } from './dto/getalls.dto';
 import { Serialize } from '@/common/interceptors/serialize.interceptor';
+import { ComboDetailDto } from './dto/getById.dto';
 
 @Controller('combo')
 export class ComboController {
@@ -25,4 +26,11 @@ export class ComboController {
   async getAllCombos(@Query() query: GetAllComboQueryDto) {
     return this.comboService.getAllCombos(query);
   }
+
+  @Get('/public/get-by-id/:id')
+  @ApiParam({ name: 'id', type: Number })
+  @Serialize(ComboDetailDto)
+  async getComboById(@Param('id') id: number) {
+    return this.comboService.getComboById(id);
+  } 
 }
