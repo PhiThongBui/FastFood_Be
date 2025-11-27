@@ -86,7 +86,7 @@ export class ComboService {
         limit,
         sortBy = 'createdAt',
         sortOrder = 'DESC',
-        search
+        search,
     } = query;
 
     const hasPagination = page !== undefined && limit !== undefined;
