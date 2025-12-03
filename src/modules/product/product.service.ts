@@ -16,6 +16,7 @@ import { ResponseProductDetailDto } from './dto/getOne.dto';
 import { plainToInstance } from 'class-transformer';
 import { ORDERSTATUS } from '@/models/order.model';
 import { filterPizzaDto } from './dto/filter-pizza.dto';
+import { QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
 
 @Injectable()
 export class ProductService {
@@ -295,7 +296,6 @@ export class ProductService {
         }
     }
 
-    // Backend - productController hoặc service
     async findPizzaProducts(filterSearch: filterPizzaDto) {
         // Force categoryId = 1 for pizza
         const pizzaFilter = {
@@ -551,4 +551,106 @@ export class ProductService {
             combo: sortedCombos
         };
     }
+
+    async getAllPizza(query: QueryGetAllPizzaDto) {
+        const { page, limit, sortBy, sortOrder } = query;
+        console.log("page", page);
+        console.log("limit", limit);
+
+        // Kiểm tra có pagination hay không
+        const hasPagination = page !== undefined && limit !== undefined;
+
+        // Build where conditions - luôn filter theo categoryId = 1
+        const where: any = {
+            isActive: true,
+            categoryId: 1  // Luôn filter theo category = 1
+        };
+
+        // Build order - ưu tiên isFeatured trước, sau đó mới sort theo các tiêu chí khác
+        const orderArray: any[] = [
+            ['isFeatured', 'DESC'], // Featured items lên đầu (true > false)
+        ];
+
+        // Thêm sort động nếu có
+        if (sortBy && sortOrder) {
+            orderArray.push([sortBy, sortOrder.toUpperCase()]);
+        } else {
+            // Mặc định sort theo createdAt DESC
+            orderArray.push(['createdAt', 'DESC']);
+        }
+
+        // Build query options
+        const queryOptions: any = {
+            where,
+            order: orderArray,
+            attributes: {
+                exclude: ['categoryId']
+            },
+            distinct: true,
+        };
+
+        // Thêm pagination nếu có
+        if (hasPagination) {
+            const offset = (page - 1) * limit;
+            queryOptions.limit = limit;
+            queryOptions.offset = offset;
+        }
+
+        // Query products
+        const { count, rows: products } = await this.modelProduct.findAndCountAll(queryOptions);
+
+        // Transform to plain objects
+        const plainProducts = products.map(product => product.get({ plain: true }));
+        // Return with or without pagination metadata
+        if (hasPagination) {
+            const totalPages = Math.ceil(count / limit);
+            return {
+                meta: {
+                    total: count,
+                    page,
+                    limit,
+                    totalPages
+                },
+                data: plainProducts
+            };
+        }
+
+        // Return all without pagination (cũng filtered by categoryId = 1)
+        return {
+            data: plainProducts,
+            meta: {
+                total: count
+            }
+        };
+    }
+
+
+    async getProductByIdCustom(id: number) {
+         return await this.modelProduct.findByPk(id, {
+            attributes: [],
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
+                    }
+                },
+                {
+                    model: this.modelProductIngredient,
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId']
+                    },
+                    include: [
+                        {
+                            model: this.modelIngredient,
+                            attributes: ['name', 'imageUrl', 'price', 'isRequired']
+                        }
+                    ]
+                }
+            ]
+        });
+
+    }
+
+
 }

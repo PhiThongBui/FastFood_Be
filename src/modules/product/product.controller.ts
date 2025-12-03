@@ -8,6 +8,7 @@ import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { Serialize } from '@/common/interceptors/serialize.interceptor';
 import { BestSellerDto } from './dto/bestSeller.dto';
 import { filterPizzaDto } from './dto/filter-pizza.dto';
+import { DataGetAllPizzaDto, GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
 
 @Controller('product')
 export class ProductController {
@@ -32,13 +33,13 @@ export class ProductController {
     return await this.productService.findAllProducts(filterSearch)
   }
 
-  @Get('/get-all-pizza')
-  @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
-  @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
-  @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
-  async getAllPizza(@Query() filterSearch: filterPizzaDto) {
-    return await this.productService.findPizzaProducts(filterSearch)
-  }
+  // @Get('/get-all-pizza')
+  // @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
+  // @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
+  // @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
+  // async getAllPizza(@Query() filterSearch: filterPizzaDto) {
+  //   return await this.productService.findPizzaProducts(filterSearch)
+  // }
 
   @Delete('/softdelete/:id')
   async softDeleteProduct(@Param('id') id: number) {
@@ -71,6 +72,24 @@ export class ProductController {
   @ApiResponse({ status: 404, description: 'Khong tim thay san pham best seller' })
   async getProductBestSeller() {
     return await this.productService.getBestSellerProduct()
+  }
+
+  @Get('/get-all-pizza')
+  @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
+  @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
+  @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
+  @Serialize(GetAllPizzaResponseDto)
+  async getAllPizza(@Query() filterSearch: QueryGetAllPizzaDto) {
+    return await this.productService.getAllPizza(filterSearch)
+  }
+
+
+  @Get('/get-by-id-custom/:id/combovariant')
+  @ApiOperation({ summary: 'Lay danh sach variant và ingredient dùng cho combo detail' })
+  @ApiResponse({ status: 200, description: 'Lay danh sach variant và ingredient' })
+  @ApiResponse({ status: 404, description: 'Khong tim thay danh sach variant và ingredient' })
+  async getProductByIdCustom(@Param('id') id: number) {
+    return await this.productService.getProductByIdCustom(id)
   }
 
 }

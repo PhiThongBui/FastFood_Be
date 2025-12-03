@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 // DTO cho Ingredient
 export class IngredientDto {
@@ -60,7 +60,7 @@ export class ProductDto {
   @Expose()
   name: string;
 
-  @Expose()
+  @Exclude()
   slug: string;
 
   @Expose()

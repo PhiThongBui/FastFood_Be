@@ -35,36 +35,6 @@ export class ProductVariantService {
     return await this.modelProductVariant.findByPk(id);
   }
 
-  async findByIdCustom(id: number) {
-    return await this.modelProductVariant.findByPk(id, {
-      attributes: {
-        exclude: ['createdAt', 'updatedAt', 'productId', 'isActive']
-      },
-      include: [
-        {
-          model: this.modelProduct,
-          attributes: ['name', 'description', 'basePrice', 'imageUrl'],
-          include: [
-            {
-              model: this.modelProductIngredient,
-              attributes: {
-                exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId']
-              },
-              include: [
-                {
-                  model: this.ingredientModel,
-                  attributes: ['name', 'description', 'imageUrl', 'price']
-                }
-              ]
-            }
-          ]
-        },
-
-      ]
-    });
-  }
-
-
   async findProductIsCombo(_id: number) {
     const targetVariant = await this.modelProductVariant.findByPk(_id);
     if (!targetVariant) {

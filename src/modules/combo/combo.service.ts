@@ -146,9 +146,7 @@ export class ComboService {
 
     async getComboById(id: number) {
         return await this.comboModel.findByPk(id,{
-            attributes: {
-                exclude: ['categoryId','isFeatured']
-            },
+            attributes:[],
             include:[
                 {
                     model: this.comboItemModel,
@@ -159,12 +157,12 @@ export class ComboService {
                     include: [
                         {
                             model: this.productModel,
-                            attributes: ['id', 'name', 'slug', 'basePrice', 'description', 'imageUrl'],
+                            attributes: ['id', 'name', 'imageUrl'],
                             include: [
                                 {
                                     model: this.productIngredientModel,
-                                    attributes: { exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId'] },
-                                    include: [{ model: this.ingredientModel, attributes: ['name', 'description', 'imageUrl', 'price'] }]
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId', 'quantity'] },
+                                    include: [{ model: this.ingredientModel, attributes: ['name'] }]
                                 }
                             ]                          
                         },

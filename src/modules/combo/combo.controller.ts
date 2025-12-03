@@ -29,7 +29,7 @@ export class ComboController {
 
   @Get('/public/get-by-id/:id')
   @ApiParam({ name: 'id', type: Number })
-  @Serialize(ComboDetailDto)
+  // @Serialize(ComboDetailDto)
   async getComboById(@Param('id') id: number) {
     return this.comboService.getComboById(id);
   } 
