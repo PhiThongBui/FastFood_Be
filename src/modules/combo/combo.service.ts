@@ -81,73 +81,73 @@ export class ComboService {
     }
 
     async getAllCombos(query: GetAllComboQueryDto) {
-    const {
-        page,
-        limit,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
-        search,
-    } = query;
+        const {
+            page,
+            limit,
+            sortBy = 'createdAt',
+            sortOrder = 'DESC',
+            search,
+        } = query;
 
-    const hasPagination = page !== undefined && limit !== undefined;
+        const hasPagination = page !== undefined && limit !== undefined;
 
-    // Build where conditions
-    const where: any = {
-        isActive: true
-    };
+        // Build where conditions
+        const where: any = {
+            isActive: true
+        };
 
-    if (search) {
-        where[Op.or] = [
-            { name: { [Op.iLike]: `%${search}%` } },
-            { description: { [Op.iLike]: `%${search}%` } }
-        ];
-    }
+        if (search) {
+            where[Op.or] = [
+                { name: { [Op.iLike]: `%${search}%` } },
+                { description: { [Op.iLike]: `%${search}%` } }
+            ];
+        }
 
-    // Build query options
-    const queryOptions: any = {
-        where,
-        order: [[sortBy, sortOrder]],
-        attributes: {
-            exclude: ['categoryId', 'isFeatured']
-        },
-        distinct: true,
-    };
+        // Build query options
+        const queryOptions: any = {
+            where,
+            order: [[sortBy, sortOrder]],
+            attributes: {
+                exclude: ['categoryId', 'isFeatured']
+            },
+            distinct: true,
+        };
 
-    if (hasPagination) {
-        const offset = (page - 1) * limit;
-        queryOptions.limit = limit;
-        queryOptions.offset = offset;
-    }
+        if (hasPagination) {
+            const offset = (page - 1) * limit;
+            queryOptions.limit = limit;
+            queryOptions.offset = offset;
+        }
 
-    const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
-    const plainCombos = combos.map(combo => combo.get({ plain: true }));
+        const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
+        const plainCombos = combos.map(combo => combo.get({ plain: true }));
 
-    if (hasPagination) {
-        const totalPages = Math.ceil(count / limit);
+        if (hasPagination) {
+            const totalPages = Math.ceil(count / limit);
+            return {
+                data: plainCombos,
+                meta: {
+                    total: count,
+                    page,
+                    limit,
+                    totalPages
+                }
+            };
+        }
+
         return {
             data: plainCombos,
             meta: {
-                total: count,
-                page,
-                limit,
-                totalPages
+                total: count
             }
         };
     }
 
-    return {
-        data: plainCombos,
-        meta: {
-            total: count
-        }
-    };
-}
-
 
     async getComboById(id: number) {
-        return await this.comboModel.findByPk(id,{
-            attributes:[],
-            include:[
+        return await this.comboModel.findByPk(id, {
+            attributes: [],
+            include: [
                 {
                     model: this.comboItemModel,
                     as: 'items',
@@ -162,13 +162,17 @@ export class ComboService {
                                 {
                                     model: this.productIngredientModel,
                                     attributes: { exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId', 'quantity'] },
+                                    where: {
+                                        isDefault: true  // ✅ Thêm filter isDefault = true
+                                    },
+                                    required: false,  // ✅ LEFT JOIN để không bỏ product không có ingredient default
                                     include: [{ model: this.ingredientModel, attributes: ['name'] }]
                                 }
-                            ]                          
+                            ]
                         },
                         {
                             model: this.productVariantModel,
-                            attributes:{
+                            attributes: {
                                 exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
                             }
                         }

@@ -35,6 +35,7 @@ import { CronModule } from './modules/cron/cron.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { LookupModule } from './modules/lookup/lookup.module';
 
 @Module({
   imports: [
@@ -104,7 +105,8 @@ import { PricingModule } from './modules/pricing/pricing.module';
     // CronModule,
     MailModule,
     ComboModule,
-    PricingModule
+    PricingModule,
+    LookupModule
   ],
   providers:[
     RedisService
