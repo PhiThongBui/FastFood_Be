@@ -66,7 +66,7 @@ export class ProductController {
   }
 
   @Get('/best-seller')
-  @Serialize(BestSellerDto)
+  // @Serialize(BestSellerDto)
   @ApiOperation({ summary: 'Lay danh sach san pham best seller' })
   @ApiResponse({ status: 200, description: 'Lay danh sach san pham best seller' })
   @ApiResponse({ status: 404, description: 'Khong tim thay san pham best seller' })

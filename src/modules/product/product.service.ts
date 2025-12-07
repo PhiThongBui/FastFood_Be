@@ -475,16 +475,7 @@ export class ProductService {
             // 1. Query Product lẻ (Giữ nguyên logic của bạn)
             this.modelProduct.findAll({
                 where: { id: { [Op.in]: productIds }, isActive: true },
-                attributes: { exclude: ['createdAt', 'updatedAt', 'isActive'] },
-                include: [{
-                    model: this.modelProductVariant,
-                    attributes: {
-                        exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
-                        include: [
-                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
-                        ]
-                    }
-                }]
+                attributes: ['id', 'name', 'basePrice', 'imageUrl'],
             }),
 
             // 2. Query Combo (UPDATE: Lấy thêm Items -> Product -> Variant)
@@ -492,42 +483,7 @@ export class ProductService {
             // 2. Query Combo (UPDATE: Sửa cấu trúc Include để tính toán đúng)
             this.modelCombo.findAll({
                 where: { id: { [Op.in]: comboIds }, isActive: true },
-                attributes: ['id', 'name', 'slug', 'price', 'imageUrl', 'description'],
-                include: [
-                    {
-                        model: this.modelComboItem,
-                        as: 'items', // ⚠️ Kiểm tra model Combo: @HasMany(() => ComboItem) items;
-                        attributes: ['id', 'quantity'],
-                        include: [
-                            // 1. Lấy thông tin Product (để lấy basePrice)
-                            {
-                                model: this.modelProduct,
-                                as: 'product', // Khớp với @BelongsTo trong ComboItem
-                                attributes: ['id', 'name', 'slug', 'basePrice', 'imageUrl', 'description'],
-                            },
-                            // 2. Lấy thông tin Variant CỤ THỂ (để lấy modifiedPrice)
-                            // Đặt ngang hàng với Product, không lồng bên trong
-                            {
-                                model: this.modelProductVariant,
-                                as: 'productVariant', // Khớp với @BelongsTo trong ComboItem
-                                attributes: {
-                                    exclude: ['createdAt', 'updatedAt', 'productId', 'isActive'],
-                                    include: [
-                                        // LOGIC TÍNH TOÁN
-                                        // items -> product (Lấy basePrice)
-                                        // items -> productVariant (Lấy modifiedPrice)
-                                        [
-                                            this.sequelize.literal(
-                                                `"items->product"."basePrice" + "items->productVariant"."modifiedPrice"`
-                                            ),
-                                            'variantPrice'
-                                        ]
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                ]
+                attributes: ['id', 'name', 'price', 'imageUrl'],
             })
         ]);
 
