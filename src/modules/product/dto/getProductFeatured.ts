@@ -19,11 +19,11 @@ export class VariantFeatruedDto {
     type: string
 
     @ApiProperty({ example: 10000 })
-    @Expose()
+    @Exclude()
     modifiedPrice: number
 
     @ApiProperty({ example: 189000 })
-    @Expose()
+    @Exclude()
     variantPrice: number
 }
 export class GetProductFeaturedDto {
@@ -36,15 +36,15 @@ export class GetProductFeaturedDto {
     name: string
 
     @ApiProperty({ example: "pizza-hai-san-pesto" })
-    @Expose()
+    @Exclude()
     slug: string
 
     @ApiProperty({ example: 179000 })
-    @Expose()
+    @Exclude()
     basePrice: number
 
     @ApiProperty({ example: "Pizza với hải sản tươi ngon và sốt Pesto đặc biệt" })
-    @Expose()
+    @Exclude()
     description: string
 
     @ApiProperty({

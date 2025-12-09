@@ -16,12 +16,11 @@ export class ComboController {
     return await this.comboService.createCombo(data)
   }
 
-  @Get('/public/get-all')
+  @Get('/public/get-all-combo')
   @ApiOperation({ summary: 'Lấy danh sách tất cả combo' })
   @ApiResponse({
     status: 200,
     description: 'Danh sách combo',
-    type: GetAllComboResponseDto
   })
   async getAllCombos(@Query() query: GetAllComboQueryDto) {
     return this.comboService.getAllCombos(query);

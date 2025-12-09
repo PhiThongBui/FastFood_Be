@@ -421,22 +421,13 @@ export class ProductService {
                 isFeatured: true,
                 isActive: true
             },
-            // Bỏ attributes liệt kê dài dòng đi, Sequelize sẽ Select All
             include: [
                 {
                     model: this.modelProductVariant,
-                    // Vẫn cần include attribute tính toán nếu bạn dùng SQL Literal
-                    attributes: {
-                        include: [
-                            [this.sequelize.literal(`"Product"."basePrice" + "variants"."modifiedPrice"`), 'variantPrice']
-                        ],
-                        // Không cần exclude dài dòng nữa, Interceptor sẽ lo
-                    },
                 }
             ],
             order: [['createdAt', 'DESC']],
         });
-        // KHÔNG return result.map(...) nữa, cứ trả nguyên Model ra
     }
 
 
@@ -510,9 +501,6 @@ export class ProductService {
 
     async getAllPizza(query: QueryGetAllPizzaDto) {
         const { page, limit, sortBy, sortOrder } = query;
-        console.log("page", page);
-        console.log("limit", limit);
-
         // Kiểm tra có pagination hay không
         const hasPagination = page !== undefined && limit !== undefined;
 

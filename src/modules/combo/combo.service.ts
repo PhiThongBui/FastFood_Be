@@ -84,8 +84,8 @@ export class ComboService {
         const {
             page,
             limit,
-            sortBy = 'createdAt',
-            sortOrder = 'DESC',
+            sortBy ,
+            sortOrder,
             search,
         } = query;
 
@@ -93,8 +93,17 @@ export class ComboService {
 
         // Build where conditions
         const where: any = {
-            isActive: true
+            isActive: true,
         };
+        const orderArray: any[] = [
+            ['isFeatured', 'DESC'], // Featured items lên đầu (true > false)
+        ];
+        if (sortBy && sortOrder) {
+            orderArray.push([sortBy, sortOrder.toUpperCase()]);
+        } else {
+            // Mặc định sort theo createdAt DESC
+            orderArray.push(['createdAt', 'DESC']);
+        }
 
         if (search) {
             where[Op.or] = [
@@ -106,9 +115,9 @@ export class ComboService {
         // Build query options
         const queryOptions: any = {
             where,
-            order: [[sortBy, sortOrder]],
+            order: orderArray,
             attributes: {
-                exclude: ['categoryId', 'isFeatured']
+                exclude: ['categoryId']
             },
             distinct: true,
         };
@@ -121,7 +130,7 @@ export class ComboService {
 
         const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
         const plainCombos = combos.map(combo => combo.get({ plain: true }));
-
+        
         if (hasPagination) {
             const totalPages = Math.ceil(count / limit);
             return {
