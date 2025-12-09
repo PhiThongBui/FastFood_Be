@@ -1,5 +1,5 @@
 import { CartItems, Product, ProductIngredient, ProductVariant } from '@/models';
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
 import { Sequelize } from 'sequelize-typescript';
@@ -17,34 +17,43 @@ export class PricingService {
     ) { }
 
     async getSinglePricing(dto: GetPricingNoQuantityDto) {
-        const { productVariantId } = dto;
+        const { productVariantId, productId } = dto;
 
-        const productVariant = await this.modelProductVariant.findByPk(productVariantId, {
-            include: [
-                {
-                    model: this.modelProduct,
-                    attributes: {
-                        include: [
-                            [
-                                this.sequelize.literal(
-                                    `"product"."basePrice" + "ProductVariant"."modifiedPrice"`
-                                ),
-                                'variantPrice'
+        if (productVariantId) {
+            const productVariant = await this.modelProductVariant.findByPk(productVariantId, {
+                include: [
+                    {
+                        model: this.modelProduct,
+                        attributes: {
+                            include: [
+                                [
+                                    this.sequelize.literal(
+                                        `"product"."basePrice" + "ProductVariant"."modifiedPrice"`
+                                    ),
+                                    'variantPrice'
+                                ]
                             ]
-                        ]
+                        }
                     }
-                }
-            ]
-        });
+                ]
+            });
 
-        if (!productVariant) return 'Không có dữ liệu';
+            if (!productVariant) throw new BadRequestException('Không có dữ liệu giá cho biến thể này');
 
-        const rawData = productVariant.get({ plain: true }) as unknown as {
-            product: Product & { variantPrice: number }
-        };
+            const rawData = productVariant.get({ plain: true }) as unknown as {
+                product: Product & { variantPrice: number }
+            };
 
-        return {
-            variantPrice: rawData.product.variantPrice
+            return {
+                variantPrice: rawData.product.variantPrice
+            }
+        }
+        if(productId){
+            const product = await this.modelProduct.findByPk(productId);
+            if (!product) throw new BadRequestException('Không có dữ liệu giá cho sản phẩm này');
+            return {
+                variantPrice: product.dataValues.basePrice
+            }
         }
     }
 
