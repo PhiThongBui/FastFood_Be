@@ -19,6 +19,12 @@ export class PricingService {
     async getSinglePricing(dto: GetPricingNoQuantityDto) {
         const { productVariantId, productId } = dto;
 
+        if (productVariantId && productId) {
+            throw new BadRequestException(
+                'Chỉ truyền 1 trong 2: productVariantId hoặc productId'
+            );
+        }
+
         if (productVariantId) {
             const productVariant = await this.modelProductVariant.findByPk(productVariantId, {
                 include: [
@@ -30,31 +36,37 @@ export class PricingService {
                                     this.sequelize.literal(
                                         `"product"."basePrice" + "ProductVariant"."modifiedPrice"`
                                     ),
-                                    'variantPrice'
-                                ]
-                            ]
-                        }
-                    }
-                ]
+                                    'variantPrice',
+                                ],
+                            ],
+                        },
+                    },
+                ],
             });
 
-            if (!productVariant) throw new BadRequestException('Không có dữ liệu giá cho biến thể này');
+            if (!productVariant) {
+                throw new BadRequestException('Không có dữ liệu giá cho biến thể này');
+            }
 
-            const rawData = productVariant.get({ plain: true }) as unknown as {
-                product: Product & { variantPrice: number }
+            const raw = productVariant.get({ plain: true }) as unknown as {
+                product: Product & { variantPrice: number };
             };
 
-            return {
-                variantPrice: rawData.product.variantPrice
-            }
+            return { variantPrice: raw.product.variantPrice };
         }
-        if(productId){
+
+        if (productId) {
             const product = await this.modelProduct.findByPk(productId);
-            if (!product) throw new BadRequestException('Không có dữ liệu giá cho sản phẩm này');
-            return {
-                variantPrice: product.dataValues.basePrice
+            if (!product) {
+                throw new BadRequestException('Không có dữ liệu giá cho sản phẩm này');
             }
+
+            return { variantPrice: product.dataValues.basePrice };
         }
+        throw new BadRequestException(
+            'Cần truyền productVariantId hoặc productId'
+        );
     }
+
 
 }

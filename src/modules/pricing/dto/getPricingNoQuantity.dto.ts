@@ -1,19 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsOptional } from 'class-validator';
 
 export class GetPricingNoQuantityDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'ID của biến thể sản phẩm',
   })
   @IsInt()
-  @IsNotEmpty()
-  productVariantId: number;
+  @IsOptional()
+  productVariantId?: number;
 
- @ApiProperty({
-    description: 'ID của sản phẩm',
+  @ApiPropertyOptional({
+    description: 'ID của sản phẩm không có biến thể',
   })
   @IsInt()
-  @IsNotEmpty()
-  productId: number;
-
+  @IsOptional()
+  productId?: number;
 }
