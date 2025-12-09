@@ -14,5 +14,5 @@ export class GetPricingNoQuantityDto {
   })
   @IsInt()
   @IsOptional()
-  productId?: number;
+  productId?: number
 }
