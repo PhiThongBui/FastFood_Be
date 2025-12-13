@@ -9,4 +9,10 @@ export class LookupController {
   lookUpVariant(@Param('productId') productId: number) {
     return this.lookupService.lookUpVariant(productId);
   }
+
+
+  @Get('change-variantcombo/:productId')
+  lookUpChangeVariantCombo(@Param('productId') productId: number) {
+    return this.lookupService.lookUpChangeVariantCombo(productId);
+  }
 }

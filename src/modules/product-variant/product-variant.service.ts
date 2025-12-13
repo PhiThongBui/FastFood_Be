@@ -65,7 +65,7 @@ export class ProductVariantService {
       include: [
         {
           model: this.modelProduct,
-          attributes: ['name', 'imageUrl'],
+          attributes: ['id', 'name', 'imageUrl'],
         },
       ]
     });
