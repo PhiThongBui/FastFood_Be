@@ -134,12 +134,13 @@ export class CartItemService {
             quantity,
             userId,
             sessionId,
-            ingredientId,
+            singleProductOptions,
             comboId,
             selectedOptions
         } = dataAdd;
 
         const transaction = await this.sequelize.transaction();
+
         try {
             if (quantity <= 0) {
                 throw new BadGatewayException('Số lượng phải lớn hơn 0!!!');
@@ -147,70 +148,81 @@ export class CartItemService {
 
             const isCombo = !!comboId;
 
-            // Validate combo
+            // 1. VALIDATION
             if (isCombo) {
                 if (!comboId || !selectedOptions || selectedOptions.length === 0) {
                     throw new BadGatewayException('Dữ liệu combo không hợp lệ!');
                 }
-
-                const existedCombo = await this.modelCombo.findByPk(comboId);
+                const existedCombo = await this.modelCombo.findByPk(comboId, { transaction });
                 if (!existedCombo) throw new BadGatewayException('Combo không tồn tại!');
 
+                // Validate chi tiết combo (Hàm này bạn đã có)
                 await this.validateComboOptions(selectedOptions, transaction);
             }
-            // Validate món lẻ
             else {
+                // Validate Món Lẻ
                 if (!productId || !productVariantId) {
                     throw new BadGatewayException('Thiếu thông tin sản phẩm!');
                 }
-
-                const existedProduct = await this.modelProduct.findByPk(productId);
+                const existedProduct = await this.modelProduct.findByPk(productId, { transaction });
                 if (!existedProduct) throw new BadGatewayException('Sản phẩm không tồn tại!');
 
                 const existedProductVariant = await this.productVariantService.findById(productVariantId);
                 if (!existedProductVariant) throw new BadGatewayException('Biến thể không tồn tại!');
             }
 
+            // 2. LẤY GIỎ HÀNG
             const cart = await this.cartService.getCartByContext(sessionId, userId, transaction);
-
             let matchingCartItem: CartItems | null;
 
-            if (isCombo && comboId && selectedOptions) {
+            // 3. TÌM KIẾM TRÙNG LẶP (MATCHING LOGIC)
+            if (isCombo && selectedOptions) {
                 matchingCartItem = await this.matchingComboCartItem(
                     cart.id,
                     comboId,
                     selectedOptions
                 );
-            } else if (!isCombo && productId && productVariantId) {
-                const ingredientIds = ingredientId ?? [];
+            } else {
+                // Logic Mới cho Món Lẻ: Dùng singleProductOptions
+                const options = singleProductOptions || [];
                 matchingCartItem = await this.matchingRegularCartItem(
                     cart.id,
-                    productId,
-                    productVariantId,
-                    ingredientIds
+                    productId!,
+                    productVariantId!,
+                    options,
+                    transaction // 🔥 FIX 3: Truyền transaction vào đây
                 );
-            } else {
-                throw new BadGatewayException('Dữ liệu không hợp lệ!');
             }
 
-            // Nếu tìm thấy -> tăng số lượng
+            // 4. XỬ LÝ KẾT QUẢ
             if (matchingCartItem) {
+                // === TRƯỜNG HỢP A: ĐÃ CÓ -> TĂNG SỐ LƯỢNG ===
+
+                // Tăng số lượng item chính
                 await matchingCartItem.increment('quantity', {
                     by: quantity,
                     transaction
                 });
 
-                await matchingCartItem.reload({ transaction });
+                // Cập nhật các thành phần phụ (Ingredients) cho Món Lẻ
+                if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
+                    for (const opt of singleProductOptions) {
+                        // Công thức: Tăng thêm = (Số Pizza thêm vào) * (Số topping trên 1 Pizza)
+                        // VD: Thêm 2 Pizza, mỗi cái 2 Cheese => Tăng thêm 4 Cheese vào kho
+                        const totalIngredientToAdd = quantity * opt.quantity;
 
-                if (!isCombo && ingredientId && ingredientId.length > 0) {
-                    const cartItemIngredients = await this.modelCartItemIngredient.findAll({
-                        where: { cartItemId: matchingCartItem.id },
-                        transaction
-                    });
-
-                    await Promise.all(cartItemIngredients.map(item =>
-                        item.increment('quantity', { by: quantity, transaction })
-                    ));
+                        await this.modelCartItemIngredient.increment(
+                            { quantity: totalIngredientToAdd }, 
+                            {
+                                where: {
+                                    cartItemId: matchingCartItem.id,
+                                    ingredientId: opt.ingredientId,
+                                    type: opt.type
+                                },
+                                transaction
+                            }
+                        );
+                    }
                 }
 
                 await transaction.commit();
@@ -219,41 +231,46 @@ export class CartItemService {
                     data: matchingCartItem
                 };
             }
+            else {
+                // === TRƯỜNG HỢP B: CHƯA CÓ -> TẠO MỚI ===
 
-            // Tạo mới
-            const newCartItem = await this.modelCartItems.create({
-                cartId: cart.id,
-                productId: isCombo ? null : productId,  // Null nếu combo
-                productVariantId: isCombo ? null : productVariantId,  // Null nếu combo
-                comboId: isCombo ? comboId : null,
-                selectedOptions: isCombo ? selectedOptions : null,
-                quantity: quantity,
-            } as CartItems, {
-                transaction
-            });
+                const newCartItem = await this.modelCartItems.create({
+                    cartId: cart.id,
+                    productId: isCombo ? null : productId,
+                    productVariantId: isCombo ? null : productVariantId,
+                    comboId: isCombo ? comboId : null,
+                    selectedOptions: isCombo ? selectedOptions : null, // JSON Combo
+                    quantity: quantity,
+                } as any, { transaction });
 
-            if (!isCombo && ingredientId && ingredientId.length > 0) {
-                const cartItemIngredients = ingredientId.map(id => ({
-                    cartItemId: newCartItem.id,
-                    ingredientId: id,
-                    quantity: quantity
-                }));
+                // Lưu Ingredients cho Món Lẻ
+               if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
+                    const ingredientsToCreate: any[] = singleProductOptions.map(opt => ({
+                        cartItemId: newCartItem.id,
+                        ingredientId: opt.ingredientId,
+                        
+                        // 🔥 QUAN TRỌNG: Lưu tổng số lượng
+                        // Tổng = (Số Pizza) * (Số topping trên 1 Pizza)
+                        quantity: quantity * opt.quantity, 
+                        
+                        type: opt.type
+                    }))
 
-                await this.modelCartItemIngredient.bulkCreate(
-                    cartItemIngredients as CartItemsIngredient[],
-                    { transaction }
-                );
+                    await this.modelCartItemIngredient.bulkCreate(
+                        ingredientsToCreate, 
+                        { transaction }
+                    );
+                }
+
+                await transaction.commit();
+                return {
+                    message: 'Thêm vào giỏ hàng thành công!',
+                    data: newCartItem
+                };
             }
 
-            await transaction.commit();
-
-            return {
-                message: 'Thêm vào giỏ hàng thành công!',
-                data: newCartItem
-            };
-
         } catch (error) {
-            console.log(error);
+            console.error(error);
             await transaction.rollback();
             throw error;
         }
@@ -267,39 +284,71 @@ export class CartItemService {
         cartId: number,
         productId: number,
         productVariantId: number,
-        ingredientIds: number[]
+        ingredients: any[], // DTO gửi lên (cấu hình cho 1 sản phẩm)
+        transaction: any
     ): Promise<CartItems | null> {
+        
         const candidates = await this.modelCartItems.findAll({
-            where: {
-                cartId: cartId,
-                productId: productId,
-                productVariantId: productVariantId,
-                comboId: null // Quan trọng: chỉ lấy món lẻ
-            }
+            where: { cartId, productId, productVariantId, comboId: null },
+            include: [{
+                model: this.modelCartItemIngredient,
+                attributes: ['ingredientId', 'quantity', 'type']
+            }],
+            transaction
         });
 
         if (candidates.length === 0) return null;
 
-        const sortedIngredientIds = [...ingredientIds].sort((a, b) => a - b);
+        // Payload gửi lên là cấu hình cho 1 sản phẩm (VD: 2 Cheese)
+        const normalizedPayload = this.normalizeIngredients(ingredients);
+        const payloadSignature = JSON.stringify(normalizedPayload);
 
         for (const item of candidates) {
-            const itemIngredients = await this.modelCartItemIngredient.findAll({
-                where: { cartItemId: item.id },
-                attributes: ['ingredientId']
+            const currentItemQty = item.dataValues.quantity; // VD: Đang có 2 cái Pizza
+            const cartItemIngredients = item.dataValues.cartItemIngredients || [];
+            
+            // 🔥 QUAN TRỌNG: Chuẩn hóa dữ liệu DB về "trên 1 sản phẩm"
+            const dbIngredients = cartItemIngredients.map(ing => {
+                // Logic bảo vệ: Nếu chia ra lẻ hoặc số lượng item = 0 (lỗi data) thì lấy luôn số gốc
+                // VD: DB lưu 4 Cheese, Item Qty = 2 => Unit Qty = 2
+                const unitQty = currentItemQty > 0 
+                    ? (ing.dataValues.quantity / currentItemQty) 
+                    : ing.dataValues.quantity;
+
+                return {
+                    ingredientId: ing.dataValues.ingredientId,
+                    quantity: unitQty, // So sánh dựa trên số lượng của 1 đơn vị
+                    type: ing.dataValues.type
+                };
             });
 
-            const sortedItemIngredients = itemIngredients
-                .map(ing => ing.get('ingredientId'))
-                .sort((a, b) => a - b);
+            const normalizedDbData = this.normalizeIngredients(dbIngredients);
+            const dbSignature = JSON.stringify(normalizedDbData);
 
-            if (Helper.isEqualArray(sortedIngredientIds, sortedItemIngredients)) {
+            if (payloadSignature === dbSignature) {
                 return item;
             }
         }
 
         return null;
-    };
+    }
 
+
+    private normalizeIngredients(ingredients: any[]): any[] {
+        if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) return [];
+
+        return ingredients
+            .map(ing => ({
+                ingredientId: Number(ing.ingredientId), // Ép kiểu Number
+                quantity: Number(ing.quantity),         // Ép kiểu Number
+                type: String(ing.type)                  // Ép kiểu String
+            }))
+            .sort((a, b) => {
+                // Sắp xếp theo ID -> Nếu ID bằng nhau thì sắp xếp theo Type (ADD trước REMOVE sau)
+                if (a.ingredientId !== b.ingredientId) return a.ingredientId - b.ingredientId;
+                return a.type.localeCompare(b.type);
+            });
+    }
     /**
      * Tìm combo cart item khớp chính xác
      */
@@ -676,134 +725,135 @@ export class CartItemService {
     // }
 
     async mergerCart(sessionId: string, userId: number) {
-    // 1. Dùng transaction để đảm bảo an toàn
-    const transaction = await this.sequelize.transaction();
+        // 1. Dùng transaction để đảm bảo an toàn
+        const transaction = await this.sequelize.transaction();
 
-    try {
-        // ---------------------------------------------------------
-        // BƯỚC 1: LẤY GUEST CART (KÈM FULL THÔNG TIN)
-        // ---------------------------------------------------------
-        // QUAN TRỌNG: Phải include cả CartItemsIngredient để check món lẻ
-        const guestCart = await this.modelCarts.findOne({
-            where: { sessionId: sessionId },
-            include: [
-                {
-                    model: this.modelCartItems,
-                    include: [
-                        { model: this.modelCartItemIngredient } // Lấy topping món lẻ
-                    ]
+        try {
+            // ---------------------------------------------------------
+            // BƯỚC 1: LẤY GUEST CART (KÈM FULL THÔNG TIN)
+            // ---------------------------------------------------------
+            // QUAN TRỌNG: Phải include cả CartItemsIngredient để check món lẻ
+            const guestCart = await this.modelCarts.findOne({
+                where: { sessionId: sessionId },
+                include: [
+                    {
+                        model: this.modelCartItems,
+                        include: [
+                            { model: this.modelCartItemIngredient } // Lấy topping món lẻ
+                        ]
+                    }
+                ],
+                transaction
+            });
+
+            // Nếu không có giỏ guest -> Không làm gì cả, return luôn (Đừng throw lỗi)
+            // Vì user mới login có thể chưa từng thêm gì vào giỏ
+            if (!guestCart) {
+                await transaction.commit();
+                return { message: 'Không có giỏ hàng khách để merge.' };
+            }
+
+            const userCart = await this.cartService.getOrCreateUserCart(userId, transaction);
+            const userCartId = userCart.dataValues.id;
+
+            // ---------------------------------------------------------
+            // BƯỚC 2: DUYỆT TỪNG MÓN BÊN GUEST ĐỂ XỬ LÝ
+            // ---------------------------------------------------------
+            for (const guestItem of guestCart.dataValues.cartItems) {
+                let matchingUserItem: CartItems | null = null;
+
+                // --- TRƯỜNG HỢP A: COMBO ---
+                if (guestItem.comboId) {
+                    // Gọi lại hàm check trùng Combo mình đã viết ở CartItemService
+                    // (Giả sử bạn đang ở trong CartService, cần inject CartItemService hoặc copy logic đó sang)
+                    matchingUserItem = await this.matchingComboCartItem(
+                        userCartId,
+                        guestItem.comboId,
+                        guestItem.selectedOptions
+                    );
                 }
-            ],
-            transaction
-        });
+                // --- TRƯỜNG HỢP B: MÓN LẺ ---
+                else if (guestItem.productId) {
+                    const guestIngredientIds = guestItem.cartItemIngredients.map(i => i.ingredientId);
 
-        // Nếu không có giỏ guest -> Không làm gì cả, return luôn (Đừng throw lỗi)
-        // Vì user mới login có thể chưa từng thêm gì vào giỏ
-        if (!guestCart) {
+                    // Gọi lại hàm check trùng Món Lẻ
+                    matchingUserItem = await this.matchingRegularCartItem(
+                        userCartId,
+                        guestItem.productId,
+                        guestItem.productVariantId,
+                        guestIngredientIds,
+                        transaction
+                    );
+                }
+
+                // ---------------------------------------------------------
+                // BƯỚC 3: QUYẾT ĐỊNH MERGE HAY MOVE
+                // ---------------------------------------------------------
+
+                if (matchingUserItem) {
+                    // === TÌNH HUỐNG 1: ĐÃ CÓ TRÙNG KHỚP (MERGE) ===
+
+                    // 1. Cộng dồn số lượng vào item của User
+                    await matchingUserItem.increment('quantity', {
+                        by: guestItem.quantity,
+                        transaction
+                    });
+
+                    // 2. Nếu là món lẻ, phải cộng dồn cả số lượng Topping trong bảng phụ
+                    if (!guestItem.comboId && guestItem.cartItemIngredients?.length > 0) {
+                        // Logic: Tìm các dòng ingredient tương ứng của UserItem và cộng thêm
+                        // (Để đơn giản, ta giả định ingredient giống hệt nhau thì bulk update hoặc loop update)
+                        for (const guestIng of guestItem.cartItemIngredients) {
+                            await this.modelCartItemIngredient.increment(
+                                { quantity: guestIng.quantity }, // Cộng thêm số lượng từ guest
+                                {
+                                    where: {
+                                        cartItemId: matchingUserItem.id,
+                                        ingredientId: guestIng.ingredientId
+                                    },
+                                    transaction
+                                }
+                            );
+                        }
+                    }
+
+                    // 3. Xóa item bên Guest (vì đã cộng dồn sang User rồi)
+                    await guestItem.destroy({ transaction });
+
+                } else {
+                    // === TÌNH HUỐNG 2: CHƯA CÓ (MOVE) ===
+                    // Đây là cách tối ưu nhất: Chỉ cần đổi chủ sở hữu (cartId)
+
+                    await guestItem.update(
+                        { cartId: userCartId },
+                        { transaction }
+                    );
+
+                    // Lưu ý: Các bảng phụ (CartItemsIngredient) sẽ tự động đi theo
+                    // vì chúng liên kết với CartItemId, mà ID này không đổi, chỉ đổi cartId cha.
+                }
+            }
+
+            // ---------------------------------------------------------
+            // BƯỚC 4: DỌN DẸP
+            // ---------------------------------------------------------
+            // Xóa vỏ giỏ hàng Guest (Item bên trong đã bị xóa hoặc di chuyển hết rồi)
+            await this.modelCarts.destroy({
+                where: { id: guestCart.id },
+                transaction
+            });
+
             await transaction.commit();
-            return { message: 'Không có giỏ hàng khách để merge.' };
+            return {
+                message: 'Đồng bộ giỏ hàng thành công!',
+            };
+
+        } catch (error) {
+            console.log(error);
+            await transaction.rollback();
+            throw error;
         }
-
-        const userCart = await this.cartService.getOrCreateUserCart(userId, transaction);
-        const userCartId = userCart.dataValues.id;
-
-        // ---------------------------------------------------------
-        // BƯỚC 2: DUYỆT TỪNG MÓN BÊN GUEST ĐỂ XỬ LÝ
-        // ---------------------------------------------------------
-        for (const guestItem of guestCart.dataValues.cartItems) {
-            let matchingUserItem: CartItems | null = null;
-
-            // --- TRƯỜNG HỢP A: COMBO ---
-            if (guestItem.comboId) {
-                // Gọi lại hàm check trùng Combo mình đã viết ở CartItemService
-                // (Giả sử bạn đang ở trong CartService, cần inject CartItemService hoặc copy logic đó sang)
-                matchingUserItem = await this.matchingComboCartItem(
-                    userCartId,
-                    guestItem.comboId,
-                    guestItem.selectedOptions
-                );
-            } 
-            // --- TRƯỜNG HỢP B: MÓN LẺ ---
-            else if (guestItem.productId) {
-                const guestIngredientIds = guestItem.cartItemIngredients.map(i => i.ingredientId);
-                
-                // Gọi lại hàm check trùng Món Lẻ
-                matchingUserItem = await this.matchingRegularCartItem(
-                    userCartId,
-                    guestItem.productId,
-                    guestItem.productVariantId,
-                    guestIngredientIds
-                );
-            }
-
-            // ---------------------------------------------------------
-            // BƯỚC 3: QUYẾT ĐỊNH MERGE HAY MOVE
-            // ---------------------------------------------------------
-            
-            if (matchingUserItem) {
-                // === TÌNH HUỐNG 1: ĐÃ CÓ TRÙNG KHỚP (MERGE) ===
-                
-                // 1. Cộng dồn số lượng vào item của User
-                await matchingUserItem.increment('quantity', {
-                    by: guestItem.quantity,
-                    transaction
-                });
-
-                // 2. Nếu là món lẻ, phải cộng dồn cả số lượng Topping trong bảng phụ
-                if (!guestItem.comboId && guestItem.cartItemIngredients?.length > 0) {
-                     // Logic: Tìm các dòng ingredient tương ứng của UserItem và cộng thêm
-                     // (Để đơn giản, ta giả định ingredient giống hệt nhau thì bulk update hoặc loop update)
-                     for (const guestIng of guestItem.cartItemIngredients) {
-                         await this.modelCartItemIngredient.increment(
-                             { quantity: guestIng.quantity }, // Cộng thêm số lượng từ guest
-                             {
-                                 where: {
-                                     cartItemId: matchingUserItem.id,
-                                     ingredientId: guestIng.ingredientId
-                                 },
-                                 transaction
-                             }
-                         );
-                     }
-                }
-
-                // 3. Xóa item bên Guest (vì đã cộng dồn sang User rồi)
-                await guestItem.destroy({ transaction });
-
-            } else {
-                // === TÌNH HUỐNG 2: CHƯA CÓ (MOVE) ===
-                // Đây là cách tối ưu nhất: Chỉ cần đổi chủ sở hữu (cartId)
-                
-                await guestItem.update(
-                    { cartId: userCartId }, 
-                    { transaction }
-                );
-                
-                // Lưu ý: Các bảng phụ (CartItemsIngredient) sẽ tự động đi theo
-                // vì chúng liên kết với CartItemId, mà ID này không đổi, chỉ đổi cartId cha.
-            }
-        }
-
-        // ---------------------------------------------------------
-        // BƯỚC 4: DỌN DẸP
-        // ---------------------------------------------------------
-        // Xóa vỏ giỏ hàng Guest (Item bên trong đã bị xóa hoặc di chuyển hết rồi)
-        await this.modelCarts.destroy({
-            where: { id: guestCart.id },
-            transaction
-        });
-
-        await transaction.commit();
-        return {
-            message: 'Đồng bộ giỏ hàng thành công!',
-        };
-
-    } catch (error) {
-        console.log(error);
-        await transaction.rollback();
-        throw error;
     }
-}
 
     async getCartItemsById(idCart: number) {
         return await this.modelCartItems.findByPk(idCart);

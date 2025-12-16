@@ -43,11 +43,12 @@ export class CreateCartItemDto {
     @IsNotEmpty()
     productVariantId?: number;
 
-    // Cho món lẻ
+    // 🔥 MỚI: Thêm vào đây để hỗ trợ món lẻ (Single Product) có ADD/REMOVE
     @IsOptional()
     @IsArray()
-    @IsNumber({}, { each: true })
-    ingredientId?: number[];
+    @ValidateNested({ each: true })
+    @Type(() => IngredientOptionDto) // Tái sử dụng DTO của Ingredient
+    singleProductOptions?: IngredientOptionDto[];
 
     @NumberRequired('Số lượng', 1)
     quantity: number;

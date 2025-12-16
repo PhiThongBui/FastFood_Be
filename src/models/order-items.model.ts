@@ -6,22 +6,35 @@ import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
 import { Combo } from './combo.model';
 export interface OrderItemMetadata {
-    itemName: string;        // Tên hiển thị (VD: Combo Sinh Viên)
-    originalPrice: number;   // Giá gốc
-    finalPrice: number;      // Giá sau khi cộng thêm (Upsize, Topping)
+    itemName: string;        
+    originalPrice: number;   
+    finalPrice: number;      
     
-    // Chi tiết các món bên trong (Dành cho Combo)
+    // Dành cho Combo
     items?: {
         productId: number;
-        productName: string; // Lưu tên lúc mua
+        productName: string;
         variantId: number;
-        unitPrice: number;   // Giá của item này (nếu cần tách lẻ)
-        ingredients: {       // Topping của item này
+        variantName: string; // Nên thêm trường này để hiển thị Size/De ma khong can join
+        unitPrice: number;   
+        ingredients: {       
             name: string;
             quantity: number;
-            price: number;   // Giá topping lúc mua
+            price: number;
+            type: 'ADD' | 'REMOVE'; // 🔥 CẦN THÊM: Để hiển thị "Không lấy..." trong lịch sử đơn
         }[];
     }[];
+
+    // Dành cho Món Lẻ (Nên lưu snapshot cả món lẻ vào đây luôn)
+    singleItemMetadata?: {
+        variantName: string;
+        ingredients: {
+            name: string;
+            quantity: number;
+            price: number;
+            type: 'ADD' | 'REMOVE';
+        }[];
+    }
 }
 @Table
 export class OrderItems extends Model<OrderItems> {

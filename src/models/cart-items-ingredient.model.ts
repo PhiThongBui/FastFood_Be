@@ -28,4 +28,12 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         type: DataType.INTEGER,
     })
     quantity: number
+
+    // 🔥 THÊM CỘT NÀY: Để phân biệt Thêm hay Bỏ
+    @Column({
+        type: DataType.ENUM('ADD', 'REMOVE'),
+        defaultValue: 'ADD', 
+        allowNull: false
+    })
+    type: string;
 }

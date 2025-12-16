@@ -11,7 +11,7 @@ import { User } from '@/models';
 import { actionUpdateCartItem } from './types/cartItem.type';
 import { CartService } from '../cart/cart.service';
 import { Sequelize } from 'sequelize-typescript';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 interface AddToCartParams extends CreateCartItemDto {
   userId?: number;
   sessionId?: string;
@@ -27,14 +27,140 @@ export class CartItemController {
   ) { }
 
   @Post('/addtocart')
+  @ApiOperation({
+    summary: 'Thêm sản phẩm vào giỏ hàng',
+    description: `
+Hỗ trợ 2 loại thao tác:
+
+**1. Mua món lẻ (Pizza, Đồ uống, v.v.)**
+Cần cung cấp:
+- productId: ID sản phẩm (bắt buộc)
+- productVariantId: ID biến thể/size (bắt buộc)  
+- quantity: Số lượng mua (bắt buộc)
+- ingredientId: Mảng ID nguyên liệu/topping thêm (tùy chọn)
+
+**2. Mua combo**
+Cần cung cấp:
+- comboId: ID combo (bắt buộc)
+- quantity: Số lượng combo mua (bắt buộc)
+- selectedOptions: Mảng các món đã chọn trong combo (bắt buộc)
+  + Mỗi món cần có: productId, productVariantId
+  + Có thể thêm ingredients để customize topping (tùy chọn)
+    * ingredientId: ID nguyên liệu
+    * quantity: Số lượng thêm/bớt
+    * type: "ADD" (thêm) hoặc "REMOVE" (bớt)
+        `
+  })
+  @ApiBody({
+    type: CreateCartItemDto,
+    examples: {
+      'món-lẻ-đơn-giản': {
+        summary: '1. Mua Pizza đơn - Không topping',
+        description: 'Mua 1 Pizza Margherita size M, không thêm topping',
+        value: {
+          productId: 3,
+          productVariantId: 5,
+          quantity: 1
+        }
+      },
+      'món-lẻ-có-topping': {
+        summary: '2. Mua Pizza - Có thêm topping',
+        description: 'Mua 2 Pizza Pepperoni size L, thêm phô mai, xúc xích, nấm',
+        value: {
+          productId: 5,
+          productVariantId: 8,
+          quantity: 2,
+          ingredientId: [1, 2, 3] // [phô mai, xúc xích, nấm]
+        }
+      },
+      'combo-đơn-giản': {
+        summary: '3. Mua Combo - Không customize',
+        description: 'Mua 1 Combo Sinh Viên (1 Pizza size M + 1 Coca size L), không thêm/bớt topping',
+        value: {
+          comboId: 1,
+          quantity: 1,
+          selectedOptions: [
+            {
+              productId: 3,
+              productVariantId: 5 // Pizza Margherita size M
+            },
+            {
+              productId: 10,
+              productVariantId: 12 // Coca size L
+            }
+          ]
+        }
+      },
+      'combo-customize': {
+        summary: '4. Mua Combo - Có customize topping',
+        description: 'Mua 2 Combo Gia Đình, Pizza thêm 2 phần phô mai, bớt 1 phần hành tây',
+        value: {
+          comboId: 2,
+          quantity: 2,
+          selectedOptions: [
+            {
+              productId: 7,
+              productVariantId: 15, // Pizza Hải Sản size L
+              ingredients: [
+                {
+                  ingredientId: 1,
+                  quantity: 2,
+                  type: 'ADD' // Thêm 2 phần phô mai
+                },
+                {
+                  ingredientId: 4,
+                  quantity: 1,
+                  type: 'REMOVE' // Bớt 1 phần hành tây
+                }
+              ]
+            },
+            {
+              productId: 10,
+              productVariantId: 13 // Coca size XL
+            },
+            {
+              productId: 20,
+              productVariantId: 22 // Gà rán 6 miếng
+            }
+          ]
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Thêm vào giỏ hàng thành công',
+    schema: {
+      example: {
+        message: 'Thêm vào giỏ hàng thành công!',
+        data: {
+          id: 123,
+          cartId: 1,
+          productId: 3,
+          productVariantId: 5,
+          quantity: 1,
+          createdAt: '2025-12-16T04:17:35.592Z'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dữ liệu không hợp lệ',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'Thiếu thông tin sản phẩm!',
+        error: 'Bad Gateway'
+      }
+    }
+  })
   async addToCart(
     @Body() dataAdd: CreateCartItemDto,
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request,
-    // @GetUser('uid') userId: number
   ) {
-    let sessionId = Helper.getSessionIdFromRequest(req)
-
+    let sessionId = Helper.getSessionIdFromRequest(req);
     let userId: number | null = null;
 
     const authHeader = req.headers?.authorization;
@@ -45,21 +171,20 @@ export class CartItemController {
         const decoded = this.JWTservice.verify(token, this.configService.get('JWT_SECRET')) as any;
         userId = decoded.uid;
       } catch (error) {
-        // Token invalid hoặc expired, treat as guest
         userId = null;
       }
     }
+
     if (!userId && !sessionId) {
-      sessionId = Helper.generateSessionId()
-      Helper.setSessionCookie(sessionId, res)
+      sessionId = Helper.generateSessionId();
+      Helper.setSessionCookie(sessionId, res);
     }
 
     return await this.cartItemService.addToCart({
       ...dataAdd,
       userId,
       sessionId
-    } as AddToCartParams)
-
+    } as AddToCartParams);
   }
 
   @Patch('/:cartItemId/quantity')
@@ -78,12 +203,66 @@ export class CartItemController {
   @Get('/mergecart')
   @UseGuards(JWTGuard)
   @ApiBearerAuth('access-token')
-  async mergeCart(@Req() req: Request, @Res({ passthrough: true }) _res: Response) {
+  @ApiOperation({
+    summary: 'Đồng bộ giỏ hàng từ guest sang user',
+    description: `
+**Mục đích:** Khi user login, hợp nhất giỏ hàng khách (guest cart) vào giỏ hàng user.
 
-    const sessionId = Helper.getSessionIdFromRequest(req)
+**Quy trình xử lý:**
+
+**1. Món trùng khớp (MERGE)**
+- Nếu item đã tồn tại trong giỏ user → Cộng dồn số lượng
+- Với món lẻ: Cộng dồn cả số lượng topping
+- Sau đó xóa item khỏi guest cart
+
+**2. Món chưa có (MOVE)**
+- Nếu item chưa có trong giỏ user → Di chuyển sang giỏ user
+- Giữ nguyên toàn bộ thông tin (quantity, ingredients, selectedOptions)
+
+**3. Dọn dẹp**
+- Xóa guest cart sau khi đã xử lý hết items
+
+**Lưu ý:**
+- Yêu cầu đăng nhập (Bearer Token)
+- SessionId tự động lấy từ cookie
+- Tự động phát hiện và xử lý cả món lẻ và combo
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Đồng bộ thành công',
+    schema: {
+      example: {
+        message: 'Đồng bộ giỏ hàng thành công!'
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Không có giỏ hàng guest',
+    schema: {
+      example: {
+        message: 'Không có giỏ hàng khách để merge.'
+      }
+    }
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Chưa đăng nhập',
+    schema: {
+      example: {
+        statusCode: 401,
+        message: 'Unauthorized',
+        error: 'Unauthorized'
+      }
+    }
+  })
+  async mergeCart(@Req() req: Request, @Res({ passthrough: true }) _res: Response) {
+    const sessionId = Helper.getSessionIdFromRequest(req);
     const userId = (req.user as { uid: number; role: string }).uid;
-    return await this.cartItemService.mergerCart(sessionId, userId)
+    return await this.cartItemService.mergerCart(sessionId, userId);
   }
+
 
   @Get('/get-cartitems')
   async getCartItemsByCartId

@@ -30,4 +30,12 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
     })
     quantity: number
 
+    // 🔥 CẦN THÊM: Để lưu trạng thái Thêm/Bớt từ Cart chuyển sang
+    @Column({
+        type: DataType.ENUM('ADD', 'REMOVE'),
+        defaultValue: 'ADD', 
+        allowNull: false
+    })
+    type: string;
+
 }

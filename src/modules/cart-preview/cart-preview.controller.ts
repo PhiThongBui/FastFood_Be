@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Logger, Post, Req, UseGuards } from '@nestjs/common';
 import { CartPreviewService } from './cart-preview.service';
 import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
@@ -19,7 +19,7 @@ export class CartPreviewController {
     private readonly cartService: CartService
 
   ) { }
-
+  private readonly logger = new Logger('CartPreviewController');
   @Get('/checkout-preview')
   async getCartPreview(@Body('cartItemId') cartItemId: number[], @Req() req: Request) {
     const transaction = await this.sequelize.transaction();

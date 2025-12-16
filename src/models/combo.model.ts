@@ -30,7 +30,7 @@ export class Combo extends Model<Combo> {
     allowNull: false,
     type: DataType.INTEGER,
   })
-  price: number; 
+  price: number;
 
   @Column({
     allowNull: false,
@@ -51,7 +51,14 @@ export class Combo extends Model<Combo> {
     type: DataType.BOOLEAN,
   })
   isFeatured: boolean;
-
+  // 🔥 THÊM CỘT NÀY
+  @Column({
+    allowNull: false,
+    defaultValue: 0, // Mặc định giảm 0%
+    type: DataType.INTEGER,
+    comment: 'Phần trăm giảm giá của Combo (VD: 10 nghĩa là 10%)'
+  })
+  discountPercentage: number;
   @ForeignKey(() => Category)
   @Column({
     allowNull: false, // Có thể cho phép null nếu combo không thuộc category nào
@@ -61,6 +68,7 @@ export class Combo extends Model<Combo> {
 
   @BelongsTo(() => Category)
   category: Category;
+
 
   // Một combo sẽ có nhiều món hàng
   @HasMany(() => ComboItem, {
