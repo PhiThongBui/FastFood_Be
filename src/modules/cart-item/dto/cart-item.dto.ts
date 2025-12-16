@@ -1,26 +1,65 @@
-import { ArrayNotRequired, NumberNotRequired, NumberRequired, StringNotRequired } from "@/common/decorators";
-import { IsNumber, IsOptional } from "class-validator";
-import { IsArray } from "class-validator";
+import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, ValidateNested, ValidateIf } from "class-validator";
+import { Type } from "class-transformer";
+import { NumberRequired } from "@/common/decorators";
 
-export class CreateCartItemDto {
-    @NumberRequired('Id sản phẩm', 1)
-    productId: number;
+export class IngredientOptionDto {
+    @IsNumber()
+    @IsNotEmpty()
+    ingredientId: number;
 
-    @NumberRequired('Id của biến thế', 1)
-    productVariantId: number;
-
-    @IsOptional()
-    @IsArray()  // Validate property is array
-    @IsNumber({}, { each: true })  // Validate each element is number
-    ingredientId?: number[];
-
-
-    @NumberRequired('Số lượng biến thể mua', 1)
+    @IsNumber()
+    @IsNotEmpty()
     quantity: number;
 
-    @NumberNotRequired
-    userId?: number
+    @IsEnum(['ADD', 'REMOVE'])
+    type: 'ADD' | 'REMOVE';
+}
 
-    @StringNotRequired
-    sessionId?: string
+export class ComboOptionDto {
+    @IsNumber()
+    @IsNotEmpty()
+    productId: number;
+
+    @IsNumber()
+    @IsNotEmpty()
+    productVariantId: number;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => IngredientOptionDto)
+    @IsOptional()
+    ingredients?: IngredientOptionDto[];
+}
+
+export class CreateCartItemDto {
+    // Required nếu KHÔNG phải combo, Optional nếu là combo
+    @ValidateIf(o => !o.comboId)
+    @IsNumber()
+    @IsNotEmpty()
+    productId?: number;
+
+    @ValidateIf(o => !o.comboId)
+    @IsNumber()
+    @IsNotEmpty()
+    productVariantId?: number;
+
+    // Cho món lẻ
+    @IsOptional()
+    @IsArray()
+    @IsNumber({}, { each: true })
+    ingredientId?: number[];
+
+    @NumberRequired('Số lượng', 1)
+    quantity: number;
+
+    // Cho combo
+    @IsOptional()
+    @IsNumber()
+    comboId?: number;
+
+    @ValidateIf(o => !!o.comboId)
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ComboOptionDto)
+    selectedOptions?: ComboOptionDto[];
 }

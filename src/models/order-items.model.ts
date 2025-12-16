@@ -5,7 +5,24 @@ import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
 import { Combo } from './combo.model';
-
+export interface OrderItemMetadata {
+    itemName: string;        // Tên hiển thị (VD: Combo Sinh Viên)
+    originalPrice: number;   // Giá gốc
+    finalPrice: number;      // Giá sau khi cộng thêm (Upsize, Topping)
+    
+    // Chi tiết các món bên trong (Dành cho Combo)
+    items?: {
+        productId: number;
+        productName: string; // Lưu tên lúc mua
+        variantId: number;
+        unitPrice: number;   // Giá của item này (nếu cần tách lẻ)
+        ingredients: {       // Topping của item này
+            name: string;
+            quantity: number;
+            price: number;   // Giá topping lúc mua
+        }[];
+    }[];
+}
 @Table
 export class OrderItems extends Model<OrderItems> {
     @ForeignKey(() => Order)
@@ -17,7 +34,7 @@ export class OrderItems extends Model<OrderItems> {
 
     @ForeignKey(() => Product)
     @Column({
-        allowNull: false,
+        allowNull: true,
         type: DataType.INTEGER,
     })
     productId: number;
@@ -54,7 +71,12 @@ export class OrderItems extends Model<OrderItems> {
         type: DataType.INTEGER,
     })
     quantity: number
-
+// 🔥 SỬA 3: Cột quan trọng nhất để lưu lịch sử đơn hàng
+    @Column({
+        type: DataType.JSON, // Postgres dùng JSONB sẽ tốt hơn, MySQL dùng JSON
+        allowNull: true,
+    })
+    metadata: OrderItemMetadata;
 
     //relations
 

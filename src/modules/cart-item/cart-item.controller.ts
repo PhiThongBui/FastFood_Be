@@ -12,7 +12,10 @@ import { actionUpdateCartItem } from './types/cartItem.type';
 import { CartService } from '../cart/cart.service';
 import { Sequelize } from 'sequelize-typescript';
 import { ApiBearerAuth } from '@nestjs/swagger';
-
+interface AddToCartParams extends CreateCartItemDto {
+  userId?: number;
+  sessionId?: string;
+}
 @Controller('cart-item')
 export class CartItemController {
   constructor(
@@ -55,7 +58,7 @@ export class CartItemController {
       ...dataAdd,
       userId,
       sessionId
-    } as CreateCartItemDto)
+    } as AddToCartParams)
 
   }
 

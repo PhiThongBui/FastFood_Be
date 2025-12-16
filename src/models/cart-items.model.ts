@@ -4,7 +4,16 @@ import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { CartItemsIngredient } from './cart-items-ingredient.model';
 import { Combo } from './combo.model';
-
+// Interface định nghĩa cấu trúc JSON (để gợi ý code)
+export interface CartComboOption {
+    productId: number;
+    productVariantId: number;
+    ingredients: {
+        ingredientId: number;
+        quantity: number; // Ví dụ: Thêm 2 phần phô mai
+        type: 'ADD' | 'REMOVE'; // Thêm hay Bỏ
+    }[];
+}
 @Table
 export class CartItems extends Model<CartItems> {
 
@@ -13,14 +22,14 @@ export class CartItems extends Model<CartItems> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    cartId: number;
+    cartId: number
 
     @BelongsTo(() => Carts)
     cart: Carts
 
     @ForeignKey(() => Product)
     @Column({
-        allowNull: false,
+        allowNull: true,
         type: DataType.INTEGER,
     })
     productId: number;
@@ -54,7 +63,13 @@ export class CartItems extends Model<CartItems> {
     })
     quantity: number
 
-
+// 🔥 SỬA 3: Cột JSON mới để lưu cấu hình Combo
+    // Lưu mảng các món khách chọn: [{productId: 1, variantId: 5, ingredients: [...]}, ...]
+    @Column({
+        type: DataType.JSON, 
+        allowNull: true,
+    })
+    selectedOptions: CartComboOption[];
     //relation
 
     @HasMany(() => CartItemsIngredient,{
