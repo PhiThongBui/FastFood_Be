@@ -14,10 +14,17 @@ export interface CartPreviewItem {
         variantName?: string;
         size?: string;
         crust?: string; // Type đế bánh
-        ingredients?: { name: string; price: number; type?: string }[];    
-        originalPrice?: number;
+        ingredients?: {
+            name: string;
+            price: number;
+            quantity?: number;      // ✅ Thêm field này
+            totalPrice?: number;    // ✅ Thêm field này
+            type?: 'ADD' | 'REMOVE'; // ✅ Sửa type chính xác hơn
+        }[];
+        discountPercentage?: number;
         savedAmount?: number;
         // Dành cho Combo: Danh sách các món con
+        originalPrice?: number;  
         comboItems?: {
             productName: string;
             variantName: string;

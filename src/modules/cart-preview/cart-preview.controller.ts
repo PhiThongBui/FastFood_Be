@@ -55,7 +55,7 @@ API sẽ tự động xác định cart tương ứng.
     status: 200,
     description: 'Preview thành công'
   })
-  async getCartPreview(
+  async getCartDetail(
     @Body('cartItemId') cartItemId: number[],
     @Req() req: Request
   ) {
@@ -64,7 +64,7 @@ API sẽ tự động xác định cart tương ứng.
     const sessionId = Helper.getSessionIdFromRequest(req);
     let userId: number | null = null;
 
-    const authBearer = req.headers?.authorization;    
+    const authBearer = req.headers?.authorization;
     if (authBearer?.startsWith('Bearer ')) {
       try {
         const token = authBearer.substring(7);
@@ -76,7 +76,7 @@ API sẽ tự động xác định cart tương ứng.
       } catch {
         userId = null;
       }
-    }    
+    }
     const cart = await this.cartService.getCartByContext(
       sessionId,
       userId,
@@ -90,6 +90,54 @@ API sẽ tự động xác định cart tương ứng.
     );
   }
 
+  @Post('/cart')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Xem giỏ hàng của mình',
+  })
+  @ApiOperation({
+    summary: 'Cart Preview',
+    description: `
+Yêu cầu xác định giỏ hàng thông qua:
+
+- Authorization: Bearer token (đối với user đã đăng nhập)
+- Cookie: sessionId (đối với khách vãng lai)
+
+API sẽ tự động xác định cart tương ứng.
+`
+  })
+  async getCartPreview(
+    @Req() req: Request
+  ) {
+    const transaction = await this.sequelize.transaction();
+
+    const sessionId = Helper.getSessionIdFromRequest(req);
+    let userId: number | null = null;
+
+    const authBearer = req.headers?.authorization;
+    if (authBearer?.startsWith('Bearer ')) {
+      try {
+        const token = authBearer.substring(7);
+        const decoded = this.jwtService.verify(
+          token,
+          this.configService.get('JWT_SECRET')
+        ) as any;
+        userId = decoded.uid;
+      } catch {
+        userId = null;
+      }
+    }
+    const cart = await this.cartService.getCartByContext(
+      sessionId,
+      userId,
+      transaction
+    );
+
+    return await this.cartPreviewService.getUserCartPreview(
+      cart.id,
+      transaction
+    );
+  }
 
   @UseGuards(JWTGuard)
   @Post('/checkout-calculate')
