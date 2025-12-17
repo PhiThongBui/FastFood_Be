@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CartService } from '../cart/cart.service';
 import { CheckoutCaculateDto } from './dto/checkout.dto';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('cart-preview')
 export class CartPreviewController {
@@ -20,25 +21,75 @@ export class CartPreviewController {
 
   ) { }
   private readonly logger = new Logger('CartPreviewController');
-  @Get('/checkout-preview')
-  async getCartPreview(@Body('cartItemId') cartItemId: number[], @Req() req: Request) {
-    const transaction = await this.sequelize.transaction();
+  @Post('/checkout-preview')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Xem trước thanh toán (Checkout Preview)',
+    description: 'Tính toán giá trị thanh toán cho các CartItem được chọn'
+  })
+  @ApiOperation({
+    summary: 'Checkout Preview',
+    description: `
+Yêu cầu xác định giỏ hàng thông qua:
 
-    const sessionId = Helper.getSessionIdFromRequest(req)
-    let userId: number | null = null
-    const authBearer = req.headers?.authorization
-    if (authBearer && authBearer.startsWith('Bearer ')) {
-      try {
-        const token = authBearer.substring(7)
-        const decoded = this.jwtService.verify(token, this.configService.get('JWT_SECRET')) as any
-        userId = decoded.uid
-      } catch (error) {
-        userId = null
+- Authorization: Bearer token (đối với user đã đăng nhập)
+- Cookie: sessionId (đối với khách vãng lai)
+
+API sẽ tự động xác định cart tương ứng.
+`
+  })
+
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        cartItemId: {
+          type: 'array',
+          items: { type: 'number' },
+          example: [12, 15, 18]
+        }
       }
     }
-    const cartId = await this.cartService.getCartByContext(sessionId, userId, transaction)
-    return await this.cartPreviewService.cartPreview(cartId?.dataValues?.id, cartItemId, transaction);
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Preview thành công'
+  })
+  async getCartPreview(
+    @Body('cartItemId') cartItemId: number[],
+    @Req() req: Request
+  ) {
+    const transaction = await this.sequelize.transaction();
+
+    const sessionId = Helper.getSessionIdFromRequest(req);
+    let userId: number | null = null;
+
+    const authBearer = req.headers?.authorization;    
+    if (authBearer?.startsWith('Bearer ')) {
+      try {
+        const token = authBearer.substring(7);
+        const decoded = this.jwtService.verify(
+          token,
+          this.configService.get('JWT_SECRET')
+        ) as any;
+        userId = decoded.uid;
+      } catch {
+        userId = null;
+      }
+    }    
+    const cart = await this.cartService.getCartByContext(
+      sessionId,
+      userId,
+      transaction
+    );
+
+    return await this.cartPreviewService.cartPreview(
+      cart.id,
+      cartItemId,
+      transaction
+    );
   }
+
 
   @UseGuards(JWTGuard)
   @Post('/checkout-calculate')

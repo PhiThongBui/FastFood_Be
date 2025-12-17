@@ -30,103 +30,128 @@ export class CartItemController {
   @ApiOperation({
     summary: 'Thêm sản phẩm vào giỏ hàng',
     description: `
-Hỗ trợ 2 loại thao tác:
+API hỗ trợ **2 loại thao tác**:
 
-**1. Mua món lẻ (Pizza, Đồ uống, v.v.)**
-Cần cung cấp:
-- productId: ID sản phẩm (bắt buộc)
-- productVariantId: ID biến thể/size (bắt buộc)  
-- quantity: Số lượng mua (bắt buộc)
-- ingredientId: Mảng ID nguyên liệu/topping thêm (tùy chọn)
+---
 
-**2. Mua combo**
-Cần cung cấp:
-- comboId: ID combo (bắt buộc)
-- quantity: Số lượng combo mua (bắt buộc)
-- selectedOptions: Mảng các món đã chọn trong combo (bắt buộc)
-  + Mỗi món cần có: productId, productVariantId
-  + Có thể thêm ingredients để customize topping (tùy chọn)
-    * ingredientId: ID nguyên liệu
-    * quantity: Số lượng thêm/bớt
-    * type: "ADD" (thêm) hoặc "REMOVE" (bớt)
-        `
+### 🔹 1. Mua món lẻ (Single Product)
+Bắt buộc:
+- productId
+- productVariantId
+- quantity
+
+Tuỳ chọn:
+- singleProductOptions: danh sách topping / nguyên liệu
+  - ingredientId
+  - quantity
+  - type: ADD | REMOVE
+
+---
+
+### 🔹 2. Mua combo
+Bắt buộc:
+- comboId
+- quantity
+- selectedOptions
+
+Trong đó mỗi selectedOption gồm:
+- productId
+- productVariantId
+- ingredients (tuỳ chọn)
+  - ingredientId
+  - quantity
+  - type: ADD | REMOVE
+`
   })
+
   @ApiBody({
     type: CreateCartItemDto,
     examples: {
-      'món-lẻ-đơn-giản': {
-        summary: '1. Mua Pizza đơn - Không topping',
-        description: 'Mua 1 Pizza Margherita size M, không thêm topping',
+
+      'single-no-topping': {
+        summary: '1. Món lẻ - Không topping',
+        description: 'Mua 1 Pizza Margherita size M',
         value: {
           productId: 3,
           productVariantId: 5,
           quantity: 1
         }
       },
-      'món-lẻ-có-topping': {
-        summary: '2. Mua Pizza - Có thêm topping',
-        description: 'Mua 2 Pizza Pepperoni size L, thêm phô mai, xúc xích, nấm',
+
+      'single-with-topping': {
+        summary: '2. Món lẻ - Có topping',
+        description: 'Mua 2 Pizza Pepperoni size L, thêm phô mai, bớt hành',
         value: {
           productId: 5,
           productVariantId: 8,
           quantity: 2,
-          ingredientId: [1, 2, 3] // [phô mai, xúc xích, nấm]
+          singleProductOptions: [
+            {
+              ingredientId: 1,
+              quantity: 2,
+              type: 'ADD'
+            },
+            {
+              ingredientId: 4,
+              quantity: 1,
+              type: 'REMOVE'
+            }
+          ]
         }
       },
-      'combo-đơn-giản': {
-        summary: '3. Mua Combo - Không customize',
-        description: 'Mua 1 Combo Sinh Viên (1 Pizza size M + 1 Coca size L), không thêm/bớt topping',
+
+      'combo-basic': {
+        summary: '3. Combo - Không customize',
+        description: 'Combo Sinh Viên',
         value: {
           comboId: 1,
           quantity: 1,
           selectedOptions: [
             {
               productId: 3,
-              productVariantId: 5 // Pizza Margherita size M
+              productVariantId: 5
             },
             {
               productId: 10,
-              productVariantId: 12 // Coca size L
+              productVariantId: 12
             }
           ]
         }
       },
+
       'combo-customize': {
-        summary: '4. Mua Combo - Có customize topping',
-        description: 'Mua 2 Combo Gia Đình, Pizza thêm 2 phần phô mai, bớt 1 phần hành tây',
+        summary: '4. Combo - Có customize',
+        description: 'Combo Gia Đình, Pizza thêm topping',
         value: {
           comboId: 2,
           quantity: 2,
           selectedOptions: [
             {
               productId: 7,
-              productVariantId: 15, // Pizza Hải Sản size L
+              productVariantId: 15,
               ingredients: [
                 {
                   ingredientId: 1,
                   quantity: 2,
-                  type: 'ADD' // Thêm 2 phần phô mai
+                  type: 'ADD'
                 },
                 {
                   ingredientId: 4,
                   quantity: 1,
-                  type: 'REMOVE' // Bớt 1 phần hành tây
+                  type: 'REMOVE'
                 }
               ]
             },
             {
               productId: 10,
-              productVariantId: 13 // Coca size XL
-            },
-            {
-              productId: 20,
-              productVariantId: 22 // Gà rán 6 miếng
+              productVariantId: 13
             }
           ]
         }
       }
     }
   })
+
   @ApiResponse({
     status: 201,
     description: 'Thêm vào giỏ hàng thành công',
