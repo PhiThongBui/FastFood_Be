@@ -156,11 +156,9 @@ export class CartItemService {
                 const existedCombo = await this.modelCombo.findByPk(comboId, { transaction });
                 if (!existedCombo) throw new BadGatewayException('Combo không tồn tại!');
 
-                // Validate chi tiết combo (Hàm này bạn đã có)
                 await this.validateComboOptions(selectedOptions, transaction);
             }
             else {
-                // Validate Món Lẻ
                 if (!productId || !productVariantId) {
                     throw new BadGatewayException('Thiếu thông tin sản phẩm!');
                 }
@@ -175,7 +173,7 @@ export class CartItemService {
             const cart = await this.cartService.getCartByContext(sessionId, userId, transaction);
             let matchingCartItem: CartItems | null;
 
-            // 3. TÌM KIẾM TRÙNG LẶP (MATCHING LOGIC)
+            // 3. TÌM KIẾM TRÙNG LẶP
             if (isCombo && selectedOptions) {
                 matchingCartItem = await this.matchingComboCartItem(
                     cart.id,
@@ -183,14 +181,13 @@ export class CartItemService {
                     selectedOptions
                 );
             } else {
-                // Logic Mới cho Món Lẻ: Dùng singleProductOptions
                 const options = singleProductOptions || [];
                 matchingCartItem = await this.matchingRegularCartItem(
                     cart.id,
                     productId!,
                     productVariantId!,
                     options,
-                    transaction // 🔥 FIX 3: Truyền transaction vào đây
+                    transaction 
                 );
             }
 
@@ -198,19 +195,14 @@ export class CartItemService {
             if (matchingCartItem) {
                 // === TRƯỜNG HỢP A: ĐÃ CÓ -> TĂNG SỐ LƯỢNG ===
 
-                // Tăng số lượng item chính
                 await matchingCartItem.increment('quantity', {
                     by: quantity,
                     transaction
                 });
 
-                // Cập nhật các thành phần phụ (Ingredients) cho Món Lẻ
                 if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
                     for (const opt of singleProductOptions) {
-                        // Công thức: Tăng thêm = (Số Pizza thêm vào) * (Số topping trên 1 Pizza)
-                        // VD: Thêm 2 Pizza, mỗi cái 2 Cheese => Tăng thêm 4 Cheese vào kho
                         const totalIngredientToAdd = quantity * opt.quantity;
-
                         await this.modelCartItemIngredient.increment(
                             { quantity: totalIngredientToAdd }, 
                             {
@@ -224,6 +216,15 @@ export class CartItemService {
                         );
                     }
                 }
+
+                // 🔥 FIX 1: Reload lại item kèm theo Ingredients để trả về đầy đủ data mới nhất
+                await matchingCartItem.reload({
+                    include: [{
+                        model: this.modelCartItemIngredient,
+                        attributes: ['ingredientId', 'quantity', 'type']
+                    }],
+                    transaction
+                });
 
                 await transaction.commit();
                 return {
@@ -239,20 +240,16 @@ export class CartItemService {
                     productId: isCombo ? null : productId,
                     productVariantId: isCombo ? null : productVariantId,
                     comboId: isCombo ? comboId : null,
-                    selectedOptions: isCombo ? selectedOptions : null, // JSON Combo
+                    selectedOptions: isCombo ? selectedOptions : null,
                     quantity: quantity,
                 } as any, { transaction });
 
-                // Lưu Ingredients cho Món Lẻ
-               if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
+                if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
                     const ingredientsToCreate: any[] = singleProductOptions.map(opt => ({
                         cartItemId: newCartItem.id,
                         ingredientId: opt.ingredientId,
-                        
-                        // 🔥 QUAN TRỌNG: Lưu tổng số lượng
-                        // Tổng = (Số Pizza) * (Số topping trên 1 Pizza)
+                        // Lưu tổng số lượng
                         quantity: quantity * opt.quantity, 
-                        
                         type: opt.type
                     }))
 
@@ -262,7 +259,18 @@ export class CartItemService {
                     );
                 }
 
-                await transaction.commit();
+                // 🔥 FIX 2: Quan trọng nhất!
+                // Sau khi bulkCreate, newCartItem chưa biết về các ingredient vừa tạo.
+                // Phải reload lại để lấy data kèm theo ingredient.
+                await newCartItem.reload({
+                    include: [{
+                        model: this.modelCartItemIngredient,
+                        attributes: ['ingredientId', 'quantity', 'type']
+                    }],
+                    transaction
+                });
+
+                await transaction.commit()
                 return {
                     message: 'Thêm vào giỏ hàng thành công!',
                     data: newCartItem

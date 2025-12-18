@@ -84,11 +84,11 @@ Trong đó mỗi selectedOption gồm:
         value: {
           productId: 5,
           productVariantId: 8,
-          quantity: 2,
+          quantity: 1,
           singleProductOptions: [
             {
               ingredientId: 1,
-              quantity: 2,
+              quantity: 1,
               type: 'ADD'
             },
             {
@@ -132,7 +132,7 @@ Trong đó mỗi selectedOption gồm:
               ingredients: [
                 {
                   ingredientId: 1,
-                  quantity: 2,
+                  quantity: 1,
                   type: 'ADD'
                 },
                 {
