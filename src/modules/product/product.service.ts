@@ -587,7 +587,7 @@ export class ProductService {
                     include: [
                         {
                             model: this.modelIngredient,
-                            attributes: ['name', 'imageUrl', 'price', 'isRequired']
+                            attributes: ['id', 'name', 'imageUrl', 'price', 'isRequired']
                         }
                     ]
                 }
