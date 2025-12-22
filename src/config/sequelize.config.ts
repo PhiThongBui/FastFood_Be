@@ -5,6 +5,8 @@ import { ConfigService } from "@nestjs/config";
 
 export const sequelizeConfig = (config: ConfigService) => {
   const isLocal = config.get('DB_HOST') === 'localhost';
+
+  const maxConn = parseInt(config.get('DB_MAX_CONN') || '5', 10);
   return {
     dialect: config.get('DB_DIALECT'),
     host: config.get('DB_HOST'),
@@ -16,11 +18,19 @@ export const sequelizeConfig = (config: ConfigService) => {
     synchronize: true,
     logging: false, // Tắt SQL logging,
     benchmark: false,
+    pool: {
+      max: maxConn, // Số lượng kết nối tối đa. Database Free thường chỉ chịu được 5-10.
+      min: 0,       // Số lượng kết nối tối thiểu
+      acquire: 60000, // Thời gian tối đa (ms) để cố lấy kết nối trước khi báo lỗi (60s)
+      idle: 10000,   // Thời gian (ms) một kết nối rảnh rỗi trước khi bị đóng
+    },
     dialectOptions: isLocal ? {} : {
-        ssl: {
-            require: true,
-            rejectUnauthorized: false, 
-        }
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, 
+      },
+      // Thêm keepAlive để giữ kết nối ổn định hơn trên môi trường cloud
+      keepAlive: true, 
     },
     models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address, Combo, ComboItem],
   }

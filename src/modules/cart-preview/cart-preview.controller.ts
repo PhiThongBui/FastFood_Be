@@ -90,7 +90,7 @@ API sẽ tự động xác định cart tương ứng.
     );
   }
 
-  @Post('/cart')
+  @Get('/cart')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Xem giỏ hàng của mình',
