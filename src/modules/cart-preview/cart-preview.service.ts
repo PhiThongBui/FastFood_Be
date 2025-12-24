@@ -251,7 +251,7 @@ export class CartPreviewService {
     //         },
     //     };
     // }
-    async getUserCartPreview(cartId: number, transaction: any): Promise<CartPreviewOutput> {
+    async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
         // 1. Query CartItems (Giữ nguyên đoạn query của bạn)
         const cartItems = await this.cartItemsModel.findAll({
             where: { cartId: cartId },
@@ -265,7 +265,6 @@ export class CartPreviewService {
                     include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price'] }]
                 }
             ],
-            transaction,
         });
 
         if (!cartItems || cartItems.length === 0) {
@@ -296,17 +295,14 @@ export class CartPreviewService {
             this.ingredientModel.findAll({
                 where: { id: { [Op.in]: Array.from(allIngredientIdsInCombos) } },
                 attributes: ['id', 'price', 'name'],
-                transaction
             }),
             this.productModel.findAll({
                 where: { id: { [Op.in]: Array.from(allProductIdsInCombos) } },
                 attributes: ['id', 'name', 'basePrice'], // Đảm bảo có basePrice
-                transaction
             }),
             this.productVariantModel.findAll({
                 where: { id: { [Op.in]: Array.from(allVariantIdsInCombos) } },
                 attributes: ['id', 'name', 'size', 'type', 'modifiedPrice'],
-                transaction
             })
         ]);
 
@@ -516,7 +512,7 @@ export class CartPreviewService {
         };
     }
 
-    async cartPreview(cartId: number, cartItemIds: number[], transaction: any): Promise<CartPreviewOutput> {
+    async cartPreview(cartId: number, cartItemIds: number[]): Promise<CartPreviewOutput> {
         // 1. Query CartItems (Giữ nguyên đoạn query của bạn)
         const cartItems = await this.cartItemsModel.findAll({
             where: { id: { [Op.in]: cartItemIds }, cartId: cartId },
@@ -530,7 +526,6 @@ export class CartPreviewService {
                     include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price'] }]
                 }
             ],
-            transaction,
         });
 
         if (!cartItems || cartItems.length === 0) {
@@ -561,17 +556,14 @@ export class CartPreviewService {
             this.ingredientModel.findAll({
                 where: { id: { [Op.in]: Array.from(allIngredientIdsInCombos) } },
                 attributes: ['id', 'price', 'name'],
-                transaction
             }),
             this.productModel.findAll({
                 where: { id: { [Op.in]: Array.from(allProductIdsInCombos) } },
                 attributes: ['id', 'name', 'basePrice'], // Đảm bảo có basePrice
-                transaction
             }),
             this.productVariantModel.findAll({
                 where: { id: { [Op.in]: Array.from(allVariantIdsInCombos) } },
                 attributes: ['id', 'name', 'size', 'type', 'modifiedPrice'],
-                transaction
             })
         ]);
 
@@ -788,8 +780,8 @@ export class CartPreviewService {
         };
     }
 
-    async checkoutCaculate(userId: number, cartId: number, dto: CheckoutCaculateDto, transaction: any): Promise<any> {
-        const cartPrev = await this.cartPreview(cartId, dto.cartItemId, transaction)
+    async checkoutCaculate(userId: number, cartId: number, dto: CheckoutCaculateDto): Promise<any> {
+        const cartPrev = await this.cartPreview(cartId, dto.cartItemId)
 
         if (!cartPrev) {
             throw new BadRequestException('No valid cart items found for preview.');
@@ -812,7 +804,7 @@ export class CartPreviewService {
         let discount = 0;
         let applyedCouponCode: any
         if (dto.couponCode) {
-            const validateCoupon = await this.couponService.validateCoupon(userId, dto.couponCode, cartPrev.data.totalAmount, transaction);
+            const validateCoupon = await this.couponService.validateCoupon(userId, dto.couponCode, cartPrev.data.totalAmount);
             console.log(validateCoupon);
 
             discount = validateCoupon.discount

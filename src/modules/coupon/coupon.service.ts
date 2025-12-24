@@ -79,12 +79,11 @@ export class CouponService {
         } as UserCoupons)
     }
 
-    async validateCoupon(userId: number, couponCode: string, subTotal: number, transaction: any): Promise<ValidateCoupon> {
+    async validateCoupon(userId: number, couponCode: string, subTotal: number): Promise<ValidateCoupon> {
         const coupon = await this.modelCoupon.findOne({
             where: {
                 code: couponCode
             },
-            transaction: transaction
         })
 
         if (!coupon) {
@@ -97,7 +96,6 @@ export class CouponService {
                 couponId: coupon.dataValues.id,
                 isUsed: true
             },
-            transaction: transaction
         })
 
         if (useCoupon) {

@@ -86,7 +86,6 @@ API sẽ tự động xác định cart tương ứng.
     return await this.cartPreviewService.cartPreview(
       cart.id,
       cartItemId,
-      transaction
     );
   }
 
@@ -135,7 +134,6 @@ API sẽ tự động xác định cart tương ứng.
 
     return await this.cartPreviewService.getUserCartPreview(
       cart.id,
-      transaction
     );
   }
 
@@ -169,7 +167,7 @@ API sẽ tự động xác định cart tương ứng.
 
       const cartId = await this.cartService.getCartByContext(sessionId, userId, transaction)
 
-      return await this.cartPreviewService.checkoutCaculate(userId, cartId?.dataValues?.id, dto, transaction);
+      return await this.cartPreviewService.checkoutCaculate(userId, cartId?.dataValues?.id, dto);
     } catch (error) {
       console.log(error);
       await transaction.rollback()
