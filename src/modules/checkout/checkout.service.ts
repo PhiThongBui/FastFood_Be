@@ -68,7 +68,6 @@ export class CheckoutService {
                     temporaryAddress: dto.temporaryAddress as any,
                     couponCode: dto.couponCode
                 },
-                transaction
             );
 
             if (!calculation || !calculation.data) {
