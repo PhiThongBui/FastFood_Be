@@ -8,7 +8,7 @@ import { Combo } from './combo.model';
 export interface CartComboOption {
     productId: number;
     productVariantId: number;
-    ingredients: {
+    ingredients?: {
         ingredientId: number;
         quantity: number; // Ví dụ: Thêm 2 phần phô mai
         type: 'ADD' | 'REMOVE'; // Thêm hay Bỏ

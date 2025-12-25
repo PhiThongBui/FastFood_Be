@@ -10,7 +10,7 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         type: DataType.INTEGER,
     })
     cartItemId: number
-    
+
     @ForeignKey(() => Ingredient)
     @Column({
         allowNull: false,
@@ -32,8 +32,9 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
     // 🔥 THÊM CỘT NÀY: Để phân biệt Thêm hay Bỏ
     @Column({
         type: DataType.ENUM('ADD', 'REMOVE'),
-        defaultValue: 'ADD', 
+        defaultValue: 'ADD',
         allowNull: false
     })
-    type: string;
+    type: 'ADD' | 'REMOVE'; // ✅ Thay đổi ở đây
+
 }

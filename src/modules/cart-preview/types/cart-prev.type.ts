@@ -2,33 +2,67 @@
 
 export interface CartPreviewItem {
     cartItemId: number;
-    type: 'SINGLE' | 'COMBO'; // Phân loại
-    name: string;             // Tên món hoặc Tên Combo
-    unitPrice: number;        // Giá đơn vị (đã cộng topping)
+    type: 'SINGLE' | 'COMBO';
+    name: string;
+    unitPrice: number;
     quantity: number;
-    totalPrice: number;       // unitPrice * quantity
+    totalPrice: number;
     imageUrl: string;
     
-    // Chi tiết (Optional)
+    // ✅ THÊM: Raw data để restore modal
+    rawData?: {
+        // For SINGLE
+        productId?: number;
+        productVariantId?: number;
+        
+        // For COMBO
+        comboId?: number;
+        selectedOptions?: Array<{
+            productId: number;
+            productVariantId: number;
+            ingredients?: Array<{
+                ingredientId: number;
+                quantity: number;
+                type: 'ADD' | 'REMOVE';
+                name?: string;
+                price?: number;
+            }>;
+            // ✅ Enriched data
+            product?: {
+                id: number;
+                name: string;
+                imageUrl?: string;
+                basePrice: number;
+            };
+            variant?: {
+                id: number;
+                name: string;
+                size: string;
+                type: string;
+                modifiedPrice: number;
+            };
+        }>;
+    };
+    
+    // Chi tiết hiển thị
     details?: {
         variantName?: string;
         size?: string;
-        crust?: string; // Type đế bánh
+        crust?: string;
         ingredients?: {
             name: string;
             price: number;
-            quantity?: number;      // ✅ Thêm field này
-            totalPrice?: number;    // ✅ Thêm field này
-            type?: 'ADD' | 'REMOVE'; // ✅ Sửa type chính xác hơn
+            quantity?: number;
+            totalPrice?: number;
+            type?: 'ADD' | 'REMOVE';
         }[];
         discountPercentage?: number;
         savedAmount?: number;
-        // Dành cho Combo: Danh sách các món con
         originalPrice?: number;  
         comboItems?: {
             productName: string;
             variantName: string;
-            ingredients: string[]; // Tên topping thêm/bớt
+            ingredients: string[];
         }[];
     };
 }

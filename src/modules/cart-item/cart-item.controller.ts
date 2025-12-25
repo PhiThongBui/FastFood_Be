@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { CartItemService } from './cart-item.service';
 import { CreateCartItemDto } from './dto/cart-item.dto';
 import { Response, Request } from 'express';
@@ -11,7 +11,8 @@ import { User } from '@/models';
 import { actionUpdateCartItem } from './types/cartItem.type';
 import { CartService } from '../cart/cart.service';
 import { Sequelize } from 'sequelize-typescript';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { UpdateCartItemDto } from './dto/update-cart-item.dto.ts';
 interface AddToCartParams extends CreateCartItemDto {
   userId?: number;
   sessionId?: string;
@@ -310,5 +311,93 @@ Trong đó mỗi selectedOption gồm:
 
     return await this.cartItemService.getCartItemByCartId(cartId?.dataValues?.id, transaction)
 
+  }
+
+
+  @Put('/items/:cartItemId')
+  @ApiOperation({
+    summary: 'Cập nhật cart item',
+    description: 'Cho phép cập nhật quantity, variant, ingredients hoặc combo selectedOptions'
+  })
+  @ApiParam({
+    name: 'cartItemId',
+    type: Number,
+    example: 123
+  })
+  @ApiBody({
+    type: UpdateCartItemDto,
+    examples: {
+      'update-combo': {
+        summary: 'Update combo selectedOptions',
+        value: {
+          selectedOptions: [
+            {
+              productId: 10,
+              productVariantId: 30,
+              ingredients: [
+                {
+                  ingredientId: 3,
+                  quantity: 1,
+                  type: 'ADD'
+                }
+              ]
+            },
+            {
+              productId: 15,
+              productVariantId: 35
+            }
+          ]
+        }
+      },
+      'update-quantity-only': {
+        summary: 'Chỉ update số lượng',
+        value: {
+          quantity: 3
+        }
+      },
+      'update-single-pizza': {
+        summary: 'Update món lẻ (variant + ingredients)',
+        value: {
+          productVariantId: 8,
+          singleProductOptions: [
+            {
+              ingredientId: 1,
+              quantity: 2,
+              type: 'ADD'
+            }
+          ]
+        }
+      }
+    }
+  })
+  async updateCartItem(
+    @Param('cartItemId') cartItemId: number,
+    @Body() updateDto: UpdateCartItemDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) _res: Response
+  ) {
+    const sessionId = Helper.getSessionIdFromRequest(req);
+    let userId: number | null = null;
+
+    const authHeader = req.headers?.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = this.JWTservice.verify(
+          token,
+          this.configService.get('JWT_SECRET')
+        ) as any;
+        userId = decoded.uid;
+      } catch (error) {
+        userId = null;
+      }
+    }
+
+    return await this.cartItemService.updateCartItem(
+      cartItemId,
+      updateDto,
+      userId,
+      sessionId
+    );
   }
 }

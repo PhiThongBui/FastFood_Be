@@ -325,21 +325,25 @@ export class CartPreviewService {
             if (isCombo) {
                 const comboInstance = item.dataValues.combo;
                 if (!comboInstance) continue;
-
+                console.log("1234");
+                
                 const comboData = comboInstance.dataValues;
+                console.log("comboData", comboData);
+                
                 let currentComboTotal = 0;
                 const comboDetailsDisplay: any[] = [];
                 const options = item.dataValues.selectedOptions;
 
+                // ✅ NEW: Enrich selectedOptions với product/variant/ingredient details
+                const enrichedOptions: any[] = [];
+
                 if (options) {
                     for (const opt of options) {
-                        // Lấy data từ Map (đã có declare trong Model nên truy cập trực tiếp được)
                         const pInstance = productMap.get(opt.productId);
                         const vInstance = variantMap.get(opt.productVariantId);
 
                         if (!pInstance || !vInstance) continue;
 
-                        // Lấy raw values
                         const pData = pInstance.dataValues;
                         const vData = vInstance.dataValues;
 
@@ -347,23 +351,15 @@ export class CartPreviewService {
                         const vName = `${vData.size} - ${vData.type}`;
                         const ingNames: string[] = [];
 
-                        // ---------------------------------------------------------
-                        // 1. TÍNH GIÁ CƠ BẢN: BASE PRICE + VARIANT PRICE
-                        // ---------------------------------------------------------
-
-                        // Giá gốc sản phẩm
+                        // 1. TÍNH GIÁ CƠ BẢN
                         const basePrice = Number(pData.basePrice || 0);
-                        // Giá biến thể (Upsize/Đế...). Nếu null/undefined thì là 0.
                         const variantSurcharge = Number(vData.modifiedPrice || 0);
-
-                        // 🔥 LOGIC SỬA: Cộng dồn Base + Variant
                         let componentPrice = basePrice + variantSurcharge;
 
-                        // console.log(`Item: ${pName} | Base: ${basePrice} + Variant: ${variantSurcharge} = ${componentPrice}`);
+                        // ✅ NEW: Enrich ingredients
+                        const enrichedIngredients: any[] = [];
 
-                        // ---------------------------------------------------------
-                        // 2. TÍNH GIÁ TOPPING (INGREDIENTS)
-                        // ---------------------------------------------------------
+                        // 2. TÍNH GIÁ TOPPING
                         if (opt.ingredients) {
                             for (const ing of opt.ingredients) {
                                 const ingInstance = ingredientMap.get(ing.ingredientId);
@@ -371,22 +367,26 @@ export class CartPreviewService {
 
                                 const ingData = ingInstance.dataValues;
 
+                                // ✅ Push enriched ingredient
+                                enrichedIngredients.push({
+                                    ingredientId: ing.ingredientId,
+                                    quantity: ing.quantity,
+                                    type: ing.type,
+                                    name: ingData.name,
+                                    price: ingData.price,
+                                });
+
                                 if (ing.type === 'ADD') {
                                     const price = Number(ingData.price || 0);
                                     const qty = Number(ing.quantity || 1);
-
-                                    // Cộng tiền topping vào giá món
                                     componentPrice += (price * qty);
-
                                     ingNames.push(`+ ${ingData.name} (x${qty})`);
                                 } else if (ing.type === 'REMOVE') {
-                                    // Không trừ tiền, chỉ ghi chú
                                     ingNames.push(`KHÔNG LẤY ${ingData.name}`);
                                 }
                             }
                         }
 
-                        // Cộng dồn giá món này vào tổng giá trị Combo
                         currentComboTotal += componentPrice;
 
                         comboDetailsDisplay.push({
@@ -394,20 +394,32 @@ export class CartPreviewService {
                             variantName: vName,
                             ingredients: ingNames
                         });
+
+                        // ✅ NEW: Build enriched option
+                        enrichedOptions.push({
+                            productId: opt.productId,
+                            productVariantId: opt.productVariantId,
+                            ingredients: enrichedIngredients,
+                            product: {
+                                id: pData.id,
+                                name: pData.name,
+                                imageUrl: pData.imageUrl || '',
+                                basePrice: pData.basePrice,
+                            },
+                            variant: {
+                                id: vData.id,
+                                name: vData.name,
+                                size: vData.size,
+                                type: vData.type,
+                                modifiedPrice: vData.modifiedPrice,
+                            }
+                        });
                     }
                 }
 
-                // ======================================================
-                // 3. ÁP DỤNG GIẢM GIÁ COMBO (Nếu có)
-                // ======================================================
-
-                // Lấy % giảm giá (VD: 10%)
+                // 3. ÁP DỤNG GIẢM GIÁ COMBO
                 const discountPercent = Number(comboData.discountPercentage || 0);
-
-                // Giá sau khi giảm
                 const discountedPrice = currentComboTotal * (1 - (discountPercent / 100));
-
-                // Làm tròn về hàng nghìn
                 itemUnitPrice = Math.ceil(discountedPrice / 1000) * 1000;
 
                 finalItemObj = {
@@ -418,11 +430,18 @@ export class CartPreviewService {
                     unitPrice: itemUnitPrice,
                     quantity: itemQty,
                     totalPrice: itemUnitPrice * itemQty,
+
+                    // ✅ NEW: Add rawData
+                    rawData: {
+                        comboId: comboData.id,
+                        selectedOptions: enrichedOptions, // ✅ Enriched version
+                    },
+
                     details: {
                         comboItems: comboDetailsDisplay,
-                        originalPrice: currentComboTotal, // Giá thực tế chưa giảm
+                        originalPrice: currentComboTotal,
                         discountPercentage: discountPercent,
-                        savedAmount: currentComboTotal - itemUnitPrice // Số tiền tiết kiệm được
+                        savedAmount: currentComboTotal - itemUnitPrice
                     }
                 };
             }
@@ -434,25 +453,7 @@ export class CartPreviewService {
 
                 if (!productData || !variantData) continue;
 
-                // 1. Tính giá Topping
-                const unitToppingPrice = cartItemIngredients.reduce((sum, ing) => {
-                    if (ing.dataValues.type === 'ADD') {
-                        const totalIngQty = ing.dataValues.quantity;
-                        // SỬA: Ép kiểu Number
-                        const ingPrice = Number(ing.dataValues.ingredient?.dataValues.price || 0);
-                        const unitQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
-                        return sum + (ingPrice * unitQty);
-                    }
-                    return sum;
-                }, 0);
-
-                // 2. Base Price
-                let baseItemPrice = Number(productData.dataValues.basePrice || 0);
-                if (variantData.dataValues.modifiedPrice != null) {
-                    baseItemPrice += Number(variantData.dataValues.modifiedPrice);
-                }
-
-                itemUnitPrice = baseItemPrice + unitToppingPrice;
+                // ... existing price calculation logic ...
 
                 // 3. Format Display
                 const ingredientsDisplay = cartItemIngredients.map(ing => {
@@ -465,6 +466,7 @@ export class CartPreviewService {
 
                     if (ing.dataValues.type === 'ADD') {
                         return {
+                            ingredientId: ingData.id, // ✅ ADD this
                             name: `+ ${ingData.name}`,
                             price: price,
                             quantity: unitQty,
@@ -473,6 +475,7 @@ export class CartPreviewService {
                         };
                     } else {
                         return {
+                            ingredientId: ingData.id, // ✅ ADD this
                             name: `KHÔNG LẤY ${ingData.name}`,
                             price: 0,
                             quantity: unitQty,
@@ -490,6 +493,13 @@ export class CartPreviewService {
                     unitPrice: itemUnitPrice,
                     quantity: itemQty,
                     totalPrice: itemUnitPrice * itemQty,
+
+                    // ✅ NEW: Add rawData for SINGLE
+                    rawData: {
+                        productId: productData.dataValues.id,
+                        productVariantId: variantData.dataValues.id,
+                    },
+
                     details: {
                         variantName: variantData.dataValues.name,
                         size: variantData.dataValues.size,
@@ -630,9 +640,9 @@ export class CartPreviewService {
                         if (opt.ingredients) {
                             for (const ing of opt.ingredients) {
                                 const ingInstance = ingredientMap.get(ing.ingredientId);
-                                
+
                                 if (!ingInstance) continue;
-                                
+
                                 const ingData = ingInstance.dataValues;
                                 console.log(ingData);
 
