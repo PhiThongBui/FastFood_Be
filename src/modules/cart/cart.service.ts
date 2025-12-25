@@ -11,7 +11,7 @@ export class CartService {
         private readonly sequelize: Sequelize
     ) { }
 
-    async getOrCreateUserCart(userId: number, transaction: any) {
+    async getOrCreateUserCart(userId: number, transaction?: any) {
         let cart = await this.modelCarts.findOne({
             where: {
                 userId: userId,
@@ -26,7 +26,7 @@ export class CartService {
         return cart
     }
 
-    async getOrCreateGuestCart(sessionId: string, transaction: any) {
+    async getOrCreateGuestCart(sessionId: string, transaction?: any) {
         let cart = await this.modelCarts.findOne({
             where: {
                 sessionId: sessionId,
@@ -41,7 +41,7 @@ export class CartService {
         return cart
     }
 
-    async getCartByContext(sessionId: string | undefined, userId: number | null | undefined, transaction: any) {
+    async getCartByContext(sessionId: string | undefined, userId: number | null | undefined, transaction?: any) {
         if (userId) {
             return await this.getOrCreateUserCart(userId, transaction)
         } else if (sessionId) {

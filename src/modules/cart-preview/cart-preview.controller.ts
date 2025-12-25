@@ -14,7 +14,6 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagg
 export class CartPreviewController {
   constructor(
     private readonly cartPreviewService: CartPreviewService,
-    private readonly sequelize: Sequelize,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly cartService: CartService
@@ -59,8 +58,6 @@ API sẽ tự động xác định cart tương ứng.
     @Body('cartItemId') cartItemId: number[],
     @Req() req: Request
   ) {
-    const transaction = await this.sequelize.transaction();
-
     const sessionId = Helper.getSessionIdFromRequest(req);
     let userId: number | null = null;
 
@@ -80,7 +77,6 @@ API sẽ tự động xác định cart tương ứng.
     const cart = await this.cartService.getCartByContext(
       sessionId,
       userId,
-      transaction
     );
 
     return await this.cartPreviewService.cartPreview(
@@ -108,8 +104,6 @@ API sẽ tự động xác định cart tương ứng.
   async getCartPreview(
     @Req() req: Request
   ) {
-    const transaction = await this.sequelize.transaction();
-
     const sessionId = Helper.getSessionIdFromRequest(req);
     let userId: number | null = null;
 
@@ -129,7 +123,6 @@ API sẽ tự động xác định cart tương ứng.
     const cart = await this.cartService.getCartByContext(
       sessionId,
       userId,
-      transaction
     );
 
     return await this.cartPreviewService.getUserCartPreview(
@@ -140,7 +133,6 @@ API sẽ tự động xác định cart tương ứng.
   @UseGuards(JWTGuard)
   @Post('/checkout-calculate')
   async checkoutCaculate(@Body() dto: CheckoutCaculateDto, @Req() req: Request) {
-    const transaction = await this.sequelize.transaction();
     try {
       if (!dto.addressId && !dto.temporaryAddress) {
         throw new BadRequestException('Either addressId or temporaryAddress must be provided.');
@@ -165,12 +157,11 @@ API sẽ tự động xác định cart tương ứng.
         throw new BadRequestException('User id not found')
       }
 
-      const cartId = await this.cartService.getCartByContext(sessionId, userId, transaction)
+      const cartId = await this.cartService.getCartByContext(sessionId, userId)
 
       return await this.cartPreviewService.checkoutCaculate(userId, cartId?.dataValues?.id, dto);
     } catch (error) {
       console.log(error);
-      await transaction.rollback()
       throw new BadRequestException(error.message)
     }
   }
