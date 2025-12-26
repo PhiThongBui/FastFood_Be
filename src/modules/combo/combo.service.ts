@@ -84,26 +84,18 @@ export class ComboService {
         const {
             page,
             limit,
-            sortBy ,
+            sortBy,
             sortOrder,
             search,
         } = query;
 
+        // Kiểm tra xem có yêu cầu phân trang không
         const hasPagination = page !== undefined && limit !== undefined;
 
-        // Build where conditions
+        // 1. Xây dựng điều kiện lọc (WHERE)
         const where: any = {
-            isActive: true,
+            isActive: true, // Chỉ lấy combo đang hoạt động
         };
-        const orderArray: any[] = [
-            ['isFeatured', 'DESC'], // Featured items lên đầu (true > false)
-        ];
-        if (sortBy && sortOrder) {
-            orderArray.push([sortBy, sortOrder.toUpperCase()]);
-        } else {
-            // Mặc định sort theo createdAt DESC
-            orderArray.push(['createdAt', 'DESC']);
-        }
 
         if (search) {
             where[Op.or] = [
@@ -112,12 +104,23 @@ export class ComboService {
             ];
         }
 
-        // Build query options
+        // 2. Xây dựng thứ tự sắp xếp (ORDER)
+        const orderArray: any[] = [
+            ['isFeatured', 'DESC'], // Ưu tiên Combo nổi bật lên đầu
+        ];
+
+        if (sortBy && sortOrder) {
+            orderArray.push([sortBy, sortOrder.toUpperCase()]);
+        } else {
+            orderArray.push(['createdAt', 'DESC']); // Mặc định mới nhất lên trước
+        }
+
+        // 3. Cấu hình Query
         const queryOptions: any = {
             where,
             order: orderArray,
             attributes: {
-                exclude: ['categoryId']
+                exclude: ['categoryId'] // Không lấy categoryId, nhưng VẪN LẤY price và discountPercentage
             },
             distinct: true,
         };
@@ -128,13 +131,33 @@ export class ComboService {
             queryOptions.offset = offset;
         }
 
+        // 4. Thực thi Query
         const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
-        const plainCombos = combos.map(combo => combo.get({ plain: true }));
-        
+
+        // 5. Xử lý dữ liệu trả về (Tính salePrice)
+        const formattedCombos = combos.map(combo => {
+            const plainData = combo.get({ plain: true });
+
+            const originalPrice = plainData.price;
+            const discount = plainData.discountPercentage || 0;
+
+            // Tính giá sau giảm (salePrice)
+            let salePrice = originalPrice;
+            if (discount > 0) {
+                salePrice = originalPrice * (1 - discount / 100);
+            }
+
+            return {
+                ...plainData,
+                salePrice: Math.ceil(salePrice / 1000) * 1000 // Làm tròn thành số nguyên
+            };
+        });
+
+        // 6. Trả về kết quả (Kèm Meta phân trang nếu có)
         if (hasPagination) {
             const totalPages = Math.ceil(count / limit);
             return {
-                data: plainCombos,
+                data: formattedCombos,
                 meta: {
                     total: count,
                     page,
@@ -144,8 +167,9 @@ export class ComboService {
             };
         }
 
+        // Trả về kết quả (Không phân trang)
         return {
-            data: plainCombos,
+            data: formattedCombos,
             meta: {
                 total: count
             }
@@ -154,12 +178,15 @@ export class ComboService {
 
 
     async getComboById(id: number) {
-        return await this.comboModel.findByPk(id, {
-            attributes: [],
+        const combo = await this.comboModel.findByPk(id, {
+            // ✅ 1. Thêm 'discountPercentage' vào danh sách lấy về
+            attributes: ['id', 'name', 'price', 'description', 'imageUrl', 'discountPercentage'],
             include: [
                 {
                     model: this.comboItemModel,
                     as: 'items',
+                    // 🔥 QUAN TRỌNG: Giữ separate: true để tối ưu query, tránh lỗi timeout
+                    separate: true,
                     attributes: {
                         exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId', 'quantity']
                     },
@@ -172,9 +199,9 @@ export class ComboService {
                                     model: this.productIngredientModel,
                                     attributes: { exclude: ['createdAt', 'updatedAt', 'productId', 'ingredientId', 'quantity'] },
                                     where: {
-                                        isDefault: true  // ✅ Thêm filter isDefault = true
+                                        isDefault: true
                                     },
-                                    required: false,  // ✅ LEFT JOIN để không bỏ product không có ingredient default
+                                    required: false,
                                     include: [{ model: this.ingredientModel, attributes: ['name'] }]
                                 }
                             ]
@@ -188,6 +215,24 @@ export class ComboService {
                     ]
                 }
             ]
-        })
+        });
+
+        if (!combo) return null;
+
+        // ✅ 2. Xử lý tính toán salePrice
+        const plainData = combo.get({ plain: true });
+        
+        const originalPrice = plainData.price;
+        const discount = plainData.discountPercentage || 0;
+
+        let salePrice = originalPrice;
+        if (discount > 0) {
+            salePrice = originalPrice * (1 - discount / 100);
+        }
+
+        return {
+            ...plainData,
+            salePrice: Math.ceil(salePrice / 1000) * 1000
+        };
     }
 }
