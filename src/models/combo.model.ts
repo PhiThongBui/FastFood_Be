@@ -10,47 +10,47 @@ export class Combo extends Model<Combo> {
     unique: true,
     type: DataType.STRING,
   })
-  name: string;
+  declare name: string;
 
   @Column({
     allowNull: false,
     unique: true,
     type: DataType.STRING,
   })
-  slug: string;
+  declare slug: string;
 
   @Column({
     allowNull: true,
     type: DataType.TEXT,
   })
-  description: string;
+  declare description: string;
 
   // Đây là giá cố định của combo (ví dụ: 199.000)
   @Column({
     allowNull: false,
     type: DataType.INTEGER,
   })
-  price: number;
+  declare price: number;
 
   @Column({
     allowNull: false,
     type: DataType.STRING,
   })
-  imageUrl: string;
+  declare imageUrl: string;
 
   @Column({
     allowNull: false,
     defaultValue: true,
     type: DataType.BOOLEAN,
   })
-  isActive: boolean;
+  declare isActive: boolean;
 
   @Column({
     allowNull: false,
     defaultValue: false,
     type: DataType.BOOLEAN,
   })
-  isFeatured: boolean;
+  declare isFeatured: boolean;
   // 🔥 THÊM CỘT NÀY
   @Column({
     allowNull: false,
@@ -58,13 +58,13 @@ export class Combo extends Model<Combo> {
     type: DataType.INTEGER,
     comment: 'Phần trăm giảm giá của Combo (VD: 10 nghĩa là 10%)'
   })
-  discountPercentage: number;
+  declare discountPercentage: number;
   @ForeignKey(() => Category)
   @Column({
     allowNull: false, // Có thể cho phép null nếu combo không thuộc category nào
     type: DataType.INTEGER,
   })
-  categoryId: number;
+  declare categoryId: number;
 
   @BelongsTo(() => Category)
   category: Category;

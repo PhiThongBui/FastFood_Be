@@ -9,7 +9,7 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    orderItemId: number;
+   declare orderItemId: number;
 
     @BelongsTo(() => OrderItems)
     orderItem: OrderItems
@@ -19,7 +19,7 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    ingredientId: number;
+   declare ingredientId: number;
 
     @BelongsTo(() => Ingredient)
     ingredient: Ingredient
@@ -28,7 +28,7 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    quantity: number
+   declare quantity: number
 
     // 🔥 CẦN THÊM: Để lưu trạng thái Thêm/Bớt từ Cart chuyển sang
     @Column({
@@ -36,6 +36,6 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
         defaultValue: 'ADD', 
         allowNull: false
     })
-    type: string;
+   declare type: string;
 
 }

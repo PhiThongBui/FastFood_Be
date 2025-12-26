@@ -27,39 +27,39 @@ export class User extends Model<User> {
         unique: true,
         type: DataType.STRING,
     })
-    email: string;
+    declare email: string;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    password: string;
+    declare password: string;
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    name: string;
+    declare name: string;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    avatar: string;
+    declare avatar: string;
 
     @Column({
         unique: true,
         allowNull: true,
         type: DataType.STRING,
     })
-    phone: string;
+    declare phone: string;
 
     @Column({
         allowNull: false,
         defaultValue: ENUMROLE.User,
         type: DataType.ENUM(...Object.values(ENUMROLE)),
     })
-    role: ENUMROLE;
+    declare role: ENUMROLE;
 
 
     @Column({
@@ -67,14 +67,14 @@ export class User extends Model<User> {
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
-    isActive: boolean;
+    declare isActive: boolean;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
         unique: true
     })
-    googleId: string
+    declare googleId: string
 
 
     @Column({
@@ -82,41 +82,41 @@ export class User extends Model<User> {
         type: DataType.ENUM(...Object.values(AuthProvider)),
         defaultValue: AuthProvider.LOCAL
     })
-    authProvider: AuthProvider
+    declare authProvider: AuthProvider
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    refreshToken: string
+    declare refreshToken: string
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    passwordResetToken: string | null
+    declare passwordResetToken: string | null
 
 
     @Column({
         allowNull: true,
         type: DataType.BIGINT,
     })
-    passwordResetExpires: number | null
+    declare passwordResetExpires: number | null
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    passwordChangeAt: string | null
+    declare passwordChangeAt: string | null
 
     @Column({
         allowNull: false,
         defaultValue: false,
         type: DataType.BOOLEAN
     })
-    isEmailVerified: boolean
+    declare isEmailVerified: boolean
 
-    
+
     @HasMany(() => Address, {
         onDelete: 'CASCADE',
         hooks: false

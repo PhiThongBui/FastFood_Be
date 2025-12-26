@@ -14,53 +14,53 @@ export class Product extends Model<Product> {
     unique: true,
     type: DataType.STRING,
   })
-  name: string;
+  declare name: string;
 
   @Column({
     allowNull: false,
     unique: true,
     type: DataType.STRING,
   })
-  slug: string;
+  declare slug: string;
 
   @Column({
     allowNull: true,
     type: DataType.TEXT,
   })
-  description: string;
+  declare description: string;
 
   @Column({
     allowNull: false,
     type: DataType.INTEGER,
   })
-  basePrice: number;
+  declare basePrice: number;
 
   @Column({
     allowNull: false,
     type: DataType.STRING,
   })
-  imageUrl: string;
+  declare imageUrl: string;
 
   @Column({
     allowNull: true,
     defaultValue: true,
     type: DataType.BOOLEAN,
   })
-  isActive: boolean;
+  declare isActive: boolean;
 
   @Column({
     allowNull: false,
     defaultValue: false,
     type: DataType.BOOLEAN,
   })
-  isFeatured: boolean; // sản phẩm hot theo tuần VD: Hiển thị trang đầu để quảng bá
+  declare isFeatured: boolean; // sản phẩm hot theo tuần VD: Hiển thị trang đầu để quảng bá
 
   @ForeignKey(() => Category)
   @Column({
     allowNull: false,
     type: DataType.INTEGER,
   })
-  categoryId: number;
+  declare categoryId: number;
 
   @BelongsTo(() => Category)
   category: Category

@@ -18,55 +18,54 @@ export class ProductVariant extends Model<ProductVariant> {
         allowNull: false,
         type: DataType.STRING,
     })
-    name: string;
+    declare name: string; // ✅ Thêm declare
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(PRODUCTVARIANTSIZE)),
     })
-    size: PRODUCTVARIANTSIZE;
-
+    declare size: PRODUCTVARIANTSIZE; // ✅ Thêm declare
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(PRODUCTVARIANTTYPE)),
     })
-    type: PRODUCTVARIANTTYPE;
-
+    declare type: PRODUCTVARIANTTYPE; // ✅ Thêm declare
 
     @Column({
         defaultValue: 0,
         type: DataType.INTEGER,
     })
-    modifiedPrice: number;
-  @Column({
+    declare modifiedPrice: number; // ✅ Thêm declare
+
+    @Column({
         allowNull: false,
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
-    isComboItem: boolean;
+    declare isComboItem: boolean; // ✅ Thêm declare
+
     @Column({
         allowNull: true,
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
-    isActive: boolean;
-  
+    declare isActive: boolean; // ✅ Thêm declare
+
     //relations
     @ForeignKey(() => Product)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    productId: number;
+    declare productId: number; // 🔥 QUAN TRỌNG NHẤT: Thêm declare để fix lỗi undefined
 
     @BelongsTo(() => Product)
-    product: Product
+    product: Product;
 
     @HasMany(() => CartItems, {
         onDelete: 'CASCADE',
         hooks: false
     })
     cartItems: CartItems[];
-
 }

@@ -9,69 +9,69 @@ export class Address extends Model<Address> {
         allowNull: false,
         type: DataType.STRING,
     })
-    recipientName: string; // <--- TÊN NGƯỜI NHẬN
+   declare recipientName: string; // <--- TÊN NGƯỜI NHẬN
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    recipientPhone: string; // <--- SỐ ĐIỆN THOẠI NGƯỜI NHẬN
+   declare recipientPhone: string; // <--- SỐ ĐIỆN THOẠI NGƯỜI NHẬN
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    street: string;
+   declare street: string;
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    city: string;
+   declare city: string;
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    district: string;
+   declare district: string;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    ward: string;
+   declare ward: string;
 
     @Column({
         allowNull: false,
         type: DataType.FLOAT,
     })
-    longitude: number;
+   declare longitude: number;
 
     @Column({
         allowNull: false,
         type: DataType.FLOAT,
     })
-    latitude: number;
+   declare latitude: number;
 
 
     @Column({
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
-    isDefault: boolean;
+   declare isDefault: boolean;
 
     @Index // Thêm index để tăng tốc độ truy vấn theo sessionId
     @Column({
         allowNull: true,
         type: DataType.STRING
     })
-    sessionId: string | null;
+   declare sessionId: string | null;
 
     @ForeignKey(() => User)
     @Column({
         allowNull: true,
         type: DataType.INTEGER,
     })
-    userId: number | null;
+   declare userId: number | null;
 
 
     @BelongsTo(() => User)

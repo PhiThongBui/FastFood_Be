@@ -8,7 +8,7 @@ export class Category extends Model<Category> {
         allowNull: false,
         type: DataType.STRING,
     })
-    name: string;
+   declare name: string;
 
 
     @Column({
@@ -16,27 +16,27 @@ export class Category extends Model<Category> {
         type: DataType.STRING,
         unique: true
     })
-    slug: string;
+   declare slug: string;
 
     @Column({
         allowNull: true,
         type: DataType.TEXT,
     })
-    description: string;
+   declare description: string;
 
 
     @Column({
         defaultValue: 0,
         type: DataType.INTEGER,
     })
-    sortOrder: number;
+   declare sortOrder: number;
 
     @Column({
         defaultValue: true,
         allowNull: true,
         type: DataType.BOOLEAN,
     })
-    isActive: boolean;
+   declare isActive: boolean;
 
     //Relationship
     @HasMany(() => Product,{

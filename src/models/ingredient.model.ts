@@ -11,39 +11,39 @@ export class Ingredient extends Model<Ingredient> {
         unique: true,
         type: DataType.STRING,
     })
-    name: string;
+    declare name: string;
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    imageUrl: string;
+    declare imageUrl: string;
 
 
     @Column({
         allowNull: true,
         type: DataType.TEXT,
     })
-    description: string;
+    declare description: string;
 
     @Column({
         defaultValue: 0,
         type: DataType.INTEGER,
     })
-    price: number;
+    declare price: number;
 
     @Column({
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
-    isActive: boolean;
+    declare isActive: boolean;
 
 
     @Column({
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
-    isRequired: boolean;
+    declare isRequired: boolean;
 
 
     // relation
@@ -52,24 +52,24 @@ export class Ingredient extends Model<Ingredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    categoryId: number
+    declare categoryId: number
 
     @BelongsTo(() => Category)
     category: Category
 
-    @HasMany(() => ProductIngredient,{
+    @HasMany(() => ProductIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })
     productIngredients: ProductIngredient
 
-    @HasMany(() => OrderItemIngredient,{
+    @HasMany(() => OrderItemIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })
     orderItemIngredients: OrderItemIngredient
 
-    @HasMany(() => CartItemsIngredient,{
+    @HasMany(() => CartItemsIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })

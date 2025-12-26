@@ -22,7 +22,7 @@ export class CartItems extends Model<CartItems> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    cartId: number
+    declare cartId: number
 
     @BelongsTo(() => Carts)
     cart: Carts
@@ -32,7 +32,7 @@ export class CartItems extends Model<CartItems> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    productId: number;
+    declare productId: number;
 
     @BelongsTo(() => Product)
     product: Product
@@ -43,7 +43,7 @@ export class CartItems extends Model<CartItems> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    productVariantId: number;
+    declare productVariantId: number;
     @BelongsTo(() => ProductVariant)
     productVariant: ProductVariant;
 
@@ -52,7 +52,7 @@ export class CartItems extends Model<CartItems> {
         allowNull: true, // Null nghĩa là mua món lẻ, có giá trị là mua combo
         type: DataType.INTEGER,
     })
-    comboId: number | null;
+    declare comboId: number | null;
 
     @BelongsTo(() => Combo)
     combo: Combo;
@@ -61,18 +61,18 @@ export class CartItems extends Model<CartItems> {
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    quantity: number
+    declare quantity: number
 
-// 🔥 SỬA 3: Cột JSON mới để lưu cấu hình Combo
+    // 🔥 SỬA 3: Cột JSON mới để lưu cấu hình Combo
     // Lưu mảng các món khách chọn: [{productId: 1, variantId: 5, ingredients: [...]}, ...]
     @Column({
-        type: DataType.JSON, 
+        type: DataType.JSON,
         allowNull: true,
     })
-    selectedOptions: CartComboOption[];
+    declare selectedOptions: CartComboOption[];
     //relation
 
-    @HasMany(() => CartItemsIngredient,{
+    @HasMany(() => CartItemsIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })

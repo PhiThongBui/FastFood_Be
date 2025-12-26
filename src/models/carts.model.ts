@@ -10,14 +10,14 @@ export class Carts extends Model<Carts> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    userId: number;
+   declare userId: number;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
         unique: true
     })
-    sessionId: string;
+   declare sessionId: string;
 
     @BelongsTo(() => User)
     user: User

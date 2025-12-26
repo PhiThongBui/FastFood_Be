@@ -9,7 +9,7 @@ export class ProductIngredient extends Model<ProductIngredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    productId: number
+   declare productId: number
 
     @BelongsTo(() => Product)
     product: Product
@@ -19,7 +19,7 @@ export class ProductIngredient extends Model<ProductIngredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    ingredientId: number
+   declare ingredientId: number
 
     @BelongsTo(() => Ingredient)
     ingredient: Ingredient
@@ -29,13 +29,13 @@ export class ProductIngredient extends Model<ProductIngredient> {
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
-    isDefault: boolean
+   declare isDefault: boolean
 
     @Column({
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    quantity: number
+   declare quantity: number
 
 
     //relation

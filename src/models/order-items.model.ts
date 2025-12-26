@@ -6,18 +6,18 @@ import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
 import { Combo } from './combo.model';
 export interface OrderItemMetadata {
-    itemName: string;        
-    originalPrice: number;   
-    finalPrice: number;      
-    
+    itemName: string;
+    originalPrice: number;
+    finalPrice: number;
+
     // Dành cho Combo
     items?: {
         productId: number;
         productName: string;
         variantId: number;
         variantName: string; // Nên thêm trường này để hiển thị Size/De ma khong can join
-        unitPrice: number;   
-        ingredients: {       
+        unitPrice: number;
+        ingredients: {
             name: string;
             quantity: number;
             price: number;
@@ -43,28 +43,28 @@ export class OrderItems extends Model<OrderItems> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    orderId: number;
+    declare orderId: number;
 
     @ForeignKey(() => Product)
     @Column({
         allowNull: true,
         type: DataType.INTEGER,
     })
-    productId: number;
+    declare productId: number;
 
     @ForeignKey(() => ProductVariant)
     @Column({
         allowNull: true,
         type: DataType.INTEGER,
     })
-    productVariantId?: number | null;
+    declare productVariantId?: number | null;
 
     @ForeignKey(() => Combo)
     @Column({
         allowNull: true, // Null nghĩa là mua món lẻ, có giá trị là mua combo
         type: DataType.INTEGER,
     })
-    comboId: number | null;
+    declare comboId: number | null;
 
     @BelongsTo(() => Combo)
     combo: Combo;
@@ -83,17 +83,17 @@ export class OrderItems extends Model<OrderItems> {
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    quantity: number
-// 🔥 SỬA 3: Cột quan trọng nhất để lưu lịch sử đơn hàng
+    declare quantity: number
+    // 🔥 SỬA 3: Cột quan trọng nhất để lưu lịch sử đơn hàng
     @Column({
         type: DataType.JSON, // Postgres dùng JSONB sẽ tốt hơn, MySQL dùng JSON
         allowNull: true,
     })
-    metadata: OrderItemMetadata;
+    declare metadata: OrderItemMetadata;
 
     //relations
 
-    @HasMany(() => OrderItemIngredient,{
+    @HasMany(() => OrderItemIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })

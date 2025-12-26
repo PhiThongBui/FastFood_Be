@@ -284,8 +284,6 @@ export class CartItemService {
             throw error;
         }
     }
-
-
     /**
      * Tìm cart item món lẻ khớp chính xác
      */
@@ -440,76 +438,91 @@ export class CartItemService {
         options: ComboOptionDto[],
         transaction: any
     ): Promise<void> {
-        console.log("🔍 Validating combo options:", options);
+        if (!options || options.length === 0) return;
 
+        // 1. Gom tất cả ID
+        const productIds = options.map(o => o.productId);
+        const variantIds = options.map(o => o.productVariantId);
+
+        const allIngredientIds: number[] = [];
+        options.forEach(opt => {
+            if (opt.ingredients) {
+                opt.ingredients.forEach(ing => allIngredientIds.push(ing.ingredientId));
+            }
+        });
+
+        // 2. Query song song
+        const [products, variants, ingredients] = await Promise.all([
+            this.modelProduct.findAll({
+                where: { id: productIds },
+                attributes: ['id'],
+                transaction
+            }),
+            this.modelProductVariant.findAll({
+                where: { id: variantIds },
+                // Không cần attributes, lấy all để check productId
+                transaction
+            }),
+            allIngredientIds.length > 0
+                ? this.modelIngredient.findAll({ where: { id: allIngredientIds }, transaction })
+                : []
+        ]);
+
+        // 3. Convert sang Set/Map (Ép kiểu Number cho Key để an toàn)
+        const productMap = new Set(products.map(p => Number(p.id)));
+        // Map: Key = VariantID, Value = Variant Instance
+        const variantMap = new Map(variants.map(v => [Number(v.id), v]));
+        const ingredientMap = new Set(ingredients.map(i => Number(i.id)));
+
+        // 4. Validate Logic
         for (const option of options) {
-            // 1. Validate product exists
-            const product = await this.modelProduct.findByPk(option.productId, {
-                transaction // ✅ Thêm transaction để consistency
-            });
+            // Ép kiểu input về Number
+            const optProductId = Number(option.productId);
+            const optVariantId = Number(option.productVariantId);
 
-            if (!product) {
-                throw new BadRequestException(`Sản phẩm ${option.productId} không tồn tại!`);
+            // Check Product
+            if (!productMap.has(optProductId)) {
+                throw new BadRequestException(`Sản phẩm ${optProductId} không tồn tại!`);
             }
 
-            // 2. Validate variant exists
-            const variant = await this.productVariantService.findById(option.productVariantId);
-
+            // Check Variant
+            const variant = variantMap.get(optVariantId);
             if (!variant) {
-                throw new BadRequestException(`Biến thể ${option.productVariantId} không tồn tại!`);
+                throw new BadRequestException(`Biến thể ${optVariantId} không tồn tại!`);
             }
 
-            // ✅ 3. Validate variant thuộc product này
-            if (variant.productId !== option.productId) {
+            // 🔥 FIX QUAN TRỌNG: Ép kiểu khi so sánh productId
+            if (Number(variant.productId) !== optProductId) {
                 throw new BadRequestException(
-                    `Biến thể ${option.productVariantId} không thuộc sản phẩm ${option.productId}!`
+                    `Biến thể ${optVariantId} không thuộc sản phẩm ${optProductId}! (DB: ${variant.productId})`
                 );
             }
 
-            // 4. Validate ingredients (nếu có)
+            // Check Ingredients
             if (option.ingredients && option.ingredients.length > 0) {
-                const ingredientIds = option.ingredients.map(ing => ing.ingredientId);
-
-                // ✅ Kiểm tra duplicate ingredientIds
-                const uniqueIds = new Set(ingredientIds);
-                if (uniqueIds.size !== ingredientIds.length) {
-                    throw new BadRequestException('Không được thêm cùng một ingredient nhiều lần!');
-                }
-
-                // Validate ingredients exist
-                const existingIngredients = await this.modelIngredient.findAll({
-                    where: {
-                        id: ingredientIds
-                    },
-                    transaction
-                });
-
-                if (existingIngredients.length !== ingredientIds.length) {
-                    const foundIds = existingIngredients.map(ing => ing.id);
-                    const missingIds = ingredientIds.filter(id => !foundIds.includes(id));
-                    throw new BadRequestException(
-                        `Ingredients không tồn tại: ${missingIds.join(', ')}`
-                    );
-                }
-
-                // ✅ 5. Validate ingredient type và quantity
+                const tempIngIds = new Set();
                 for (const ing of option.ingredients) {
-                    if (!['ADD', 'REMOVE'].includes(ing.type)) {
-                        throw new BadRequestException(
-                            `Type "${ing.type}" không hợp lệ cho ingredient ${ing.ingredientId}. Chỉ chấp nhận ADD hoặc REMOVE.`
-                        );
+                    const ingId = Number(ing.ingredientId);
+                    const ingQty = Number(ing.quantity);
+
+                    if (tempIngIds.has(ingId)) {
+                        throw new BadRequestException(`Duplicate ingredient ${ingId} trong một món!`);
+                    }
+                    tempIngIds.add(ingId);
+
+                    if (!ingredientMap.has(ingId)) {
+                        throw new BadRequestException(`Ingredient ${ingId} không tồn tại!`);
                     }
 
-                    if (ing.quantity <= 0) {
-                        throw new BadRequestException(
-                            `Quantity cho ingredient ${ing.ingredientId} phải lớn hơn 0!`
-                        );
+                    if (!['ADD', 'REMOVE'].includes(ing.type)) {
+                        throw new BadRequestException(`Type ingredient không hợp lệ!`);
+                    }
+                    if (ingQty <= 0) {
+                        throw new BadRequestException(`Số lượng ingredient phải lớn hơn 0!`);
                     }
                 }
             }
         }
-
-        console.log("✅ Validation passed");
     }
 
 

@@ -9,14 +9,14 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    cartItemId: number
+   declare cartItemId: number
 
     @ForeignKey(() => Ingredient)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    ingredientId: number
+   declare ingredientId: number
 
     @BelongsTo(() => CartItems)
     cartItem: CartItems
@@ -27,7 +27,7 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    quantity: number
+   declare quantity: number
 
     // 🔥 THÊM CỘT NÀY: Để phân biệt Thêm hay Bỏ
     @Column({
@@ -35,6 +35,6 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
         defaultValue: 'ADD',
         allowNull: false
     })
-    type: 'ADD' | 'REMOVE'; // ✅ Thay đổi ở đây
+   declare type: 'ADD' | 'REMOVE'; // ✅ Thay đổi ở đây
 
 }

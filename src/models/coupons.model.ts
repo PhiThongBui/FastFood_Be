@@ -13,75 +13,75 @@ export class Coupons extends Model<Coupons> {
         unique: true,
         type: DataType.STRING,
     })
-    code: string;
+    declare code: string;
 
     @Column({
         allowNull: false,
         type: DataType.STRING,
     })
-    name: string;
+    declare name: string;
 
 
     @Column({
         allowNull: true,
         type: DataType.TEXT,
     })
-    description: string;
+    declare description: string;
 
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(COUPONTYPE)),
     })
-    type: COUPONTYPE;
+    declare type: COUPONTYPE;
 
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    value: number;
+    declare value: number;
 
 
     @Column({
         defaultValue: 0,
         type: DataType.INTEGER,
     })
-    minOrderAmount: number;
+    declare minOrderAmount: number;
 
     @Column({
         defaultValue: 1,
         type: DataType.INTEGER,
     })
-    maxUsers: number;
+    declare maxUsers: number;
 
     @Column({
         defaultValue: 0,
         type: DataType.INTEGER,
     })
-    currentUsers: number;
+    declare currentUsers: number;
 
     @Column({
         allowNull: false,
         type: DataType.DATE,
     })
-    validFrom: Date;
+    declare validFrom: Date;
 
 
     @Column({
         allowNull: false,
         type: DataType.DATE,
     })
-    validTo: Date;
+    declare validTo: Date;
 
     @Column({
         defaultValue: true,
         type: DataType.BOOLEAN,
     })
-    isActive: boolean
+    declare isActive: boolean
 
     //relation
 
-    @HasMany(() => UserCoupons,{
+    @HasMany(() => UserCoupons, {
         onDelete: 'CASCADE',
         hooks: false
     })

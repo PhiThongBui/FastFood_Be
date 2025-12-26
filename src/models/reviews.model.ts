@@ -9,35 +9,35 @@ export class Reviews extends Model<Reviews> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    rating: Number;
+   declare rating: Number;
 
 
     @Column({
         allowNull: false,
         type: DataType.TEXT,
     })
-    comment: string;
+   declare comment: string;
 
     @ForeignKey(() => Product)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    productId: number
+   declare productId: number
 
     @ForeignKey(() => User)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    userId: number
+   declare userId: number
 
     @ForeignKey(() => Order)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    orderId: number
+   declare orderId: number
 
 
     @BelongsTo(() => User)

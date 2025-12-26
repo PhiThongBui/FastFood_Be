@@ -8,13 +8,13 @@ export class UserCoupons extends Model<UserCoupons> {
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
-    isUsed: boolean;
+    declare isUsed: boolean;
 
     @Column({
         allowNull: true,
         type: DataType.DATE,
     })
-    usedAt: Date;
+    declare usedAt: Date;
 
 
     @ForeignKey(() => User)
@@ -22,14 +22,14 @@ export class UserCoupons extends Model<UserCoupons> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    userId: number;
+    declare userId: number;
 
     @ForeignKey(() => Coupons)
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    couponId: number
+    declare couponId: number
 
     @BelongsTo(() => User)
     user: User

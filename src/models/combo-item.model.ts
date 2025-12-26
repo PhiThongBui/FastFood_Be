@@ -11,7 +11,7 @@ export class ComboItem extends Model<ComboItem> {
     allowNull: false,
     type: DataType.INTEGER,
   })
-  comboId: number;
+ declare comboId: number;
 
   @BelongsTo(() => Combo)
   combo: Combo;
@@ -22,7 +22,7 @@ export class ComboItem extends Model<ComboItem> {
     allowNull: false,
     type: DataType.INTEGER,
   })
-  productId: number;
+ declare productId: number;
 
   @BelongsTo(()=>Product)
   product: Product
@@ -34,7 +34,7 @@ export class ComboItem extends Model<ComboItem> {
     allowNull: true,
     type: DataType.INTEGER,
   })
-  productVariantId: number;
+ declare productVariantId: number;
 
   @BelongsTo(() => ProductVariant)
   productVariant: ProductVariant;
@@ -46,7 +46,7 @@ export class ComboItem extends Model<ComboItem> {
     defaultValue: 1,
     type: DataType.INTEGER,
   })
-  quantity: number;
+ declare quantity: number;
 
 
   // Hook tự động cập nhật ProductVariant

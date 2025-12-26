@@ -32,88 +32,88 @@ export class Order extends Model<Order> {
         unique: true,
         type: DataType.STRING,
     })
-    orderNumber: string;
+    declare orderNumber: string;
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(ORDERSTATUS)),
     })
-    orderStatus: ORDERSTATUS;
+    declare orderStatus: ORDERSTATUS;
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(PAYMENTMETHOD)),
     })
-    paymentMethod: PAYMENTMETHOD;
+    declare paymentMethod: PAYMENTMETHOD;
 
     @Column({
         allowNull: false,
         type: DataType.ENUM(...Object.values(PAYMENTSTATUS)),
     })
-    paymentStatus: PAYMENTSTATUS;
+    declare paymentStatus: PAYMENTSTATUS;
 
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    subTotal: number;
+    declare subTotal: number;
 
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    deliveryFee: number;
-
-
-    @Column({
-        allowNull: false,
-        type: DataType.INTEGER,
-    })
-    discount: number;
+    declare deliveryFee: number;
 
 
     @Column({
         allowNull: false,
         type: DataType.INTEGER,
     })
-    finalTotal: number;
+    declare discount: number;
+
+
+    @Column({
+        allowNull: false,
+        type: DataType.INTEGER,
+    })
+    declare finalTotal: number;
 
     @Column({
         allowNull: true,
         type: DataType.TEXT,
     })
-    notes: string | null;
+    declare notes: string | null;
 
     // ⭐ THÊM CÁC TRƯỜNG MỚI
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    momoTransId: string | null;
+    declare momoTransId: string | null;
 
     @Column({
         allowNull: true,
         type: DataType.STRING,
     })
-    momoRequestId: string | null;
+    declare momoRequestId: string | null;
 
     @Column({
         allowNull: true,
         type: DataType.DATE,
     })
-    paidAt: Date | null;
+    declare paidAt: Date | null;
 
     @Column({
         allowNull: true,
         type: DataType.TEXT,
     })
-    cancelledReason: string | null;
+    declare cancelledReason: string | null;
 
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    cancelledAt?: Date | null;
+    declare cancelledAt?: Date | null;
     //Relation
 
     @ForeignKey(() => User)
@@ -121,7 +121,7 @@ export class Order extends Model<Order> {
         allowNull: true,
         type: DataType.INTEGER,
     })
-    userId: number | null
+    declare userId: number | null
 
     @BelongsTo(() => User)
     user: User
@@ -132,7 +132,7 @@ export class Order extends Model<Order> {
         allowNull: false,
         type: DataType.INTEGER,
     })
-    addressId: number
+    declare addressId: number
 
     @BelongsTo(() => Address)
     address: Address

@@ -326,10 +326,10 @@ export class CartPreviewService {
                 const comboInstance = item.dataValues.combo;
                 if (!comboInstance) continue;
                 console.log("1234");
-                
+
                 const comboData = comboInstance.dataValues;
                 console.log("comboData", comboData);
-                
+
                 let currentComboTotal = 0;
                 const comboDetailsDisplay: any[] = [];
                 const options = item.dataValues.selectedOptions;
@@ -451,22 +451,88 @@ export class CartPreviewService {
                 const variantData = item.dataValues.productVariant;
                 const cartItemIngredients = item.dataValues.cartItemIngredients || [];
 
-                if (!productData || !variantData) continue;
+                if (!productData || !variantData) {
+                    console.warn(`⚠️ Missing product or variant for cartItem ${item.dataValues.id}`);
+                    continue;
+                }
 
-                // ... existing price calculation logic ...
+                // ========================================
+                // BƯỚC 1: LẤY GIÁ CƠ BẢN
+                // ========================================
+                const basePrice = Number(productData.dataValues.basePrice || 0);
+                const variantSurcharge = Number(variantData.dataValues.modifiedPrice || 0);
 
-                // 3. Format Display
+                // Giá cơ bản = giá sản phẩm + phụ phí variant (size/type)
+                let singleProductPrice = basePrice + variantSurcharge;
+
+                console.log(`🍕 Processing SINGLE item ${item.dataValues.id}:`);
+                console.log(`  Product: ${productData.dataValues.name}`);
+                console.log(`  Base Price: ${basePrice.toLocaleString()}₫`);
+                console.log(`  Variant Surcharge: ${variantSurcharge.toLocaleString()}₫`);
+                console.log(`  Initial Price: ${singleProductPrice.toLocaleString()}₫`);
+
+                // ========================================
+                // BƯỚC 2: TÍNH GIÁ TOPPING
+                // ========================================
+                let toppingsCost = 0;
+
+                for (const ing of cartItemIngredients) {
+                    const ingInstance = ing.dataValues.ingredient;
+                    if (!ingInstance) {
+                        console.warn(`  ⚠️ Missing ingredient instance for cartItemIngredient ${ing.dataValues.id}`);
+                        continue;
+                    }
+
+                    const ingData = ingInstance.dataValues;
+
+                    // Chỉ tính giá cho ingredients ADD
+                    if (ing.dataValues.type === 'ADD') {
+                        const ingPrice = Number(ingData.price || 0);
+                        const totalIngQty = Number(ing.dataValues.quantity || 0);
+
+                        // Tính số lượng ingredient trên 1 pizza
+                        // VD: 2 pizzas có 2 "Viền phô mai" → mỗi pizza có 1
+                        const unitIngQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
+
+                        // Giá topping trên 1 pizza
+                        const costPerPizza = ingPrice * unitIngQty;
+
+                        toppingsCost += costPerPizza;
+
+                        console.log(`  + ${ingData.name}:`);
+                        console.log(`    Price: ${ingPrice.toLocaleString()}₫`);
+                        console.log(`    Quantity per pizza: ${unitIngQty}`);
+                        console.log(`    Cost per pizza: ${costPerPizza.toLocaleString()}₫`);
+                    } else {
+                        console.log(`  - REMOVE: ${ingData.name} (no cost)`);
+                    }
+                }
+
+                // ========================================
+                // BƯỚC 3: TỔNG GIÁ
+                // ========================================
+                itemUnitPrice = singleProductPrice + toppingsCost;
+
+                console.log(`  Toppings Total: ${toppingsCost.toLocaleString()}₫`);
+                console.log(`  ✅ Final Unit Price: ${itemUnitPrice.toLocaleString()}₫`);
+                console.log(`  Quantity: ${itemQty}`);
+                console.log(`  💰 Total Price: ${(itemUnitPrice * itemQty).toLocaleString()}₫\n`);
+
+                // ========================================
+                // BƯỚC 4: FORMAT DISPLAY
+                // ========================================
                 const ingredientsDisplay = cartItemIngredients.map(ing => {
-                    const ingData = ing.dataValues.ingredient?.dataValues;
-                    if (!ingData) return null;
+                    const ingInstance = ing.dataValues.ingredient;
+                    if (!ingInstance) return null;
 
-                    const totalIngQty = ing.dataValues.quantity;
+                    const ingData = ingInstance.dataValues;
+                    const totalIngQty = Number(ing.dataValues.quantity || 0);
                     const unitQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
                     const price = Number(ingData.price || 0);
 
                     if (ing.dataValues.type === 'ADD') {
                         return {
-                            ingredientId: ingData.id, // ✅ ADD this
+                            ingredientId: ingData.id,
                             name: `+ ${ingData.name}`,
                             price: price,
                             quantity: unitQty,
@@ -475,7 +541,7 @@ export class CartPreviewService {
                         };
                     } else {
                         return {
-                            ingredientId: ingData.id, // ✅ ADD this
+                            ingredientId: ingData.id,
                             name: `KHÔNG LẤY ${ingData.name}`,
                             price: 0,
                             quantity: unitQty,
@@ -484,17 +550,16 @@ export class CartPreviewService {
                         };
                     }
                 }).filter((item): item is NonNullable<typeof item> => item !== null);
-
+                
                 finalItemObj = {
                     cartItemId: item.dataValues.id,
                     type: 'SINGLE',
                     name: productData.dataValues.name,
                     imageUrl: productData.dataValues.imageUrl,
-                    unitPrice: itemUnitPrice,
+                    unitPrice: itemUnitPrice,              // ✅ Giá 1 pizza (đã có topping)
                     quantity: itemQty,
-                    totalPrice: itemUnitPrice * itemQty,
+                    totalPrice: itemUnitPrice * itemQty,   // ✅ Tổng giá = unitPrice × số lượng
 
-                    // ✅ NEW: Add rawData for SINGLE
                     rawData: {
                         productId: productData.dataValues.id,
                         productVariantId: variantData.dataValues.id,
