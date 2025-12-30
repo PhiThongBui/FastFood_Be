@@ -52,7 +52,10 @@ export class PricingService {
                 product: Product & { variantPrice: number };
             };
 
-            return { variantPrice: raw.product.variantPrice };
+            return {
+                variantPrice: raw.product.variantPrice,
+                variantSurcharge: productVariant.dataValues.modifiedPrice
+            };
         }
 
         if (productId) {
