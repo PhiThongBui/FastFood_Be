@@ -36,7 +36,7 @@ export class CartItemService {
         private readonly sequelize: Sequelize
     ) { }
 
-   async addToCart(dataAdd: AddToCartParams) {
+    async addToCart(dataAdd: AddToCartParams) {
         const {
             productId,
             productVariantId,
@@ -56,16 +56,16 @@ export class CartItemService {
             }
 
             const isCombo = !!comboId;
-            
+
             // 🔥 Biến này sẽ chứa options cuối cùng để lưu vào DB (dù là user gửi hay tự sinh)
-            let finalComboOptions: any[] | null = null; 
+            let finalComboOptions: any[] | null = null;
 
             // ==========================================
             // 1. VALIDATION & PREPARATION
             // ==========================================
             if (isCombo) {
                 if (!comboId) throw new BadGatewayException('Thiếu thông tin Combo ID!');
-                
+
                 const existedCombo = await this.modelCombo.findByPk(comboId, { transaction });
                 if (!existedCombo) throw new BadGatewayException('Combo không tồn tại!');
 
@@ -106,7 +106,7 @@ export class CartItemService {
                 matchingCartItem = await this.matchingComboCartItem(
                     cart.id,
                     comboId,
-                    finalComboOptions || [] 
+                    finalComboOptions || []
                 );
             } else {
                 const options = singleProductOptions || [];
@@ -170,10 +170,10 @@ export class CartItemService {
                     productId: isCombo ? null : productId,
                     productVariantId: isCombo ? null : productVariantId,
                     comboId: isCombo ? comboId : null,
-                    
+
                     // 🔥 QUAN TRỌNG: Lưu finalComboOptions vào JSON
-                    selectedOptions: isCombo ? finalComboOptions : null, 
-                    
+                    selectedOptions: isCombo ? finalComboOptions : null,
+
                     quantity: quantity,
                 } as any, { transaction });
 
@@ -455,10 +455,13 @@ export class CartItemService {
         }
     }
 
+    /**
+      * 🔥 HÀM MỚI: Sinh options mặc định từ cấu hình ComboItem trong DB
+      */
     private async generateDefaultComboOptions(
-        comboId: number, 
+        comboId: number,
         transaction: any
-    ): Promise<ComboOptionDto[]> {
+    ): Promise<any[]> {
         // 1. Lấy cấu hình các món trong combo
         const comboItems = await this.modelComboItem.findAll({
             where: { comboId },
@@ -469,13 +472,13 @@ export class CartItemService {
             throw new BadGatewayException('Combo này chưa được cấu hình món ăn (Empty ComboItem)!');
         }
 
-        const generatedOptions: ComboOptionDto[] = [];
+        const generatedOptions: any[] = [];
 
         // 2. Map sang cấu trúc JSON
         for (const item of comboItems) {
-            // Nếu trong cấu hình ghi quantity = 2 (VD: 2 lon Coca)
-            // Ta phải push 2 object riêng biệt vào mảng để người dùng có thể custom từng lon sau này
-            const qty = item.quantity || 1; 
+            // Quan trọng: Nếu quantity = 2 (VD: 2 lon Coca), ta phải tách thành 2 object riêng biệt
+            // để sau này khách có thể đổi 1 lon Coca thành Sprite, lon kia giữ nguyên.
+            const qty = item.quantity || 1;
 
             for (let i = 0; i < qty; i++) {
                 generatedOptions.push({
@@ -486,7 +489,7 @@ export class CartItemService {
             }
         }
 
-        // Sắp xếp lại để đảm bảo tính nhất quán khi so sánh chuỗi JSON (Matching)
+        // 3. Sắp xếp để đảm bảo tính nhất quán khi so sánh chuỗi (Matching)
         return generatedOptions.sort((a, b) => {
             if (a.productId !== b.productId) return a.productId - b.productId;
             return a.productVariantId - b.productVariantId;

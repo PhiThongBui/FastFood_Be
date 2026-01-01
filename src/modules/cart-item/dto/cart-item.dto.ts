@@ -60,6 +60,7 @@ export class CreateCartItemDto {
 
     @ValidateIf(o => !!o.comboId)
     @IsArray()
+    @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => ComboOptionDto)
     selectedOptions?: ComboOptionDto[];
