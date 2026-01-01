@@ -41,7 +41,7 @@ export class CartPreviewService {
         });
 
         if (!cartItems || cartItems.length === 0) {
-            throw new BadRequestException('Giỏ hàng trống hoặc không tìm thấy sản phẩm hợp lệ.');
+            return { message: 'Gio hang rong', data: { items: [], totalAmount: 0 } };
         }
 
         // 2. CHUẨN BỊ DỮ LIỆU THAM CHIẾU (Giữ nguyên đoạn Pre-fetch của bạn)
