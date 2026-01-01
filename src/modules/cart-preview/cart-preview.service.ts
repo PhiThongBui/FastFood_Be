@@ -5,11 +5,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { CreateAddressDto } from '../address/dto/addressStore.dto';
 import { CheckoutCaculateDto } from './dto/checkout.dto';
 import { AddressService } from '../address/address.service';
 import { CouponService } from '../coupon/coupon.service';
-import { log } from 'node:console';
 
 @Injectable()
 export class CartPreviewService {
@@ -23,7 +21,7 @@ export class CartPreviewService {
         @InjectModel(Combo) private comboModel: typeof Combo,
         private readonly addressService: AddressService,
         private readonly couponService: CouponService,
-        private readonly sequelize: Sequelize
+        private readonly sequelize: Sequelize,
     ) { }
 
     async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
@@ -96,20 +94,19 @@ export class CartPreviewService {
             let itemUnitPrice = 0;
             let finalItemObj: CartPreviewItem;
 
-            // ================= CASE A: COMBO (Logic: Base + Variant + Topping) =================
+            // ================= CASE A: COMBO (Đã sửa logic tính giá) =================
+            // ================= CASE A: COMBO (Đã sửa logic tính giá) =================
             if (isCombo) {
                 const comboInstance = item.dataValues.combo;
                 if (!comboInstance) continue;
-                console.log("1234");
 
                 const comboData = comboInstance.dataValues;
-                console.log("comboData", comboData);
-
-                let currentComboTotal = 0;
-                const comboDetailsDisplay: any[] = [];
                 const options = item.dataValues.selectedOptions;
 
-                // ✅ NEW: Enrich selectedOptions với product/variant/ingredient details
+                // 1. KHỞI TẠO GIÁ TỪ GIÁ GỐC CỦA COMBO (Thay vì bắt đầu từ 0)
+                let currentComboTotal = Number(comboData.price || 0); // Ví dụ: 199.000đ
+
+                const comboDetailsDisplay: any[] = [];
                 const enrichedOptions: any[] = [];
 
                 if (options) {
@@ -122,27 +119,27 @@ export class CartPreviewService {
                         const pData = pInstance.dataValues;
                         const vData = vInstance.dataValues;
 
-                        const pName = pData.name;
-                        const vName = `${vData.size} - ${vData.type}`;
+                        // --- QUAN TRỌNG: LOGIC TÍNH TIỀN ---
+                        // KHÔNG cộng pData.basePrice vào đây (vì nó đã nằm trong giá Combo rồi)
+                        // CHỈ cộng modifiedPrice (phụ phí nâng size)
+                        const variantSurcharge = Number(vData.modifiedPrice || 0);
+
+                        // Biến này chỉ dùng để tính tổng phụ phí của item này (Variant + Topping)
+                        let itemSurchargeTotal = variantSurcharge;
+
+                        // Cộng phụ phí variant vào tổng giá Combo
+                        currentComboTotal += variantSurcharge;
+
+                        // --- XỬ LÝ TOPPING ---
+                        const enrichedIngredients: any[] = [];
                         const ingNames: string[] = [];
 
-                        // 1. TÍNH GIÁ CƠ BẢN
-                        const basePrice = Number(pData.basePrice || 0);
-                        const variantSurcharge = Number(vData.modifiedPrice || 0);
-                        let componentPrice = basePrice + variantSurcharge;
-
-                        // ✅ NEW: Enrich ingredients
-                        const enrichedIngredients: any[] = [];
-
-                        // 2. TÍNH GIÁ TOPPING
                         if (opt.ingredients) {
                             for (const ing of opt.ingredients) {
                                 const ingInstance = ingredientMap.get(ing.ingredientId);
                                 if (!ingInstance) continue;
-
                                 const ingData = ingInstance.dataValues;
 
-                                // ✅ Push enriched ingredient
                                 enrichedIngredients.push({
                                     ingredientId: ing.ingredientId,
                                     quantity: ing.quantity,
@@ -154,7 +151,12 @@ export class CartPreviewService {
                                 if (ing.type === 'ADD') {
                                     const price = Number(ingData.price || 0);
                                     const qty = Number(ing.quantity || 1);
-                                    componentPrice += (price * qty);
+
+                                    // Cộng tiền topping vào tổng giá Combo
+                                    const toppingCost = price * qty;
+                                    currentComboTotal += toppingCost;
+                                    itemSurchargeTotal += toppingCost; // Để track riêng item này tốn thêm bao nhiêu
+
                                     ingNames.push(`+ ${ingData.name} (x${qty})`);
                                 } else if (ing.type === 'REMOVE') {
                                     ingNames.push(`KHÔNG LẤY ${ingData.name}`);
@@ -162,15 +164,15 @@ export class CartPreviewService {
                             }
                         }
 
-                        currentComboTotal += componentPrice;
-
+                        // Display Info
                         comboDetailsDisplay.push({
-                            productName: pName,
-                            variantName: vName,
-                            ingredients: ingNames
+                            productName: pData.name,
+                            variantName: `${vData.size} - ${vData.type}`,
+                            ingredients: ingNames,
+                            surcharge: itemSurchargeTotal // (Optional) Để hiển thị cho user biết món này phụ thu bao nhiêu
                         });
 
-                        // ✅ NEW: Build enriched option
+                        // Enriched Option Structure
                         enrichedOptions.push({
                             productId: opt.productId,
                             productVariantId: opt.productVariantId,
@@ -179,7 +181,7 @@ export class CartPreviewService {
                                 id: pData.id,
                                 name: pData.name,
                                 imageUrl: pData.imageUrl || '',
-                                basePrice: pData.basePrice,
+                                basePrice: pData.basePrice, // Vẫn giữ để tham khảo, nhưng ko dùng tính tổng
                             },
                             variant: {
                                 id: vData.id,
@@ -192,10 +194,14 @@ export class CartPreviewService {
                     }
                 }
 
-                // 3. ÁP DỤNG GIẢM GIÁ COMBO
+                // 2. ÁP DỤNG GIẢM GIÁ (Nếu Combo có logic giảm giá thêm trên tổng bill)
+                // Lưu ý: Thường giá combo đã là giá giảm rồi, discountPercentage này 
+                // có thể là khuyến mãi đặc biệt (VD: Giờ vàng giảm thêm 10%)
                 const discountPercent = Number(comboData.discountPercentage || 0);
-                const discountedPrice = currentComboTotal * (1 - (discountPercent / 100));
-                itemUnitPrice = Math.ceil(discountedPrice / 1000) * 1000;
+                const finalPriceAfterDiscount = currentComboTotal * (1 - (discountPercent / 100));
+
+                // Làm tròn tiền
+                itemUnitPrice = Math.ceil(finalPriceAfterDiscount / 1000) * 1000;
 
                 finalItemObj = {
                     cartItemId: item.dataValues.id,
@@ -205,18 +211,15 @@ export class CartPreviewService {
                     unitPrice: itemUnitPrice,
                     quantity: itemQty,
                     totalPrice: itemUnitPrice * itemQty,
-
-                    // ✅ NEW: Add rawData
                     rawData: {
                         comboId: comboData.id,
-                        selectedOptions: enrichedOptions, // ✅ Enriched version
+                        selectedOptions: enrichedOptions,
                     },
-
                     details: {
                         comboItems: comboDetailsDisplay,
-                        originalPrice: currentComboTotal,
+                        originalPrice: currentComboTotal, // Giá gốc trước khi giảm % (nếu có)
                         discountPercentage: discountPercent,
-                        savedAmount: currentComboTotal - itemUnitPrice
+                        savedAmount: (currentComboTotal - itemUnitPrice) // Tiền tiết kiệm được
                     }
                 };
             }
@@ -224,7 +227,7 @@ export class CartPreviewService {
             else {
                 const productData = item.dataValues.product;
                 console.log("productData", productData);
-                
+
                 const variantData = item.dataValues.productVariant;
                 const cartItemIngredients = item.dataValues.cartItemIngredients || [];
 
@@ -327,7 +330,7 @@ export class CartPreviewService {
                         };
                     }
                 }).filter((item): item is NonNullable<typeof item> => item !== null);
-                
+
                 finalItemObj = {
                     cartItemId: item.dataValues.id,
                     type: 'SINGLE',
