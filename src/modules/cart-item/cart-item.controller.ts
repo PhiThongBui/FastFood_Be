@@ -31,7 +31,7 @@ export class CartItemController {
   @ApiOperation({
     summary: 'Thêm sản phẩm vào giỏ hàng',
     description: `
-API hỗ trợ **2 loại thao tác**:
+API hỗ trợ **3 loại thao tác chính**:
 
 ---
 
@@ -43,28 +43,25 @@ Bắt buộc:
 
 Tuỳ chọn:
 - singleProductOptions: danh sách topping / nguyên liệu
-  - ingredientId
-  - quantity
-  - type: ADD | REMOVE
 
 ---
 
-### 🔹 2. Mua combo
+### 🔹 2. Mua combo (Tuỳ chỉnh - Customize)
 Bắt buộc:
 - comboId
 - quantity
-- selectedOptions
+- selectedOptions (Danh sách các món khách chọn cụ thể)
 
-Trong đó mỗi selectedOption gồm:
-- productId
-- productVariantId
-- ingredients (tuỳ chọn)
-  - ingredientId
-  - quantity
-  - type: ADD | REMOVE
+---
+
+### 🔹 3. Mua combo (Thêm nhanh - Quick Add)
+Bắt buộc:
+- comboId
+- quantity
+
+**Lưu ý:** Không truyền \`selectedOptions\`. Hệ thống sẽ tự động lấy danh sách món mặc định được cấu hình trong Combo.
 `
   })
-
   @ApiBody({
     type: CreateCartItemDto,
     examples: {
@@ -101,28 +98,9 @@ Trong đó mỗi selectedOption gồm:
         }
       },
 
-      'combo-basic': {
-        summary: '3. Combo - Không customize',
-        description: 'Combo Sinh Viên',
-        value: {
-          comboId: 1,
-          quantity: 1,
-          selectedOptions: [
-            {
-              productId: 3,
-              productVariantId: 5
-            },
-            {
-              productId: 10,
-              productVariantId: 12
-            }
-          ]
-        }
-      },
-
       'combo-customize': {
-        summary: '4. Combo - Có customize',
-        description: 'Combo Gia Đình, Pizza thêm topping',
+        summary: '3. Combo - Có customize (User chọn món)',
+        description: 'Combo Gia Đình, Khách đổi sang Pizza Hải Sản và thêm topping',
         value: {
           comboId: 2,
           quantity: 2,
@@ -135,11 +113,6 @@ Trong đó mỗi selectedOption gồm:
                   ingredientId: 1,
                   quantity: 1,
                   type: 'ADD'
-                },
-                {
-                  ingredientId: 4,
-                  quantity: 1,
-                  type: 'REMOVE'
                 }
               ]
             },
@@ -148,6 +121,17 @@ Trong đó mỗi selectedOption gồm:
               productVariantId: 13
             }
           ]
+        }
+      },
+
+      // 🔥 TRƯỜNG HỢP MỚI BẠN CẦN Ở ĐÂY
+      'combo-quick-add': {
+        summary: '4. Combo - Thêm nhanh (Mặc định)',
+        description: 'Chỉ gửi comboId. Hệ thống tự lấy các món mặc định (VD: Combo Pizza Bò + Coke -> Tự thêm 1 Pizza Bò, 1 Coke)',
+        value: {
+          comboId: 1,
+          quantity: 1
+          // Không gửi selectedOptions
         }
       }
     }

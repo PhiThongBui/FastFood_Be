@@ -1,6 +1,6 @@
 import { actionUpdateCartItem } from './types/cartItem.type';
 import { log } from 'node:console';
-import { CartItems, CartItemsIngredient, Carts, Combo, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
+import { CartItems, CartItemsIngredient, Carts, Combo, ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -27,6 +27,7 @@ export class CartItemService {
         @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
         @InjectModel(Combo) private readonly modelCombo: typeof Combo,
+        @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
         private readonly productService: ProductService,
         private readonly cartItemIngredientSerivce: CartItemIngredientService,
         private readonly productVariantService: ProductVariantService,
@@ -35,100 +36,7 @@ export class CartItemService {
         private readonly sequelize: Sequelize
     ) { }
 
-    // async addToCart(dataAdd: AddToCartParams) {
-    //     const { productId, productVariantId, quantity, userId, sessionId, ingredientId } = dataAdd
-
-
-    //     const transaction = await this.sequelize.transaction()
-
-    //     try {
-
-    //         if (quantity <= 0) {
-    //             throw new BadGatewayException('Số lượng biến thể phải lớn hơn 0 !!!')
-    //         }
-
-    //         const existedProduct = await this.productService.findOneProductById(productId)
-    //         if (!existedProduct) throw new BadGatewayException('Sản phẩm chưa được tìm thấy!')
-    //         const existedProductVariant = await this.productVariantService.findById(productVariantId)
-    //         if (!existedProductVariant) throw new BadGatewayException('Biến thể chưa được tìm thấy!')
-
-    //         const cart = await this.cartService.getCartByContext(sessionId, userId, transaction)
-
-    //         const ingredientIds = ingredientId ?? []
-    //         const matchingCartItem = await this.matchingCartItem(cart.id, productId, productVariantId, ingredientIds)
-
-
-    //         if (matchingCartItem) {
-
-    //             await matchingCartItem.increment('quantity', {
-    //                 by: quantity,
-    //                 transaction
-    //             })
-
-    //             await matchingCartItem.reload({
-    //                 transaction
-    //             })
-
-    //             if (ingredientIds.length > 0) {
-    //                 const upQuantityCartItemIngredient = await this.modelCartItemIngredient.findAll({
-    //                     where: {
-    //                         cartItemId: matchingCartItem.id
-    //                     }
-    //                 })
-
-    //                 await Promise.all(upQuantityCartItemIngredient.map(async (item) => {
-    //                     await item.increment('quantity', {
-    //                         by: quantity,
-    //                         transaction
-    //                     })
-    //                 }))
-    //             }
-
-    //             await transaction.commit()
-    //             return {
-    //                 message: 'Đã tăng số lượng thành công!',
-    //                 data: matchingCartItem
-    //             }
-    //         } else {
-
-    //             const newCartItem = await this.modelCartItems.create({
-    //                 cartId: cart.id,
-    //                 productId: productId,
-    //                 productVariantId: productVariantId,
-    //                 quantity: quantity,
-    //             } as CartItems, {
-    //                 transaction
-    //             })
-
-
-    //             if (ingredientIds.length > 0) {
-    //                 for (const id of ingredientIds) {
-    //                     await this.modelCartItemIngredient.create({
-    //                         cartItemId: newCartItem.id,
-    //                         ingredientId: id,
-    //                         quantity: quantity
-    //                     } as CartItemsIngredient, {
-    //                         transaction,
-    //                     })
-    //                 }
-    //             }
-
-    //             await transaction.commit()
-
-    //             return {
-    //                 message: 'Them vao gio hang thanh cong!',
-    //             }
-    //         }
-    //     } catch (error) {
-
-    //         console.log(error);
-    //         await transaction.rollback()
-    //         throw error
-    //     }
-    // }
-
-
-    async addToCart(dataAdd: AddToCartParams) {
+   async addToCart(dataAdd: AddToCartParams) {
         const {
             productId,
             productVariantId,
@@ -137,7 +45,7 @@ export class CartItemService {
             sessionId,
             singleProductOptions,
             comboId,
-            selectedOptions
+            selectedOptions // Có thể null/undefined nếu là Quick Add
         } = dataAdd;
 
         const transaction = await this.sequelize.transaction();
@@ -148,18 +56,32 @@ export class CartItemService {
             }
 
             const isCombo = !!comboId;
+            
+            // 🔥 Biến này sẽ chứa options cuối cùng để lưu vào DB (dù là user gửi hay tự sinh)
+            let finalComboOptions: any[] | null = null; 
 
-            // 1. VALIDATION
+            // ==========================================
+            // 1. VALIDATION & PREPARATION
+            // ==========================================
             if (isCombo) {
-                if (!comboId || !selectedOptions || selectedOptions.length === 0) {
-                    throw new BadGatewayException('Dữ liệu combo không hợp lệ!');
-                }
+                if (!comboId) throw new BadGatewayException('Thiếu thông tin Combo ID!');
+                
                 const existedCombo = await this.modelCombo.findByPk(comboId, { transaction });
                 if (!existedCombo) throw new BadGatewayException('Combo không tồn tại!');
 
-                await this.validateComboOptions(selectedOptions, transaction);
+                // 🔥 LOGIC MỚI: Tự động sinh Options
+                if (!selectedOptions || selectedOptions.length === 0) {
+                    // CASE A: Quick Add -> Lấy từ ComboItem
+                    finalComboOptions = await this.generateDefaultComboOptions(comboId, transaction);
+                } else {
+                    // CASE B: Customize -> Dùng cái người dùng gửi lên
+                    finalComboOptions = selectedOptions;
+                    // Validate kỹ dữ liệu người dùng gửi
+                    await this.validateComboOptions(finalComboOptions, transaction);
+                }
             }
             else {
+                // Logic sản phẩm lẻ (Giữ nguyên)
                 if (!productId || !productVariantId) {
                     throw new BadGatewayException('Thiếu thông tin sản phẩm!');
                 }
@@ -170,16 +92,21 @@ export class CartItemService {
                 if (!existedProductVariant) throw new BadGatewayException('Biến thể không tồn tại!');
             }
 
+            // ==========================================
             // 2. LẤY GIỎ HÀNG
+            // ==========================================
             const cart = await this.cartService.getCartByContext(sessionId, userId, transaction);
             let matchingCartItem: CartItems | null;
 
+            // ==========================================
             // 3. TÌM KIẾM TRÙNG LẶP
-            if (isCombo && selectedOptions) {
+            // ==========================================
+            if (isCombo) {
+                // 🔥 Dùng finalComboOptions để so sánh
                 matchingCartItem = await this.matchingComboCartItem(
                     cart.id,
                     comboId,
-                    selectedOptions
+                    finalComboOptions || [] 
                 );
             } else {
                 const options = singleProductOptions || [];
@@ -192,15 +119,17 @@ export class CartItemService {
                 );
             }
 
+            // ==========================================
             // 4. XỬ LÝ KẾT QUẢ
+            // ==========================================
             if (matchingCartItem) {
                 // === TRƯỜNG HỢP A: ĐÃ CÓ -> TĂNG SỐ LƯỢNG ===
-
                 await matchingCartItem.increment('quantity', {
                     by: quantity,
                     transaction
                 });
 
+                // (Giữ nguyên logic update ingredient cho món lẻ)
                 if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
                     for (const opt of singleProductOptions) {
                         const totalIngredientToAdd = quantity * opt.quantity;
@@ -218,7 +147,7 @@ export class CartItemService {
                     }
                 }
 
-                // 🔥 FIX 1: Reload lại item kèm theo Ingredients để trả về đầy đủ data mới nhất
+                // Reload data
                 await matchingCartItem.reload({
                     include: [{
                         model: this.modelCartItemIngredient,
@@ -241,15 +170,18 @@ export class CartItemService {
                     productId: isCombo ? null : productId,
                     productVariantId: isCombo ? null : productVariantId,
                     comboId: isCombo ? comboId : null,
-                    selectedOptions: isCombo ? selectedOptions : null,
+                    
+                    // 🔥 QUAN TRỌNG: Lưu finalComboOptions vào JSON
+                    selectedOptions: isCombo ? finalComboOptions : null, 
+                    
                     quantity: quantity,
                 } as any, { transaction });
 
+                // (Giữ nguyên logic create ingredient cho món lẻ)
                 if (!isCombo && singleProductOptions && singleProductOptions.length > 0) {
                     const ingredientsToCreate: any[] = singleProductOptions.map(opt => ({
                         cartItemId: newCartItem.id,
                         ingredientId: opt.ingredientId,
-                        // Lưu tổng số lượng
                         quantity: quantity * opt.quantity,
                         type: opt.type
                     }))
@@ -260,9 +192,7 @@ export class CartItemService {
                     );
                 }
 
-                // 🔥 FIX 2: Quan trọng nhất!
-                // Sau khi bulkCreate, newCartItem chưa biết về các ingredient vừa tạo.
-                // Phải reload lại để lấy data kèm theo ingredient.
+                // Reload data
                 await newCartItem.reload({
                     include: [{
                         model: this.modelCartItemIngredient,
@@ -525,6 +455,43 @@ export class CartItemService {
         }
     }
 
+    private async generateDefaultComboOptions(
+        comboId: number, 
+        transaction: any
+    ): Promise<ComboOptionDto[]> {
+        // 1. Lấy cấu hình các món trong combo
+        const comboItems = await this.modelComboItem.findAll({
+            where: { comboId },
+            transaction
+        });
+
+        if (!comboItems || comboItems.length === 0) {
+            throw new BadGatewayException('Combo này chưa được cấu hình món ăn (Empty ComboItem)!');
+        }
+
+        const generatedOptions: ComboOptionDto[] = [];
+
+        // 2. Map sang cấu trúc JSON
+        for (const item of comboItems) {
+            // Nếu trong cấu hình ghi quantity = 2 (VD: 2 lon Coca)
+            // Ta phải push 2 object riêng biệt vào mảng để người dùng có thể custom từng lon sau này
+            const qty = item.quantity || 1; 
+
+            for (let i = 0; i < qty; i++) {
+                generatedOptions.push({
+                    productId: item.productId,
+                    productVariantId: item.productVariantId, // Variant mặc định (VD: Size M)
+                    ingredients: [] // Mặc định không có topping thêm
+                });
+            }
+        }
+
+        // Sắp xếp lại để đảm bảo tính nhất quán khi so sánh chuỗi JSON (Matching)
+        return generatedOptions.sort((a, b) => {
+            if (a.productId !== b.productId) return a.productId - b.productId;
+            return a.productVariantId - b.productVariantId;
+        });
+    }
 
 
 
