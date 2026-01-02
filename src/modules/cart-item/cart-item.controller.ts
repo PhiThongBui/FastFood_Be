@@ -28,6 +28,7 @@ export class CartItemController {
   ) { }
 
   @Post('/addtocart')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Thêm sản phẩm vào giỏ hàng',
     description: `

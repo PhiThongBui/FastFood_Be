@@ -6,12 +6,12 @@ import { Address, CartItems, CartItemsIngredient, Combo, ComboItem, Ingredient, 
 import { CartItemModule } from '../cart-item/cart-item.module';
 import { CartModule } from '../cart/cart.module';
 import { AddressModule } from '../address/address.module';
-import { CouponModule } from '../coupon/coupon.module';
+import { CouponModule } from '../coupon/coupon.module'
 
 @Module({
   controllers: [CartPreviewController],
   providers: [CartPreviewService],
   imports:[SequelizeModule.forFeature([CartItems, CartItemsIngredient,Product,ProductIngredient, ProductVariant, Ingredient, Address, Combo, ComboItem]), CartItemModule, CartModule, AddressModule, CouponModule],
-  exports:[CartPreviewService]
+  exports:[CartPreviewService],
 })
 export class CartPreviewModule {}

@@ -1,6 +1,6 @@
 import { Helper } from '@/utils/helper';
 import { CartCheckoutOutput, CartPreviewItem, CartPreviewOutput } from './types/cart-prev.type';
-import { Address, CartItems, CartItemsIngredient, Combo, Ingredient, Product, ProductVariant } from '@/models';
+import { Address, CartItems, CartItemsIngredient, Combo, ComboItem, Ingredient, Product, ProductVariant } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
@@ -19,39 +19,50 @@ export class CartPreviewService {
         @InjectModel(Address) private addressModel: typeof Address,
         @InjectModel(Product) private productModel: typeof Product,
         @InjectModel(Combo) private comboModel: typeof Combo,
+        @InjectModel(ComboItem) private comboItemModel: typeof ComboItem,
         private readonly addressService: AddressService,
         private readonly couponService: CouponService,
-        private readonly sequelize: Sequelize,
+        private readonly sequelize: Sequelize
     ) { }
 
-    async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
-        // 1. Query CartItems (Giữ nguyên đoạn query của bạn)
+   async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
+        // =================================================================
+        // 1. QUERY CART ITEMS (Giữ nguyên)
+        // =================================================================
         const cartItems = await this.cartItemsModel.findAll({
             where: { cartId: cartId },
             include: [
                 { model: this.productModel, attributes: ['id', 'name', 'basePrice', 'imageUrl'], required: false },
                 { model: this.productVariantModel, attributes: ['id', 'name', 'size', 'type', 'modifiedPrice'], required: false },
-                { model: this.comboModel, attributes: ['id', 'name', 'price', 'imageUrl', 'discountPercentage'], required: false }, // Nhớ thêm discountPercentage vào attributes
+                { model: this.comboModel, attributes: ['id', 'name', 'price', 'imageUrl', 'discountPercentage'], required: false },
                 {
                     model: this.cartItemsIngredientModel,
                     required: false,
                     include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price'] }]
                 }
             ],
+            order: [['createdAt', 'DESC']] // Sắp xếp để dễ nhìn
         });
 
         if (!cartItems || cartItems.length === 0) {
-            return { message: 'Gio hang rong', data: { items: [], totalAmount: 0 } };
+            return { message: 'Giỏ hàng trống', data: { items: [], totalAmount: 0 } };
         }
 
-        // 2. CHUẨN BỊ DỮ LIỆU THAM CHIẾU (Giữ nguyên đoạn Pre-fetch của bạn)
+        // =================================================================
+        // 2. PRE-FETCH DATA & CHUẨN BỊ DỮ LIỆU THAM CHIẾU
+        // =================================================================
+        
+        // 2.1. Gom ID để query 1 lần (Batch Query)
         const allIngredientIdsInCombos = new Set<number>();
         const allProductIdsInCombos = new Set<number>();
         const allVariantIdsInCombos = new Set<number>();
+        const comboIdsInCart = new Set<number>();
 
         cartItems.forEach(item => {
+            if (item.dataValues.comboId) comboIdsInCart.add(item.dataValues.comboId);
+
             const options = item.dataValues.selectedOptions;
-            if (item.dataValues.comboId && options) {
+            if (options) {
                 options.forEach(opt => {
                     if (opt.productId) allProductIdsInCombos.add(opt.productId);
                     if (opt.productVariantId) allVariantIdsInCombos.add(opt.productVariantId);
@@ -62,8 +73,34 @@ export class CartPreviewService {
                     }
                 });
             }
-        })
+        });
 
+        // 2.2. 🔥 QUAN TRỌNG: Lấy cấu hình mặc định (Default Items) của Combo
+        // Mục đích: Để biết Combo này "gốc" gồm những món gì, từ đó tính chênh lệch
+        const defaultComboItems = await this.comboItemModel.findAll({
+            where: { comboId: { [Op.in]: Array.from(comboIdsInCart) } },
+            include: [
+                { model: this.productModel, attributes: ['id', 'basePrice'] },
+                { model: this.productVariantModel, attributes: ['id', 'modifiedPrice'] }
+            ],
+            order: [['id', 'ASC']] // Sắp xếp ID tăng dần để khớp thứ tự với selectedOptions khi generate
+        });
+
+        // Map cấu hình mặc định theo ComboID
+        // Key: ComboID, Value: Array các món mặc định (đã bung ra theo số lượng)
+        const comboDefaultsMap = new Map<number, any[]>();
+        defaultComboItems.forEach(item => {
+            const cId = item.comboId;
+            if (!comboDefaultsMap.has(cId)) comboDefaultsMap.set(cId, []);
+            
+            // Nếu quantity = 2, push 2 lần để khớp với selectedOptions (vì selectedOptions lưu tách lẻ)
+            const qty = item.quantity || 1;
+            for(let i = 0; i < qty; i++) {
+                comboDefaultsMap.get(cId)?.push(item);
+            }
+        });
+
+        // 2.3. Query thông tin chi tiết Product, Variant, Ingredient
         const [refIngredients, refProducts, refVariants] = await Promise.all([
             this.ingredientModel.findAll({
                 where: { id: { [Op.in]: Array.from(allIngredientIdsInCombos) } },
@@ -71,7 +108,7 @@ export class CartPreviewService {
             }),
             this.productModel.findAll({
                 where: { id: { [Op.in]: Array.from(allProductIdsInCombos) } },
-                attributes: ['id', 'name', 'basePrice'], // Đảm bảo có basePrice
+                attributes: ['id', 'name', 'basePrice', 'imageUrl'],
             }),
             this.productVariantModel.findAll({
                 where: { id: { [Op.in]: Array.from(allVariantIdsInCombos) } },
@@ -79,128 +116,144 @@ export class CartPreviewService {
             })
         ]);
 
+        // Tạo Map để tra cứu nhanh O(1)
         const ingredientMap = new Map(refIngredients.map(i => [i.dataValues.id, i]));
         const productMap = new Map(refProducts.map(p => [p.dataValues.id, p]));
         const variantMap = new Map(refVariants.map(v => [v.dataValues.id, v]));
 
-        // 3. XỬ LÝ FORMAT VÀ TÍNH GIÁ
+        // =================================================================
+        // 3. TÍNH TOÁN GIÁ TIỀN (CORE LOGIC)
+        // =================================================================
         let subtotal = 0;
         const previewItems: CartPreviewItem[] = [];
 
         for (const item of cartItems) {
             const isCombo = !!item.dataValues.comboId;
             const itemQty = item.dataValues.quantity;
-
             let itemUnitPrice = 0;
             let finalItemObj: CartPreviewItem;
 
-            // ================= CASE A: COMBO (Đã sửa logic tính giá) =================
-            // ================= CASE A: COMBO (Đã sửa logic tính giá) =================
+            // =====================================================================
+            // CASE A: COMBO - TÍNH THEO CÔNG THỨC DELTA (CHÊNH LỆCH)
+            // Giá = Giá Combo Gốc + (Giá Món Mới - Giá Món Mặc Định) + Topping
+            // =====================================================================
             if (isCombo) {
                 const comboInstance = item.dataValues.combo;
                 if (!comboInstance) continue;
 
                 const comboData = comboInstance.dataValues;
-                const options = item.dataValues.selectedOptions;
+                const userOptions = item.dataValues.selectedOptions || [];
+                
+                // 1. Lấy danh sách món gốc để so sánh
+                const defaultItems = comboDefaultsMap.get(comboData.id) || [];
 
-                // 1. KHỞI TẠO GIÁ TỪ GIÁ GỐC CỦA COMBO (Thay vì bắt đầu từ 0)
-                let currentComboTotal = Number(comboData.price || 0); // Ví dụ: 199.000đ
+                // 2. Bắt đầu tính từ giá Combo Gốc
+                let currentComboTotal = Number(comboData.price || 0);
 
                 const comboDetailsDisplay: any[] = [];
                 const enrichedOptions: any[] = [];
 
-                if (options) {
-                    for (const opt of options) {
-                        const pInstance = productMap.get(opt.productId);
-                        const vInstance = variantMap.get(opt.productVariantId);
+                // Duyệt qua từng món khách chọn
+                userOptions.forEach((userOpt, index) => {
+                    const pInstance = productMap.get(userOpt.productId);
+                    const vInstance = variantMap.get(userOpt.productVariantId);
+                    
+                    if (!pInstance || !vInstance) return; // Skip nếu data lỗi
 
-                        if (!pInstance || !vInstance) continue;
+                    const pData = pInstance.dataValues;
+                    const vData = vInstance.dataValues;
+                    const ingNames: string[] = [];
+                    const enrichedIngredients: any[] = [];
 
-                        const pData = pInstance.dataValues;
-                        const vData = vInstance.dataValues;
+                    // --- BƯỚC A: TÍNH CHÊNH LỆCH GIÁ (DELTA) ---
+                    let deltaPrice = 0;
+                    
+                    // Lấy món mặc định tương ứng ở vị trí index
+                    const defaultItem = defaultItems[index]; 
+                    console.log("defaultItem", defaultItem);
+                    
+                    if (defaultItem) {
+                        // Giá Món Khách Chọn
+                        const userPrice = Number(pData.basePrice) + Number(vData.modifiedPrice);
+                        // Giá Món Mặc Định
+                        const defaultPrice = Number(defaultItem.dataValues.product.basePrice) + Number(defaultItem.dataValues.productVariant.modifiedPrice);
+                        
+                        // Delta = Khách Chọn - Mặc Định
+                        // VD: Chọn size M (15k), Mặc định size M (15k) -> Delta = 0 (Không tính thêm tiền)
+                        // VD: Chọn size L (50k), Mặc định size M (15k) -> Delta = 35k (Cộng thêm 35k)
+                        deltaPrice = userPrice - defaultPrice;
+                    } else {
+                        // Fallback: Nếu không tìm thấy món mặc định (lỗi data), tính full giá variant
+                        deltaPrice = Number(vData.modifiedPrice);
+                    }
 
-                        // --- QUAN TRỌNG: LOGIC TÍNH TIỀN ---
-                        // KHÔNG cộng pData.basePrice vào đây (vì nó đã nằm trong giá Combo rồi)
-                        // CHỈ cộng modifiedPrice (phụ phí nâng size)
-                        const variantSurcharge = Number(vData.modifiedPrice || 0);
+                    // Cộng chênh lệch vào tổng tiền
+                    currentComboTotal += deltaPrice;
 
-                        // Biến này chỉ dùng để tính tổng phụ phí của item này (Variant + Topping)
-                        let itemSurchargeTotal = variantSurcharge;
+                    // --- BƯỚC B: TÍNH TIỀN TOPPING (LUÔN CỘNG THÊM) ---
+                    if (userOpt.ingredients) {
+                        for (const ing of userOpt.ingredients) {
+                            const ingInstance = ingredientMap.get(ing.ingredientId);
+                            if (!ingInstance) continue;
+                            const ingData = ingInstance.dataValues;
 
-                        // Cộng phụ phí variant vào tổng giá Combo
-                        currentComboTotal += variantSurcharge;
+                            enrichedIngredients.push({
+                                ingredientId: ing.ingredientId,
+                                quantity: ing.quantity,
+                                type: ing.type,
+                                name: ingData.name,
+                                price: ingData.price,
+                            });
 
-                        // --- XỬ LÝ TOPPING ---
-                        const enrichedIngredients: any[] = [];
-                        const ingNames: string[] = [];
+                            if (ing.type === 'ADD') {
+                                const price = Number(ingData.price || 0);
+                                const qty = Number(ing.quantity || 1);
+                                const toppingTotal = price * qty;
 
-                        if (opt.ingredients) {
-                            for (const ing of opt.ingredients) {
-                                const ingInstance = ingredientMap.get(ing.ingredientId);
-                                if (!ingInstance) continue;
-                                const ingData = ingInstance.dataValues;
+                                currentComboTotal += toppingTotal;
+                                deltaPrice += toppingTotal; // Cộng vào surcharge để hiển thị
 
-                                enrichedIngredients.push({
-                                    ingredientId: ing.ingredientId,
-                                    quantity: ing.quantity,
-                                    type: ing.type,
-                                    name: ingData.name,
-                                    price: ingData.price,
-                                });
-
-                                if (ing.type === 'ADD') {
-                                    const price = Number(ingData.price || 0);
-                                    const qty = Number(ing.quantity || 1);
-
-                                    // Cộng tiền topping vào tổng giá Combo
-                                    const toppingCost = price * qty;
-                                    currentComboTotal += toppingCost;
-                                    itemSurchargeTotal += toppingCost; // Để track riêng item này tốn thêm bao nhiêu
-
-                                    ingNames.push(`+ ${ingData.name} (x${qty})`);
-                                } else if (ing.type === 'REMOVE') {
-                                    ingNames.push(`KHÔNG LẤY ${ingData.name}`);
-                                }
+                                ingNames.push(`+ ${ingData.name} (x${qty})`);
+                            } else if (ing.type === 'REMOVE') {
+                                ingNames.push(`KHÔNG LẤY ${ingData.name}`);
                             }
                         }
-
-                        // Display Info
-                        comboDetailsDisplay.push({
-                            productName: pData.name,
-                            variantName: `${vData.size} - ${vData.type}`,
-                            ingredients: ingNames,
-                            surcharge: itemSurchargeTotal // (Optional) Để hiển thị cho user biết món này phụ thu bao nhiêu
-                        });
-
-                        // Enriched Option Structure
-                        enrichedOptions.push({
-                            productId: opt.productId,
-                            productVariantId: opt.productVariantId,
-                            ingredients: enrichedIngredients,
-                            product: {
-                                id: pData.id,
-                                name: pData.name,
-                                imageUrl: pData.imageUrl || '',
-                                basePrice: pData.basePrice, // Vẫn giữ để tham khảo, nhưng ko dùng tính tổng
-                            },
-                            variant: {
-                                id: vData.id,
-                                name: vData.name,
-                                size: vData.size,
-                                type: vData.type,
-                                modifiedPrice: vData.modifiedPrice,
-                            }
-                        });
                     }
-                }
 
-                // 2. ÁP DỤNG GIẢM GIÁ (Nếu Combo có logic giảm giá thêm trên tổng bill)
-                // Lưu ý: Thường giá combo đã là giá giảm rồi, discountPercentage này 
-                // có thể là khuyến mãi đặc biệt (VD: Giờ vàng giảm thêm 10%)
+                    // --- BƯỚC C: FORMAT DATA HIỂN THỊ ---
+                    comboDetailsDisplay.push({
+                        productName: pData.name,
+                        variantName: `${vData.size} - ${vData.type}`,
+                        ingredients: ingNames,
+                        surcharge: deltaPrice // Số tiền chênh lệch (bao gồm upsize + topping)
+                    });
+
+                    // Build lại object đầy đủ thông tin để trả về FE
+                    enrichedOptions.push({
+                        productId: userOpt.productId,
+                        productVariantId: userOpt.productVariantId,
+                        ingredients: enrichedIngredients,
+                        product: {
+                            id: pData.id,
+                            name: pData.name,
+                            imageUrl: pData.imageUrl || '',
+                            basePrice: pData.basePrice,
+                        },
+                        variant: {
+                            id: vData.id,
+                            name: vData.name,
+                            size: vData.size,
+                            type: vData.type,
+                            modifiedPrice: vData.modifiedPrice,
+                        }
+                    });
+                });
+
+                // --- BƯỚC D: ÁP DỤNG GIẢM GIÁ (DISCOUNT) ---
                 const discountPercent = Number(comboData.discountPercentage || 0);
                 const finalPriceAfterDiscount = currentComboTotal * (1 - (discountPercent / 100));
 
-                // Làm tròn tiền
+                // Làm tròn
                 itemUnitPrice = Math.ceil(finalPriceAfterDiscount / 1000) * 1000;
 
                 finalItemObj = {
@@ -217,134 +270,67 @@ export class CartPreviewService {
                     },
                     details: {
                         comboItems: comboDetailsDisplay,
-                        originalPrice: currentComboTotal, // Giá gốc trước khi giảm % (nếu có)
+                        originalPrice: currentComboTotal, // Giá trước khi giảm %
                         discountPercentage: discountPercent,
-                        savedAmount: (currentComboTotal - itemUnitPrice) // Tiền tiết kiệm được
+                        savedAmount: (currentComboTotal - itemUnitPrice)
                     }
                 };
             }
-            // ================= CASE B: SINGLE =================
+            // =====================================================================
+            // CASE B: MÓN LẺ (SINGLE PRODUCT) - LOGIC CŨ
+            // =====================================================================
             else {
                 const productData = item.dataValues.product;
-                console.log("productData", productData);
-
                 const variantData = item.dataValues.productVariant;
                 const cartItemIngredients = item.dataValues.cartItemIngredients || [];
 
-                if (!productData || !variantData) {
-                    console.warn(`⚠️ Missing product or variant for cartItem ${item.dataValues.id}`);
-                    continue;
-                }
+                if (!productData || !variantData) continue;
 
-                // ========================================
-                // BƯỚC 1: LẤY GIÁ CƠ BẢN
-                // ========================================
+                // 1. Giá Base + Variant
                 const basePrice = Number(productData.dataValues.basePrice || 0);
                 const variantSurcharge = Number(variantData.dataValues.modifiedPrice || 0);
-
-                // Giá cơ bản = giá sản phẩm + phụ phí variant (size/type)
                 let singleProductPrice = basePrice + variantSurcharge;
 
-                console.log(`🍕 Processing SINGLE item ${item.dataValues.id}:`);
-                console.log(`  Product: ${productData.dataValues.name}`);
-                console.log(`  Base Price: ${basePrice.toLocaleString()}₫`);
-                console.log(`  Variant Surcharge: ${variantSurcharge.toLocaleString()}₫`);
-                console.log(`  Initial Price: ${singleProductPrice.toLocaleString()}₫`);
-
-                // ========================================
-                // BƯỚC 2: TÍNH GIÁ TOPPING
-                // ========================================
+                // 2. Giá Topping
                 let toppingsCost = 0;
+                const ingredientsDisplay: any[] = [];
 
                 for (const ing of cartItemIngredients) {
                     const ingInstance = ing.dataValues.ingredient;
-                    if (!ingInstance) {
-                        console.warn(`  ⚠️ Missing ingredient instance for cartItemIngredient ${ing.dataValues.id}`);
-                        continue;
-                    }
-
-                    const ingData = ingInstance.dataValues;
-
-                    // Chỉ tính giá cho ingredients ADD
-                    if (ing.dataValues.type === 'ADD') {
-                        const ingPrice = Number(ingData.price || 0);
-                        const totalIngQty = Number(ing.dataValues.quantity || 0);
-
-                        // Tính số lượng ingredient trên 1 pizza
-                        // VD: 2 pizzas có 2 "Viền phô mai" → mỗi pizza có 1
-                        const unitIngQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
-
-                        // Giá topping trên 1 pizza
-                        const costPerPizza = ingPrice * unitIngQty;
-
-                        toppingsCost += costPerPizza;
-
-                        console.log(`  + ${ingData.name}:`);
-                        console.log(`    Price: ${ingPrice.toLocaleString()}₫`);
-                        console.log(`    Quantity per pizza: ${unitIngQty}`);
-                        console.log(`    Cost per pizza: ${costPerPizza.toLocaleString()}₫`);
-                    } else {
-                        console.log(`  - REMOVE: ${ingData.name} (no cost)`);
-                    }
-                }
-
-                // ========================================
-                // BƯỚC 3: TỔNG GIÁ
-                // ========================================
-                itemUnitPrice = singleProductPrice + toppingsCost;
-
-                console.log(`  Toppings Total: ${toppingsCost.toLocaleString()}₫`);
-                console.log(`  ✅ Final Unit Price: ${itemUnitPrice.toLocaleString()}₫`);
-                console.log(`  Quantity: ${itemQty}`);
-                console.log(`  💰 Total Price: ${(itemUnitPrice * itemQty).toLocaleString()}₫\n`);
-
-                // ========================================
-                // BƯỚC 4: FORMAT DISPLAY
-                // ========================================
-                const ingredientsDisplay = cartItemIngredients.map(ing => {
-                    const ingInstance = ing.dataValues.ingredient;
-                    if (!ingInstance) return null;
-
+                    if (!ingInstance) continue;
                     const ingData = ingInstance.dataValues;
                     const totalIngQty = Number(ing.dataValues.quantity || 0);
                     const unitQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
                     const price = Number(ingData.price || 0);
 
                     if (ing.dataValues.type === 'ADD') {
-                        return {
-                            ingredientId: ingData.id,
-                            name: `+ ${ingData.name}`,
-                            price: price,
-                            quantity: unitQty,
-                            totalPrice: price * unitQty,
-                            type: 'ADD' as const
-                        };
+                        toppingsCost += (price * unitQty);
+                        ingredientsDisplay.push({
+                            ingredientId: ingData.id, name: `+ ${ingData.name}`, 
+                            price: price, quantity: unitQty, totalPrice: price * unitQty, type: 'ADD'
+                        });
                     } else {
-                        return {
-                            ingredientId: ingData.id,
-                            name: `KHÔNG LẤY ${ingData.name}`,
-                            price: 0,
-                            quantity: unitQty,
-                            totalPrice: 0,
-                            type: 'REMOVE' as const
-                        };
+                        ingredientsDisplay.push({
+                            ingredientId: ingData.id, name: `KHÔNG LẤY ${ingData.name}`, 
+                            price: 0, quantity: unitQty, totalPrice: 0, type: 'REMOVE'
+                        });
                     }
-                }).filter((item): item is NonNullable<typeof item> => item !== null);
+                }
+
+                itemUnitPrice = singleProductPrice + toppingsCost;
 
                 finalItemObj = {
                     cartItemId: item.dataValues.id,
                     type: 'SINGLE',
                     name: productData.dataValues.name,
                     imageUrl: productData.dataValues.imageUrl,
-                    unitPrice: itemUnitPrice,              // ✅ Giá 1 pizza (đã có topping)
+                    unitPrice: itemUnitPrice,
                     quantity: itemQty,
-                    totalPrice: itemUnitPrice * itemQty,   // ✅ Tổng giá = unitPrice × số lượng
-
+                    totalPrice: itemUnitPrice * itemQty,
                     rawData: {
                         productId: productData.dataValues.id,
                         productVariantId: variantData.dataValues.id,
                     },
-
                     details: {
                         variantName: variantData.dataValues.name,
                         size: variantData.dataValues.size,
