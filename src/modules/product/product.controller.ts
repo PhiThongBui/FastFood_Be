@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { filterProductDto } from './dto/filter-product.dto';
@@ -9,11 +9,13 @@ import { Serialize } from '@/common/interceptors/serialize.interceptor';
 import { BestSellerDto } from './dto/bestSeller.dto';
 import { filterPizzaDto } from './dto/filter-pizza.dto';
 import { DataGetAllPizzaDto, GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
+import { RolesGuard } from '@/common/guards/role.guards';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {
-
   }
 
   @Post('/create')
@@ -28,6 +30,8 @@ export class ProductController {
     return await this.productService.findOneProductById(id)
   }
 
+  // @UseGuards(JWTGuard, RolesGuard)
+  // @Roles('USER')
   @Get('/getall')
   async getAllProduct(@Query() filterSearch: filterProductDto) {
     return await this.productService.findAllProducts(filterSearch)
@@ -42,7 +46,7 @@ export class ProductController {
   // }
 
   @Delete('/softdelete/:id')
-  async softDeleteProduct(@Param('id') id: number) {
+  async softDeleteProduct(@Param('id', ParseIntPipe) id: number) {
     return await this.productService.softDeteleProduct(id)
   }
 

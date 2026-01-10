@@ -4,7 +4,7 @@ import e, { Request, Response } from 'express';
 import { ApiResponse } from '../interfaces';
 import { log } from 'node:console';
 
-@Catch(HttpException)
+@Catch()
 export class AllExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(AllExceptionFilter.name);
     catch(exception: unknown, host: ArgumentsHost) {
