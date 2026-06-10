@@ -207,8 +207,40 @@ Bắt buộc:
   }
 
   @Delete('/:cartItemId')
-  async deleteCartItem(@Param('cartItemId') cartItemId: number) {
-    return await this.cartItemService.deleteCartItem(cartItemId)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Xoá sản phẩm khỏi giỏ hàng',
+    description: 'Xoá một item khỏi giỏ hàng dựa trên cartItemId. Hỗ trợ cả user đã đăng nhập và guest.'
+  })
+  @ApiParam({
+    name: 'cartItemId',
+    description: 'ID của item trong giỏ hàng',
+    required: true,
+    type: Number
+  })
+  async deleteCartItem(
+    @Param('cartItemId') cartItemId: number,
+    @Req() req: Request,
+    @Res({ passthrough: true }) _res: Response
+  ) {
+    const sessionId = Helper.getSessionIdFromRequest(req);
+    let userId: number | null = null;
+
+    const authHeader = req.headers?.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = this.JWTservice.verify(
+          token,
+          this.configService.get('JWT_SECRET')
+        ) as any;
+        userId = decoded.uid;
+      } catch (error) {
+        userId = null;
+      }
+    }
+
+    return await this.cartItemService.deleteCartItem(cartItemId, userId, sessionId)
   }
 
   @Get('/mergecart')

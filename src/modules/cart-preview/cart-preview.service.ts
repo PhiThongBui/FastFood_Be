@@ -25,7 +25,7 @@ export class CartPreviewService {
         private readonly sequelize: Sequelize
     ) { }
 
-   async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
+    async getUserCartPreview(cartId: number): Promise<CartPreviewOutput> {
         // =================================================================
         // 1. QUERY CART ITEMS (Giữ nguyên)
         // =================================================================
@@ -51,7 +51,7 @@ export class CartPreviewService {
         // =================================================================
         // 2. PRE-FETCH DATA & CHUẨN BỊ DỮ LIỆU THAM CHIẾU
         // =================================================================
-        
+
         // 2.1. Gom ID để query 1 lần (Batch Query)
         const allIngredientIdsInCombos = new Set<number>();
         const allProductIdsInCombos = new Set<number>();
@@ -92,10 +92,10 @@ export class CartPreviewService {
         defaultComboItems.forEach(item => {
             const cId = item.comboId;
             if (!comboDefaultsMap.has(cId)) comboDefaultsMap.set(cId, []);
-            
+
             // Nếu quantity = 2, push 2 lần để khớp với selectedOptions (vì selectedOptions lưu tách lẻ)
             const qty = item.quantity || 1;
-            for(let i = 0; i < qty; i++) {
+            for (let i = 0; i < qty; i++) {
                 comboDefaultsMap.get(cId)?.push(item);
             }
         });
@@ -143,7 +143,7 @@ export class CartPreviewService {
 
                 const comboData = comboInstance.dataValues;
                 const userOptions = item.dataValues.selectedOptions || [];
-                
+
                 // 1. Lấy danh sách món gốc để so sánh
                 const defaultItems = comboDefaultsMap.get(comboData.id) || [];
 
@@ -157,7 +157,7 @@ export class CartPreviewService {
                 userOptions.forEach((userOpt, index) => {
                     const pInstance = productMap.get(userOpt.productId);
                     const vInstance = variantMap.get(userOpt.productVariantId);
-                    
+
                     if (!pInstance || !vInstance) return; // Skip nếu data lỗi
 
                     const pData = pInstance.dataValues;
@@ -167,17 +167,15 @@ export class CartPreviewService {
 
                     // --- BƯỚC A: TÍNH CHÊNH LỆCH GIÁ (DELTA) ---
                     let deltaPrice = 0;
-                    
+
                     // Lấy món mặc định tương ứng ở vị trí index
-                    const defaultItem = defaultItems[index]; 
-                    console.log("defaultItem", defaultItem);
-                    
+                    const defaultItem = defaultItems[index];
                     if (defaultItem) {
                         // Giá Món Khách Chọn
                         const userPrice = Number(pData.basePrice) + Number(vData.modifiedPrice);
                         // Giá Món Mặc Định
                         const defaultPrice = Number(defaultItem.dataValues.product.basePrice) + Number(defaultItem.dataValues.productVariant.modifiedPrice);
-                        
+
                         // Delta = Khách Chọn - Mặc Định
                         // VD: Chọn size M (15k), Mặc định size M (15k) -> Delta = 0 (Không tính thêm tiền)
                         // VD: Chọn size L (50k), Mặc định size M (15k) -> Delta = 35k (Cộng thêm 35k)
@@ -306,12 +304,12 @@ export class CartPreviewService {
                     if (ing.dataValues.type === 'ADD') {
                         toppingsCost += (price * unitQty);
                         ingredientsDisplay.push({
-                            ingredientId: ingData.id, name: `+ ${ingData.name}`, 
+                            ingredientId: ingData.id, name: `+ ${ingData.name}`,
                             price: price, quantity: unitQty, totalPrice: price * unitQty, type: 'ADD'
                         });
                     } else {
                         ingredientsDisplay.push({
-                            ingredientId: ingData.id, name: `KHÔNG LẤY ${ingData.name}`, 
+                            ingredientId: ingData.id, name: `KHÔNG LẤY ${ingData.name}`,
                             price: 0, quantity: unitQty, totalPrice: 0, type: 'REMOVE'
                         });
                     }
@@ -455,7 +453,6 @@ export class CartPreviewService {
 
                         // Giá gốc sản phẩm
                         const basePrice = Number(pData.basePrice || 0);
-                        console.log("basePrice", basePrice);
 
                         // Giá biến thể (Upsize/Đế...). Nếu null/undefined thì là 0.
                         const variantSurcharge = Number(vData.modifiedPrice || 0);
@@ -509,7 +506,6 @@ export class CartPreviewService {
 
                 // Lấy % giảm giá (VD: 10%)
                 const discountPercent = Number(comboData.discountPercentage || 0);
-                console.log(discountPercent);
 
                 // Giá sau khi giảm
                 const discountedPrice = currentComboTotal * (1 - (discountPercent / 100));

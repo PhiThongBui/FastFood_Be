@@ -587,15 +587,36 @@ export class CartItemService {
         }
     }
 
-    async deleteCartItem(cartItemId: number) {
+    async deleteCartItem(
+        cartItemId: number,
+        userId?: number | null,
+        sessionId?: string
+    ) {
         const transaction = await this.sequelize.transaction()
         try {
-            await this.modelCartItems.destroy({
-                where: {
-                    id: cartItemId
-                },
+            const cartItem = await this.modelCartItems.findByPk(cartItemId, { transaction })
+
+            if (!cartItem) {
+                throw new NotFoundException('Cart item không tồn tại!')
+            }
+
+            const cart = await this.modelCarts.findByPk(cartItem.cartId, { transaction })
+
+            if (!cart) {
+                throw new NotFoundException('Cart không tồn tại!')
+            }
+
+            const isOwner = (userId && cart.userId === userId) ||
+                (sessionId && cart.sessionId === sessionId)
+
+            if (!isOwner) {
+                throw new ForbiddenException('Bạn không có quyền xóa cart item này!')
+            }
+
+            await cartItem.destroy({
                 transaction
             })
+            await transaction.commit()
 
             return {
                 message: 'Đã xóa sản phẩm trong giỏ hàng'
@@ -911,8 +932,6 @@ export class CartItemService {
 
                 // ✅ Cast sang CartComboOption[]
                 cartItem.selectedOptions = updateData.selectedOptions as any;
-
-                console.log("✅ Updated combo selectedOptions:", cartItem.selectedOptions);
             }
 
             // 5. UPDATE SINGLE PRODUCT

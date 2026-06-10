@@ -31,5 +31,5 @@ export class ComboController {
   // @Serialize(ComboDetailDto)
   async getComboById(@Param('id') id: number) {
     return this.comboService.getComboById(id);
-  } 
+  }
 }

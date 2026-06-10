@@ -74,8 +74,6 @@ export class ProductService {
         const data = plainToInstance(ResponseProductDetailDto, result.get({ plain: true }), {
             excludeExtraneousValues: true,
         });
-        console.log(data);
-
         return data
     }
     async createProduct(productDto: CreateProductDto) {
