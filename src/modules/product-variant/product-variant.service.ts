@@ -36,39 +36,112 @@ export class ProductVariantService {
   }
 
   async findProductIsCombo(_id: number) {
-    const targetVariant = await this.modelProductVariant.findByPk(_id);
+    const targetVariant = await this.modelProductVariant.findByPk(_id, {
+      include: [
+        {
+          model: this.modelProduct,
+          attributes: ['id', 'basePrice'],
+          required: true
+        }
+      ]
+    });
     if (!targetVariant) {
       throw new BadRequestException(`ProductVariant with id ${_id} not found!!!`);
     }
-    return await this.modelProductVariant.findAll({
+
+    const targetTotalPrice =
+      Number(targetVariant.dataValues.product?.basePrice || 0) +
+      Number(targetVariant.dataValues.modifiedPrice || 0);
+
+    const comboEligibleVariants = await this.modelProductVariant.findAll({
       where: {
-        isComboItem: true
+        isComboItem: true,
+        isActive: true
+      },
+      attributes: ['productId']
+    });
+
+    const eligibleProductIds = Array.from(
+      new Set(comboEligibleVariants.map(variant => Number(variant.productId)).filter(Boolean))
+    );
+
+    if (eligibleProductIds.length === 0) {
+      return [];
+    }
+
+    const candidateVariants = await this.modelProductVariant.findAll({
+      where: {
+        productId: eligibleProductIds,
+        isActive: true,
+        size: targetVariant.size,
+        type: targetVariant.type
       },
       attributes: [
         'id',
         'modifiedPrice',
-        [
-          this.sequelize.literal(`"modifiedPrice" - ${targetVariant.dataValues.modifiedPrice}`),
-          'priceDifference'
-        ],
-        [
-          this.sequelize.literal(`
-            CASE 
-              WHEN "modifiedPrice" > ${targetVariant.dataValues.modifiedPrice} THEN 'increase'
-              WHEN "modifiedPrice" < ${targetVariant.dataValues.modifiedPrice} THEN 'decrease'
-              ELSE 'equal'
-            END
-          `),
-          'priceStatus'
-        ]
+        'productId',
+        'size',
+        'type'
       ],
       include: [
         {
           model: this.modelProduct,
-          attributes: ['id', 'name', 'imageUrl'],
+          attributes: ['id', 'name', 'imageUrl', 'basePrice'],
+          where: {
+            isActive: true
+          }
         },
       ]
     });
+
+    const bestVariantByProduct = new Map<number, any>();
+
+    for (const variant of candidateVariants) {
+      const product = variant.dataValues.product;
+      const productId = Number(product?.id);
+      if (!productId) continue;
+
+      const totalPrice =
+        Number(product?.basePrice || 0) +
+        Number(variant.dataValues.modifiedPrice || 0);
+      const priceDifference = totalPrice - targetTotalPrice;
+      const priceStatus =
+        priceDifference > 0 ? 'increase' :
+          priceDifference < 0 ? 'decrease' :
+            'equal';
+
+      const candidate = {
+        id: variant.id,
+        modifiedPrice: Number(variant.dataValues.modifiedPrice || 0),
+        priceDifference,
+        priceStatus,
+        product: {
+          id: product.id,
+          name: product.name,
+          imageUrl: product.imageUrl
+        }
+      };
+
+      const currentBest = bestVariantByProduct.get(productId);
+      if (!currentBest) {
+        bestVariantByProduct.set(productId, candidate);
+        continue;
+      }
+
+      const currentGap = Math.abs(Number(currentBest.priceDifference));
+      const nextGap = Math.abs(Number(candidate.priceDifference));
+
+      if (nextGap < currentGap) {
+        bestVariantByProduct.set(productId, candidate);
+        continue;
+      }
+
+      if (nextGap === currentGap && Number(candidate.id) < Number(currentBest.id)) {
+        bestVariantByProduct.set(productId, candidate);
+      }
+    }
+
+    return Array.from(bestVariantByProduct.values());
   }
 
 

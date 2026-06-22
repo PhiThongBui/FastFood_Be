@@ -75,9 +75,8 @@ export class CartItemService {
                     finalComboOptions = await this.generateDefaultComboOptions(comboId, transaction);
                 } else {
                     // CASE B: Customize -> Dùng cái người dùng gửi lên
-                    finalComboOptions = selectedOptions;
+                    finalComboOptions = await this.normalizeComboOptionsForCart(selectedOptions, transaction);
                     // Validate kỹ dữ liệu người dùng gửi
-                    await this.validateComboOptions(finalComboOptions, transaction);
                 }
             }
             else {
@@ -86,9 +85,16 @@ export class CartItemService {
                     throw new BadGatewayException('Thiếu thông tin sản phẩm!');
                 }
                 const existedProduct = await this.modelProduct.findByPk(productId, { transaction });
+                if (existedProduct?.isActive === false) throw new BadGatewayException('Sáº£n pháº©m Ä‘Ã£ ngÆ°ng kinh doanh!');
                 if (!existedProduct) throw new BadGatewayException('Sản phẩm không tồn tại!');
 
-                const existedProductVariant = await this.productVariantService.findById(productVariantId);
+                const existedProductVariant = await this.modelProductVariant.findByPk(productVariantId, { transaction });
+                if (existedProductVariant?.isActive === false) throw new BadGatewayException('Biáº¿n thá»ƒ Ä‘Ã£ ngÆ°ng kinh doanh!');
+                if (existedProductVariant && Number(existedProductVariant.productId) !== Number(productId)) {
+                    throw new BadRequestException(
+                        `Biáº¿n thá»ƒ ${productVariantId} khÃ´ng thuá»™c sáº£n pháº©m ${productId}! (DB: ${existedProductVariant.productId})`
+                    );
+                }
                 if (!existedProductVariant) throw new BadGatewayException('Biến thể không tồn tại!');
             }
 
@@ -359,6 +365,99 @@ export class CartItemService {
                 if (a.productId !== b.productId) return a.productId - b.productId;
                 return a.productVariantId - b.productVariantId;
             });
+    }
+
+    private async normalizeComboOptionsForCart(
+        options: ComboOptionDto[],
+        transaction: any
+    ): Promise<ComboOptionDto[]> {
+        if (!options || options.length === 0) return [];
+
+        const variantIds = options.map(option => Number(option.productVariantId));
+        const allIngredientIds = options.flatMap(option =>
+            (option.ingredients || []).map(ingredient => Number(ingredient.ingredientId))
+        );
+
+        const [variants, ingredients] = await Promise.all([
+            this.modelProductVariant.findAll({
+                where: { id: variantIds },
+                transaction
+            }),
+            allIngredientIds.length > 0
+                ? this.modelIngredient.findAll({
+                    where: { id: allIngredientIds },
+                    transaction
+                })
+                : []
+        ]);
+
+        const variantMap = new Map(variants.map(variant => [Number(variant.id), variant]));
+        const ingredientMap = new Set(ingredients.map(ingredient => Number(ingredient.id)));
+        const canonicalProductIds = Array.from(new Set(variants.map(variant => Number(variant.productId))));
+        const products = await this.modelProduct.findAll({
+            where: { id: canonicalProductIds },
+            attributes: ['id', 'isActive'],
+            transaction
+        });
+        const productMap = new Map(products.map(product => [Number(product.id), product]));
+
+        return options.map(option => {
+            const variantId = Number(option.productVariantId);
+            const variant = variantMap.get(variantId);
+
+            if (!variant) {
+                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} khÃ´ng tá»“n táº¡i!`);
+            }
+            if (variant.isActive === false) {
+                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} Ä‘Ã£ ngÆ°ng kinh doanh!`);
+            }
+            if (false) {
+                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} khÃ´ng há»£p lá»‡ Ä‘á»ƒ dÃ¹ng trong combo!`);
+            }
+
+            const canonicalProductId = Number(variant.productId);
+            const product = productMap.get(canonicalProductId);
+            if (!product) {
+                throw new BadRequestException(`Sáº£n pháº©m ${canonicalProductId} khÃ´ng tá»“n táº¡i!`);
+            }
+            if (product.isActive === false) {
+                throw new BadRequestException(`Sáº£n pháº©m ${canonicalProductId} Ä‘Ã£ ngÆ°ng kinh doanh!`);
+            }
+
+            const seenIngredientIds = new Set<number>();
+            const normalizedIngredients = (option.ingredients || []).map(ingredient => {
+                const ingredientId = Number(ingredient.ingredientId);
+                const quantity = Number(ingredient.quantity);
+                const type = String(ingredient.type) as 'ADD' | 'REMOVE';
+
+                if (seenIngredientIds.has(ingredientId)) {
+                    throw new BadRequestException(`Duplicate ingredient ${ingredientId} trong má»™t mÃ³n!`);
+                }
+                seenIngredientIds.add(ingredientId);
+
+                if (!ingredientMap.has(ingredientId)) {
+                    throw new BadRequestException(`Ingredient ${ingredientId} khÃ´ng tá»“n táº¡i!`);
+                }
+                if (!['ADD', 'REMOVE'].includes(type)) {
+                    throw new BadRequestException(`Type ingredient khÃ´ng há»£p lá»‡!`);
+                }
+                if (quantity <= 0) {
+                    throw new BadRequestException(`Sá»‘ lÆ°á»£ng ingredient pháº£i lá»›n hÆ¡n 0!`);
+                }
+
+                return {
+                    ingredientId,
+                    quantity,
+                    type
+                };
+            });
+
+            return {
+                productId: canonicalProductId,
+                productVariantId: variantId,
+                ingredients: normalizedIngredients
+            };
+        });
     }
 
     /**
@@ -928,10 +1027,10 @@ export class CartItemService {
             // 4. UPDATE COMBO
             if (isCombo && updateData.selectedOptions) {
                 // Validate selectedOptions
-                await this.validateComboOptions(updateData.selectedOptions, transaction);
+                const normalizedOptions = await this.normalizeComboOptionsForCart(updateData.selectedOptions, transaction);
 
                 // ✅ Cast sang CartComboOption[]
-                cartItem.selectedOptions = updateData.selectedOptions as any;
+                cartItem.selectedOptions = normalizedOptions as any;
             }
 
             // 5. UPDATE SINGLE PRODUCT
