@@ -75,13 +75,13 @@ export class Address extends Model<Address> {
 
 
     @BelongsTo(() => User)
-    user: User
+    user!: User
 
     @HasMany(() => Order,{
         onDelete: 'CASCADE',
         hooks: false
     })
-    orders: Order
+    orders!: Order
 
     @BeforeValidate
     static validateCreateAddress(instance: Address) {        

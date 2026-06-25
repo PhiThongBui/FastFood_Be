@@ -33,6 +33,8 @@ import {
     Coupons,
     UserCoupons,
     Carts,
+    CartItemComboOption,
+    CartItemComboOptionIngredient,
     CartItems,
     CartItemsIngredient,
     Order,
@@ -59,6 +61,8 @@ export class SeederService {
         @InjectModel(Coupons) private readonly couponsModel: typeof Coupons,
         @InjectModel(UserCoupons) private readonly userCouponsModel: typeof UserCoupons,
         @InjectModel(Carts) private readonly cartsModel: typeof Carts,
+        @InjectModel(CartItemComboOption) private readonly cartItemComboOptionModel: typeof CartItemComboOption,
+        @InjectModel(CartItemComboOptionIngredient) private readonly cartItemComboOptionIngredientModel: typeof CartItemComboOptionIngredient,
         @InjectModel(CartItems) private readonly cartItemsModel: typeof CartItems,
         @InjectModel(CartItemsIngredient) private readonly cartItemsIngredientModel: typeof CartItemsIngredient,
         @InjectModel(Order) private readonly orderModel: typeof Order,
@@ -250,6 +254,9 @@ export class SeederService {
     }
 
     async runAllSeeder() {
+        console.log('🧹 Clearing existing seed data before reseeding...');
+        await this.clearAllData();
+
         const transaction = await this.sequelize.transaction();
 
         try {
@@ -369,30 +376,32 @@ export class SeederService {
             // Xóa theo thứ tự để an toàn, nhưng quan trọng nhất là các bảng cha (Users, Categories...) cần restartIdentity
             
             // Xóa các bảng phụ trước (hoặc dùng cascade ở bảng cha cũng được, nhưng viết rõ cho an toàn)
-            await this.reviewsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.orderItemIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.orderItemsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.orderModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.reviewsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.orderItemIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.orderItemsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.orderModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
-            await this.cartItemsIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.cartItemsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.cartsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.cartItemComboOptionIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.cartItemComboOptionModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.cartItemsIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.cartItemsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.cartsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
-            await this.userCouponsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.couponsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.userCouponsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.couponsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
-            await this.comboItemModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.comboModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.comboItemModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.comboModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
-            await this.productIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.productVariantModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.ingredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.productIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.productVariantModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.ingredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
             // QUAN TRỌNG: Các bảng này được tham chiếu bởi bảng khác, cần reset ID về 1
-            await this.productModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.addressModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.categoryModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
-            await this.userModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true });
+            await this.productModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.addressModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.categoryModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
+            await this.userModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
 
             await transaction.commit();
             console.log('✅ All data cleared and IDs reset!\n');

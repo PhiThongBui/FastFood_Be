@@ -17,13 +17,11 @@ export interface CartPreviewItem {
         
         // For COMBO
         comboId?: number;
-        selectedOptions?: Array<{
+        comboOptions?: Array<{
             productId: number;
             productVariantId: number;
             comboItemId?: number;
             slotIndex?: number;
-            originalProductId?: number;
-            originalProductVariantId?: number;
             ingredients?: Array<{
                 ingredientId: number;
                 quantity: number;
@@ -67,6 +65,8 @@ export interface CartPreviewItem {
             productName: string;
             variantName: string;
             ingredients: string[];
+            quantity?: number;
+            surcharge?: number;
         }[];
     };
 }

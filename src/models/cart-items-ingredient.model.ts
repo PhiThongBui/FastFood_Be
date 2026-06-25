@@ -19,9 +19,9 @@ export class CartItemsIngredient extends Model<CartItemsIngredient> {
    declare ingredientId: number
 
     @BelongsTo(() => CartItems)
-    cartItem: CartItems
+    cartItem!: CartItems
     @BelongsTo(() => Ingredient)
-    ingredient: Ingredient
+    ingredient!: Ingredient
 
     @Column({
         defaultValue: 1,

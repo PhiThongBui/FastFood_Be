@@ -67,7 +67,7 @@ export class CartPreviewService {
         });
 
         if (!cartItems || cartItems.length === 0) {
-            return { message: 'Gio hang trong', data: { items: [], totalAmount: 0 } };
+            return { message: 'Giỏ hàng trống', data: { items: [], totalAmount: 0 } };
         }
 
         const comboIdsInCart = new Set<number>();
@@ -139,7 +139,7 @@ export class CartPreviewService {
         }
 
         return {
-            message: 'Lay thong tin gio hang thanh cong.',
+            message: 'Lấy thông tin giỏ hàng thành công.',
             data: {
                 items: previewItems,
                 totalAmount: subtotal
@@ -225,7 +225,13 @@ export class CartPreviewService {
         const discountedComboBasePrice = Math.ceil((comboBasePrice * (1 - (discountPercent / 100))) / 1000) * 1000;
         let itemUnitPrice = discountedComboBasePrice;
         let surchargeTotal = 0;
-        const comboDetailsDisplay: any[] = [];
+        const comboDetailsDisplayMap = new Map<string, {
+            productName: string;
+            variantName: string;
+            ingredients: string[];
+            surcharge: number;
+            quantity: number;
+        }>();
         const enrichedOptions: any[] = [];
 
         for (const slot of defaultSlots) {
@@ -278,12 +284,32 @@ export class CartPreviewService {
             itemUnitPrice += surcharge;
             surchargeTotal += surcharge;
 
-            comboDetailsDisplay.push({
-                productName: selectedProduct.dataValues.name,
-                variantName: `${selectedVariant.dataValues.size} - ${selectedVariant.dataValues.type}`,
-                ingredients: ingredientsDisplay,
-                surcharge
+            const detailKey = JSON.stringify({
+                comboItemId: Number(defaultItem.id),
+                productId: Number(selectedProduct.dataValues.id),
+                productVariantId: Number(selectedVariant.dataValues.id),
+                ingredients: enrichedIngredients.map(ingredient => ({
+                    ingredientId: ingredient.ingredientId,
+                    quantity: ingredient.quantity,
+                    type: ingredient.type
+                })).sort((a, b) => {
+                    if (a.ingredientId !== b.ingredientId) return a.ingredientId - b.ingredientId;
+                    return a.type.localeCompare(b.type);
+                })
             });
+
+            const existingDetail = comboDetailsDisplayMap.get(detailKey);
+            if (existingDetail) {
+                existingDetail.quantity += 1;
+            } else {
+                comboDetailsDisplayMap.set(detailKey, {
+                    productName: selectedProduct.dataValues.name,
+                    variantName: `${selectedVariant.dataValues.size} - ${selectedVariant.dataValues.type}`,
+                    ingredients: ingredientsDisplay,
+                    surcharge,
+                    quantity: 1
+                });
+            }
 
             enrichedOptions.push({
                 comboItemId: Number(defaultItem.id),
@@ -317,10 +343,10 @@ export class CartPreviewService {
             totalPrice: itemUnitPrice * Number(item.dataValues.quantity || 1),
             rawData: {
                 comboId: comboData.id,
-                selectedOptions: enrichedOptions
+                comboOptions: enrichedOptions
             },
             details: {
-                comboItems: comboDetailsDisplay,
+                comboItems: Array.from(comboDetailsDisplayMap.values()),
                 originalPrice: comboBasePrice + surchargeTotal,
                 discountPercentage: discountPercent,
                 savedAmount: comboBasePrice - discountedComboBasePrice

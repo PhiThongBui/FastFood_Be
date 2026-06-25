@@ -20,13 +20,13 @@ export class Carts extends Model<Carts> {
    declare sessionId: string;
 
     @BelongsTo(() => User)
-    user: User
+    user!: User
 
     @HasMany(() => CartItems, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    cartItems: CartItems[];
+    cartItems!: CartItems[];
 
     
     @BeforeValidate

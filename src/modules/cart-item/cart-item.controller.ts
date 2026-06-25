@@ -51,7 +51,7 @@ Tuỳ chọn:
 Bắt buộc:
 - comboId
 - quantity
-- selectedOptions (Danh sách các món khách chọn cụ thể)
+- comboOptions (Danh sách các món khách chọn cụ thể)
 
 ---
 
@@ -60,7 +60,7 @@ Bắt buộc:
 - comboId
 - quantity
 
-**Lưu ý:** Không truyền \`selectedOptions\`. Hệ thống sẽ tự động lấy danh sách món mặc định được cấu hình trong Combo.
+**Lưu ý:** Không truyền \`comboOptions\`. Hệ thống sẽ tự động lấy danh sách món mặc định được cấu hình trong Combo.
 `
   })
   @ApiBody({
@@ -71,7 +71,7 @@ Bắt buộc:
         summary: '1. Món lẻ - Không topping',
         description: 'Mua 1 Pizza Margherita size M',
         value: {
-          productId: 3,
+          productId: 1,
           productVariantId: 5,
           quantity: 1
         }
@@ -81,7 +81,7 @@ Bắt buộc:
         summary: '2. Món lẻ - Có topping',
         description: 'Mua 2 Pizza Pepperoni size L, thêm phô mai, bớt hành',
         value: {
-          productId: 5,
+          productId: 2,
           productVariantId: 8,
           quantity: 1,
           singleProductOptions: [
@@ -104,11 +104,12 @@ Bắt buộc:
         description: 'Combo Gia Đình, Khách đổi sang Pizza Hải Sản và thêm topping',
         value: {
           comboId: 2,
-          quantity: 2,
-          selectedOptions: [
+          quantity: 1,
+          comboOptions: [
             {
               comboItemId: 4,
               slotIndex: 0,
+              productId: 3,
               productVariantId: 15,
               ingredients: [
                 {
@@ -121,7 +122,8 @@ Bắt buộc:
             {
               comboItemId: 5,
               slotIndex: 0,
-              productVariantId: 13
+              productId: 4,
+              productVariantId: 23
             }
           ]
         }
@@ -134,7 +136,7 @@ Bắt buộc:
         value: {
           comboId: 1,
           quantity: 1
-          // Không gửi selectedOptions
+          // Không gửi comboOptions
         }
       }
     }
@@ -262,7 +264,7 @@ Bắt buộc:
 
 **2. Món chưa có (MOVE)**
 - Nếu item chưa có trong giỏ user → Di chuyển sang giỏ user
-- Giữ nguyên toàn bộ thông tin (quantity, ingredients, selectedOptions)
+- Giữ nguyên toàn bộ thông tin (quantity, ingredients, comboOptions)
 
 **3. Dọn dẹp**
 - Xóa guest cart sau khi đã xử lý hết items
@@ -336,7 +338,7 @@ Bắt buộc:
   @Put('/items/:cartItemId')
   @ApiOperation({
     summary: 'Cập nhật cart item',
-    description: 'Cho phép cập nhật quantity, variant, ingredients hoặc combo selectedOptions'
+    description: 'Cho phép cập nhật quantity, variant, ingredients hoặc comboOptions của combo'
   })
   @ApiParam({
     name: 'cartItemId',
@@ -347,12 +349,13 @@ Bắt buộc:
     type: UpdateCartItemDto,
     examples: {
       'update-combo': {
-        summary: 'Update combo selectedOptions',
+        summary: 'Update comboOptions',
         value: {
-          selectedOptions: [
+          comboOptions: [
             {
               comboItemId: 4,
               slotIndex: 0,
+              productId: 8,
               productVariantId: 30,
               ingredients: [
                 {
@@ -365,6 +368,7 @@ Bắt buộc:
             {
               comboItemId: 5,
               slotIndex: 0,
+              productId: 11,
               productVariantId: 35
             }
           ]

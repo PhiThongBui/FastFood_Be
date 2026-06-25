@@ -599,7 +599,7 @@ export const products = [
     imageUrl: 'https://media.dodostatic.net/image/r:292x292/11EE796F96D11392A2F6DD73599921B9.webp',
     isActive: true,
     isFeatured: false,
-    categoryId: 5,
+    categoryId: 6,
   },
   {
     name: 'Gà Viên Chiên',
@@ -609,7 +609,7 @@ export const products = [
     imageUrl: 'https://media.dodostatic.com/image/r:233x233/11ef935898342902a80f69edfead7a32.avif',
     isActive: true,
     isFeatured: true,
-    categoryId: 5,
+    categoryId: 6,
   },
 
   // Cà phê (1 sản phẩm)
@@ -621,7 +621,7 @@ export const products = [
     imageUrl: 'https://media.dodostatic.net/image/r:292x292/11EE7D61B0C26A3F85D97A78FEEE00AD.webp',
     isActive: true,
     isFeatured: false,
-    categoryId: 6,
+    categoryId: 7,
   },
 ];
 
@@ -1219,7 +1219,7 @@ export const users = [
   },
   {
     email: 'google.user@gmail.com',
-    password: 'google.user@gmail.com',  // Google user không có password
+    password: null,  // Google user không có password
     name: 'Phạm Thị Lan',
     avatar: 'https://lh3.googleusercontent.com/a/default-user',
     phone: '0934567890',
@@ -1393,6 +1393,32 @@ export const addresses = [
     sessionId: null,
     userId: 5,
   },
+  {
+    recipientName: 'Khach Vang Lai 1',
+    recipientPhone: '0987000001',
+    street: '12 Le Loi',
+    city: 'Da Nang',
+    district: 'Hai Chau',
+    ward: 'Thach Thang',
+    longitude: 108.2197,
+    latitude: 16.0757,
+    isDefault: false,
+    sessionId: 'guest-order-1',
+    userId: null,
+  },
+  {
+    recipientName: 'Khach Vang Lai 2',
+    recipientPhone: '0987000002',
+    street: '45 Tran Phu',
+    city: 'Ha Noi',
+    district: 'Ba Dinh',
+    ward: 'Quan Thanh',
+    longitude: 105.8461,
+    latitude: 21.0402,
+    isDefault: false,
+    sessionId: 'guest-order-2',
+    userId: null,
+  },
 ];
 
 
@@ -1432,7 +1458,7 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: 2,
-    addressId: 2,
+    addressId: 3,
   },
   {
     orderNumber: 'ORD202511240003',
@@ -1450,11 +1476,11 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: 3,
-    addressId: 3,
+    addressId: 5,
   },
   {
     orderNumber: 'ORD202511240004',
-    orderStatus: 'Sẵn sàng',
+    orderStatus: 'Đã giao hàng',
     paymentMethod: 'Chuyển khoản ngân hàng (SePay)',
     paymentStatus: 'Đã thanh toán',
     subTotal: 115000,
@@ -1468,7 +1494,7 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: 1,
-    addressId: 4,
+    addressId: 2,
   },
   {
     orderNumber: 'ORD202511240005',
@@ -1486,7 +1512,7 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: null,
-    addressId: 5,
+    addressId: 11,
   },
   {
     orderNumber: 'ORD202511240006',
@@ -1504,7 +1530,7 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: 2,
-    addressId: 1,
+    addressId: 4,
   },
   {
     orderNumber: 'ORD202511240007',
@@ -1522,7 +1548,7 @@ export const orders = [
     cancelledReason: 'Khách hủy đơn',
     cancelledAt: '2025-11-23T09:15:00.000Z',
     userId: 3,
-    addressId: 2,
+    addressId: 6,
   },
   {
     orderNumber: 'ORD202511240008',
@@ -1540,7 +1566,7 @@ export const orders = [
     cancelledReason: null,
     cancelledAt: null,
     userId: 1,
-    addressId: 3,
+    addressId: 1,
   },
   {
     orderNumber: 'ORD202511240009',
@@ -1612,7 +1638,7 @@ export const orders = [
     cancelledReason: 'Khách hủy đơn',
     cancelledAt: '2025-11-24T07:30:00.000Z',
     userId: null,
-    addressId: 2,
+    addressId: 12,
   },
 ];
 
@@ -1624,7 +1650,7 @@ export const orderItems = [
   { orderId: 1, productId: 11, productVariantId: 32, comboId: null, quantity: 2 },  // OrderItem 2: Pepsi Vừa x2 ✅
 
   // Order 2: Combo
-  { orderId: 2, productId: 1, productVariantId: null, comboId: 1, quantity: 1 },    // OrderItem 3: Combo Tiệc Gia Đình
+  { orderId: 2, productId: null, productVariantId: null, comboId: 1, quantity: 1 }, // OrderItem 3: Combo Tiệc Gia Đình
 
   // Order 3: Burger + Khoai tây
   { orderId: 3, productId: 5, productVariantId: 14, comboId: null, quantity: 3 },   // OrderItem 4: Burger Bò Lớn x3 ✅
@@ -1634,7 +1660,7 @@ export const orderItems = [
   { orderId: 4, productId: 8, productVariantId: 23, comboId: null, quantity: 1 },   // OrderItem 6: Mỳ Ý Bò Bằm Thường ✅
 
   // Order 5: Combo x2
-  { orderId: 5, productId: 3, productVariantId: null, comboId: 2, quantity: 2 },    // OrderItem 7: Combo Sinh Viên x2
+  { orderId: 5, productId: null, productVariantId: null, comboId: 2, quantity: 2 }, // OrderItem 7: Combo Sinh Viên x2
 
   // Order 6: Pizza Hải Sản + Nước cam
   { orderId: 6, productId: 2, productVariantId: 6, comboId: null, quantity: 1 },    // OrderItem 8: Pizza Hải Sản Lớn ✅
@@ -1644,7 +1670,7 @@ export const orderItems = [
   { orderId: 7, productId: 6, productVariantId: 17, comboId: null, quantity: 2 },   // OrderItem 10: Burger Gà Lớn x2 ✅
 
   // Order 8: Combo Pizza Đôi
-  { orderId: 8, productId: 1, productVariantId: null, comboId: 3, quantity: 1 },    // OrderItem 11: Combo Pizza Đôi
+  { orderId: 8, productId: null, productVariantId: null, comboId: 3, quantity: 1 }, // OrderItem 11: Combo Pizza Đôi
 
   // Order 9: Pizza Pepperoni
   { orderId: 9, productId: 3, productVariantId: 8, comboId: null, quantity: 1 },    // OrderItem 12: Pizza Pepperoni Trung ✅
@@ -1655,28 +1681,28 @@ export const orderItems = [
 // Example OrderItemIngredients
 export const orderItemIngredients = [
   // OrderItem 1 (Pizza Phô Mai Lớn x2): Thêm topping
-  { orderItemId: 1, ingredientId: 2, quantity: 1 },   // Xúc xích Pepperoni
+  { orderItemId: 1, ingredientId: 8, quantity: 1 },   // Xúc xích Pepperoni
   { orderItemId: 1, ingredientId: 6, quantity: 1 },   // Nấm Tươi
 
   // OrderItem 4 (Burger Bò Lớn x3): Thêm topping
-  { orderItemId: 4, ingredientId: 20, quantity: 2 },  // Bacon x2
-  { orderItemId: 4, ingredientId: 21, quantity: 1 },  // Phô Mai Lát
+  { orderItemId: 4, ingredientId: 19, quantity: 2 },  // Thịt xông khói x2
+  { orderItemId: 4, ingredientId: 3, quantity: 1 },   // Phô mai Cheddar
 
   // OrderItem 5 (Khoai tây Thường): Thêm topping
-  { orderItemId: 5, ingredientId: 20, quantity: 1 },  // Sốt Phô Mai
-  { orderItemId: 5, ingredientId: 21, quantity: 1 },  // Muối Ớt
+  { orderItemId: 5, ingredientId: 22, quantity: 1 },  // Tương BBQ
+  { orderItemId: 5, ingredientId: 23, quantity: 1 },  // Xốt Mayonnaise
 
   // OrderItem 6 (Mỳ Ý Bò Bằm): Thêm topping
-  { orderItemId: 6, ingredientId: 3, quantity: 1 },  // Phô Mai Parmesan
-  { orderItemId: 6, ingredientId: 14, quantity: 1 },  // Ớt Khô
+  { orderItemId: 6, ingredientId: 3, quantity: 1 },   // Phô mai Cheddar
+  { orderItemId: 6, ingredientId: 14, quantity: 1 },  // Rau thơm Ý
 
   // OrderItem 8 (Pizza Hải Sản): Thêm topping
-  { orderItemId: 8, ingredientId: 3, quantity: 1 },   // Tôm Tươi
-  { orderItemId: 8, ingredientId: 14, quantity: 1 },  // Mực Tươi
+  { orderItemId: 8, ingredientId: 18, quantity: 1 },  // Tôm sú
+  { orderItemId: 8, ingredientId: 15, quantity: 1 },  // Ớt chuông ngọt
 
   // OrderItem 10 (Burger Gà x2): Thêm topping
-  { orderItemId: 10, ingredientId: 17, quantity: 1 }, // Xà Lách
-  { orderItemId: 10, ingredientId: 18, quantity: 1 }, // Sốt Mayonnaise
+  { orderItemId: 10, ingredientId: 10, quantity: 1 }, // Dưa chuột muối chua
+  { orderItemId: 10, ingredientId: 23, quantity: 1 }, // Xốt Mayonnaise
 ];
 
 
@@ -1718,7 +1744,7 @@ export const cartItems = [
   },
   {
     cartId: 1,
-    productId: 1,              // Product đại diện cho combo
+    productId: null,           // Combo item lưu productId = null
     productVariantId: null,    // Null vì đây là combo
     comboId: 1,                // Combo Tiệc Gia Đình
     quantity: 1,
@@ -1745,7 +1771,7 @@ export const cartItems = [
   // Cart 4 (Guest): Mua Combo
   {
     cartId: 4,
-    productId: 3,              // Pizza Pepperoni (product trong combo)
+    productId: null,           // Combo item lưu productId = null
     productVariantId: null,    // Null vì là combo
     comboId: 2,                // Combo Sinh Viên
     quantity: 1,
@@ -1759,7 +1785,7 @@ export const cartItemsIngredients = [
   // CartItem 1 (Pizza Phô Mai Lớn): Thêm 2 loại topping
   {
     cartItemId: 1,
-    ingredientId: 2,       // Xúc Xích Pepperoni
+    ingredientId: 8,       // Xúc xích Pepperoni
     quantity: 1,
   },
   {
@@ -1771,19 +1797,19 @@ export const cartItemsIngredients = [
   // CartItem 3 (Burger Bò): Thêm bacon
   {
     cartItemId: 3,
-    ingredientId: 20,      // Bacon
+    ingredientId: 19,      // Thịt xông khói
     quantity: 1
   },
 
   // CartItem 4 (Mỳ Ý Bò Bằm): Thêm 2 loại topping
   {
     cartItemId: 4,
-    ingredientId: 12,      // Phô Mai Parmesan
+    ingredientId: 3,       // Phô mai Cheddar
     quantity: 1,
   },
   {
     cartItemId: 4,
-    ingredientId: 12,      // Ớt Khô
+    ingredientId: 14,      // Rau thơm Ý
     quantity: 1,
   },
 ];
@@ -2006,12 +2032,12 @@ export const userCoupons = [
 
 // Example Reviews
 export const reviews = [
-  // Review 1: User 2 review Pizza Phô Mai (Order 1)
+  // Review 1: User 1 review Pizza Phô Mai (Order 1)
   {
     rating: 5,
     comment: 'Pizza rất ngon, phô mai thơm béo, đế bánh giòn vừa phải. Giao hàng đúng giờ, nhân viên nhiệt tình. Sẽ ủng hộ tiếp!',
     productId: 1,      // Pizza Phô Mai
-    userId: 2,         // Trần Thị Hương
+    userId: 1,         // Nguyễn Văn An
     orderId: 1,        // Order đã giao hàng
   },
 
@@ -2024,30 +2050,30 @@ export const reviews = [
     orderId: 3,        // Order đã giao hàng
   },
 
-  // Review 3: User 1 review Pizza Hải Sản (Order 6)
+  // Review 3: User 2 review Pizza Hải Sản (Order 6)
   {
     rating: 5,
     comment: 'Tuyệt vời! Hải sản tươi ngon, tôm và mực rất chất lượng. Sốt vừa miệng, không quá mặn. Đáng tiền, sẽ order lại nhiều lần nữa.',
     productId: 2,      // Pizza Hải Sản
-    userId: 1,         // Admin (có thể review như user bình thường)
+    userId: 2,         // Trần Thị Hương
     orderId: 6,        // Order đã giao hàng
   },
 
-  // Review 4: User 2 review Mỳ Ý Bò Bằm (Order 4)
+  // Review 4: User 1 review Mỳ Ý Bò Bằm (Order 4)
   {
     rating: 3,
     comment: 'Mỳ Ý ổn nhưng không xuất sắc lắm. Sốt bò bằm hơi loãng, mong shop cải thiện phần sốt đặc hơn một chút. Mỳ thì vẫn ngon.',
     productId: 8,      // Mỳ Ý Bò Bằm
-    userId: 2,         // Trần Thị Hương
-    orderId: 4,        // Order đã giao hàng (có thể là order của user khác nhưng review)
+    userId: 1,         // Nguyễn Văn An
+    orderId: 4,        // Order đã giao hàng
   },
 
-  // Review 5: User 3 review Combo Pizza Đôi (Order 8)
+  // Review 5: User 1 review Combo Pizza Đôi (Order 8)
   {
     rating: 5,
     comment: 'Combo rất hợp lý về giá! 2 pizza size M vừa đủ cho gia đình 4 người. Nước ngọt mát lạnh, pizza vẫn còn nóng khi nhận. Highly recommended!',
     productId: 3,      // Pizza Pepperoni (đại diện cho combo)
-    userId: 3,         // Lê Văn Minh
+    userId: 1,         // Nguyễn Văn An
     orderId: 8,        // Order đã giao hàng
   },
 ];

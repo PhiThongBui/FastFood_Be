@@ -57,6 +57,7 @@ export class UpdateCartItemDto {
       {
         comboItemId: 4,
         slotIndex: 0,
+        productId: 8,
         productVariantId: 25,
         ingredients: [
           {
@@ -69,9 +70,10 @@ export class UpdateCartItemDto {
       {
         comboItemId: 5,
         slotIndex: 0,
+        productId: 11,
         productVariantId: 30
       }
     ]
   })
-  selectedOptions?: ComboOptionDto[];
+  comboOptions?: ComboOptionDto[];
 }

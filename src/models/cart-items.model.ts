@@ -5,18 +5,6 @@ import { ProductVariant } from './product-variant.model';
 import { CartItemsIngredient } from './cart-items-ingredient.model';
 import { Combo } from './combo.model';
 import { CartItemComboOption } from './cart-item-combo-option.model';
-// Interface định nghĩa cấu trúc JSON (để gợi ý code)
-export interface CartComboOption {
-    productId: number;
-    productVariantId: number;
-    originalProductId?: number;
-    originalProductVariantId?: number;
-    ingredients?: {
-        ingredientId: number;
-        quantity: number; // Ví dụ: Thêm 2 phần phô mai
-        type: 'ADD' | 'REMOVE'; // Thêm hay Bỏ
-    }[];
-}
 @Table
 export class CartItems extends Model<CartItems> {
 
@@ -66,14 +54,7 @@ export class CartItems extends Model<CartItems> {
     })
     declare quantity: number
 
-    // 🔥 SỬA 3: Cột JSON mới để lưu cấu hình Combo
-    // Lưu mảng các món khách chọn: [{productId: 1, variantId: 5, ingredients: [...]}, ...]
-    @Column({
-        type: DataType.JSON,
-        allowNull: true,
-    })
-    declare selectedOptions: CartComboOption[] | null;
-    //relation
+    // relation
 
     @HasMany(() => CartItemsIngredient, {
         onDelete: 'CASCADE',

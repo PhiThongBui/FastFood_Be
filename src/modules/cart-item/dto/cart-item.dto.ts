@@ -17,24 +17,16 @@ export class IngredientOptionDto {
 
 export class ComboOptionDto {
     @IsNumber()
-    @IsOptional()
-    comboItemId?: number;
+    @IsNotEmpty()
+    comboItemId: number;
 
     @IsNumber()
-    @IsOptional()
-    slotIndex?: number;
+    @IsNotEmpty()
+    slotIndex: number;
 
     @IsNumber()
-    @IsOptional()
-    productId?: number;
-
-    @IsNumber()
-    @IsOptional()
-    originalProductId?: number;
-
-    @IsNumber()
-    @IsOptional()
-    originalProductVariantId?: number;
+    @IsNotEmpty()
+    productId: number;
 
     @IsNumber()
     @IsNotEmpty()
@@ -79,5 +71,5 @@ export class CreateCartItemDto {
     @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => ComboOptionDto)
-    selectedOptions?: ComboOptionDto[];
+    comboOptions?: ComboOptionDto[];
 }
