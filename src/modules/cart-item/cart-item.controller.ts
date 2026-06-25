@@ -107,7 +107,8 @@ Bắt buộc:
           quantity: 2,
           selectedOptions: [
             {
-              productId: 7,
+              comboItemId: 4,
+              slotIndex: 0,
               productVariantId: 15,
               ingredients: [
                 {
@@ -118,7 +119,8 @@ Bắt buộc:
               ]
             },
             {
-              productId: 10,
+              comboItemId: 5,
+              slotIndex: 0,
               productVariantId: 13
             }
           ]
@@ -349,7 +351,8 @@ Bắt buộc:
         value: {
           selectedOptions: [
             {
-              productId: 10,
+              comboItemId: 4,
+              slotIndex: 0,
               productVariantId: 30,
               ingredients: [
                 {
@@ -360,7 +363,8 @@ Bắt buộc:
               ]
             },
             {
-              productId: 15,
+              comboItemId: 5,
+              slotIndex: 0,
               productVariantId: 35
             }
           ]

@@ -20,6 +20,10 @@ export interface CartPreviewItem {
         selectedOptions?: Array<{
             productId: number;
             productVariantId: number;
+            comboItemId?: number;
+            slotIndex?: number;
+            originalProductId?: number;
+            originalProductVariantId?: number;
             ingredients?: Array<{
                 ingredientId: number;
                 quantity: number;

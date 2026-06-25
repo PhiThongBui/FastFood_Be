@@ -15,4 +15,6 @@ export { UserCoupons } from './user-coupons.model';
 export { Coupons } from './coupons.model';
 export { Combo } from './combo.model';
 export { ComboItem } from './combo-item.model';
+export { CartItemComboOption } from './cart-item-combo-option.model';
+export { CartItemComboOptionIngredient } from './cart-item-combo-option-ingredient.model';
 export { Address } from './address.model';

@@ -55,7 +55,8 @@ export class UpdateCartItemDto {
     description: 'Cấu hình combo mới',
     example: [
       {
-        productId: 10,
+        comboItemId: 4,
+        slotIndex: 0,
         productVariantId: 25,
         ingredients: [
           {
@@ -66,7 +67,8 @@ export class UpdateCartItemDto {
         ]
       },
       {
-        productId: 15,
+        comboItemId: 5,
+        slotIndex: 0,
         productVariantId: 30
       }
     ]

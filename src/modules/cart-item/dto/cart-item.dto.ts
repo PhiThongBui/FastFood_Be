@@ -17,8 +17,24 @@ export class IngredientOptionDto {
 
 export class ComboOptionDto {
     @IsNumber()
-    @IsNotEmpty()
-    productId: number;
+    @IsOptional()
+    comboItemId?: number;
+
+    @IsNumber()
+    @IsOptional()
+    slotIndex?: number;
+
+    @IsNumber()
+    @IsOptional()
+    productId?: number;
+
+    @IsNumber()
+    @IsOptional()
+    originalProductId?: number;
+
+    @IsNumber()
+    @IsOptional()
+    originalProductVariantId?: number;
 
     @IsNumber()
     @IsNotEmpty()

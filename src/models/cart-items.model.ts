@@ -4,10 +4,13 @@ import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { CartItemsIngredient } from './cart-items-ingredient.model';
 import { Combo } from './combo.model';
+import { CartItemComboOption } from './cart-item-combo-option.model';
 // Interface định nghĩa cấu trúc JSON (để gợi ý code)
 export interface CartComboOption {
     productId: number;
     productVariantId: number;
+    originalProductId?: number;
+    originalProductVariantId?: number;
     ingredients?: {
         ingredientId: number;
         quantity: number; // Ví dụ: Thêm 2 phần phô mai
@@ -25,7 +28,7 @@ export class CartItems extends Model<CartItems> {
     declare cartId: number
 
     @BelongsTo(() => Carts)
-    cart: Carts
+    cart!: Carts
 
     @ForeignKey(() => Product)
     @Column({
@@ -35,7 +38,7 @@ export class CartItems extends Model<CartItems> {
     declare productId: number;
 
     @BelongsTo(() => Product)
-    product: Product
+    product!    : Product
 
 
     @ForeignKey(() => ProductVariant)
@@ -45,7 +48,7 @@ export class CartItems extends Model<CartItems> {
     })
     declare productVariantId: number;
     @BelongsTo(() => ProductVariant)
-    productVariant: ProductVariant;
+    productVariant!: ProductVariant;
 
     @ForeignKey(() => Combo)
     @Column({
@@ -55,7 +58,7 @@ export class CartItems extends Model<CartItems> {
     declare comboId: number | null;
 
     @BelongsTo(() => Combo)
-    combo: Combo;
+    combo!: Combo;
 
     @Column({
         defaultValue: 1,
@@ -69,13 +72,19 @@ export class CartItems extends Model<CartItems> {
         type: DataType.JSON,
         allowNull: true,
     })
-    declare selectedOptions: CartComboOption[];
+    declare selectedOptions: CartComboOption[] | null;
     //relation
 
     @HasMany(() => CartItemsIngredient, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    cartItemIngredients: CartItemsIngredient[]
+    cartItemIngredients!: CartItemsIngredient[]
+
+    @HasMany(() => CartItemComboOption, {
+        onDelete: 'CASCADE',
+        hooks: false
+    })
+    comboOptions!: CartItemComboOption[]
 
 }
