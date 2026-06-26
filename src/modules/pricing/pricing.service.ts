@@ -1,4 +1,4 @@
-import { CartItems, Product, ProductIngredient, ProductVariant } from '@/models';
+import { CartItems, ComboItem, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
@@ -10,6 +10,7 @@ export class PricingService {
 
     constructor(
         @InjectModel(CartItems) private readonly modelCartItem: typeof CartItems,
+        @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
         @InjectModel(Product) private readonly modelProduct: typeof Product,
         @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
@@ -26,6 +27,10 @@ export class PricingService {
         }
 
         if (productVariantId) {
+            const isVariantInCombo = await this.modelComboItem.count({
+                where: { productVariantId }
+            });
+
             const productVariant = await this.modelProductVariant.findByPk(productVariantId, {
                 include: [
                     {
@@ -54,7 +59,9 @@ export class PricingService {
 
             return {
                 variantPrice: raw.product.variantPrice,
-                variantSurcharge: productVariant.dataValues.modifiedPrice
+                variantSurcharge: isVariantInCombo > 0
+                    ? 0
+                    : productVariant.dataValues.modifiedPrice
             };
         }
 
