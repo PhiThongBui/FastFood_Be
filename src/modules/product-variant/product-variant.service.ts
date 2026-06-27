@@ -1,4 +1,4 @@
-import { Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
+import { ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -10,6 +10,7 @@ export class ProductVariantService {
     @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
     @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
     @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
+    @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
     private readonly sequelize: Sequelize
   ) { }
 
@@ -35,7 +36,7 @@ export class ProductVariantService {
     return await this.modelProductVariant.findByPk(id);
   }
 
-  async findProductIsCombo(_id: number) {
+  async findProductIsCombo(_id: number, comboItemId?: number) {
     const targetVariant = await this.modelProductVariant.findByPk(_id, {
       include: [
         {
@@ -49,9 +50,31 @@ export class ProductVariantService {
       throw new BadRequestException(`ProductVariant with id ${_id} not found!!!`);
     }
 
-    const targetTotalPrice =
-      Number(targetVariant.dataValues.product?.basePrice || 0) +
-      Number(targetVariant.dataValues.modifiedPrice || 0);
+    let baseComboVariant = targetVariant;
+
+    if (comboItemId) {
+      const comboItem = await this.modelComboItem.findByPk(comboItemId, {
+        include: [
+          {
+            model: this.modelProductVariant,
+            required: true,
+            include: [
+              {
+                model: this.modelProduct,
+                attributes: ['id', 'basePrice'],
+                required: true
+              }
+            ]
+          }
+        ]
+      });
+
+      if (!comboItem?.dataValues.productVariant) {
+        throw new BadRequestException(`ComboItem with id ${comboItemId} not found!!!`);
+      }
+
+      baseComboVariant = comboItem.dataValues.productVariant;
+    }
 
     const comboEligibleVariants = await this.modelProductVariant.findAll({
       where: {
@@ -73,15 +96,16 @@ export class ProductVariantService {
       where: {
         productId: eligibleProductIds,
         isActive: true,
-        size: targetVariant.size,
-        type: targetVariant.type
+        size: baseComboVariant.size,
+        type: baseComboVariant.type
       },
       attributes: [
         'id',
         'modifiedPrice',
         'productId',
         'size',
-        'type'
+        'type',
+        'isComboItem'
       ],
       include: [
         {
@@ -95,16 +119,17 @@ export class ProductVariantService {
     });
 
     const bestVariantByProduct = new Map<number, any>();
+    const baseComboVariantId = Number(baseComboVariant.id);
+    const baseComboVariantModifiedPrice = Number(baseComboVariant.dataValues.modifiedPrice || 0);
 
     for (const variant of candidateVariants) {
       const product = variant.dataValues.product;
       const productId = Number(product?.id);
       if (!productId) continue;
 
-      const totalPrice =
-        Number(product?.basePrice || 0) +
-        Number(variant.dataValues.modifiedPrice || 0);
-      const priceDifference = totalPrice - targetTotalPrice;
+      const priceDifference = Number(variant.id) === baseComboVariantId
+        ? 0
+        : Number(variant.dataValues.modifiedPrice || 0) - baseComboVariantModifiedPrice;
       const priceStatus =
         priceDifference > 0 ? 'increase' :
           priceDifference < 0 ? 'decrease' :

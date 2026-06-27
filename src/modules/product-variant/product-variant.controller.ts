@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ProductVariantService } from './product-variant.service';
 import { ApiOperation, ApiProperty } from '@nestjs/swagger';
 
@@ -6,7 +6,7 @@ import { ApiOperation, ApiProperty } from '@nestjs/swagger';
 export class ProductVariantController {
   constructor(private readonly productVariantService: ProductVariantService) { }
   @Get('/isCombo/:id')
-  findProductIsCombo(@Param('id') id: number) {
-    return this.productVariantService.findProductIsCombo(id);
+  findProductIsCombo(@Param('id') id: number, @Query('comboItemId') comboItemId?: number) {
+    return this.productVariantService.findProductIsCombo(id, comboItemId);
   }
 }

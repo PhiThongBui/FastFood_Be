@@ -12,7 +12,7 @@ import {
     Product,
     ProductVariant
 } from '@/models';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -22,6 +22,8 @@ import { CouponService } from '../coupon/coupon.service';
 
 @Injectable()
 export class CartPreviewService {
+    private readonly logger = new Logger(CartPreviewService.name);
+
     constructor(
         @InjectModel(CartItems) private cartItemsModel: typeof CartItems,
         @InjectModel(CartItemsIngredient) private cartItemsIngredientModel: typeof CartItemsIngredient,
@@ -46,21 +48,45 @@ export class CartPreviewService {
             },
             include: [
                 { model: this.productModel, attributes: ['id', 'name', 'basePrice', 'imageUrl', 'isActive'], required: false },
-                { model: this.productVariantModel, attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'], required: false },
+                {
+                    model: this.productVariantModel,
+                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'],
+                    required: false,
+                    include: [
+                        {
+                            model: this.productModel,
+                            attributes: ['id', 'name', 'basePrice', 'imageUrl', 'isActive'],
+                            required: false
+                        }
+                    ]
+                },
                 { model: this.comboModel, attributes: ['id', 'name', 'price', 'imageUrl', 'discountPercentage', 'isActive'], required: false },
                 {
                     model: this.cartItemsIngredientModel,
                     required: false,
-                    include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price'] }]
+                    include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price', 'isActive'] }]
                 },
                 {
                     model: this.cartItemComboOptionModel,
                     required: false,
-                    include: [{
-                        model: this.cartItemComboOptionIngredientModel,
-                        required: false,
-                        include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price'] }]
-                    }]
+                    include: [
+                        {
+                            model: this.comboItemModel,
+                            required: false,
+                            include: [
+                                {
+                                    model: this.productVariantModel,
+                                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'],
+                                    required: false
+                                }
+                            ]
+                        },
+                        {
+                            model: this.cartItemComboOptionIngredientModel,
+                            required: false,
+                            include: [{ model: this.ingredientModel, attributes: ['id', 'name', 'price', 'isActive'] }]
+                        }
+                    ]
                 }
             ],
             order: [['createdAt', 'DESC']]
@@ -86,7 +112,17 @@ export class CartPreviewService {
             where: { comboId: { [Op.in]: Array.from(comboIdsInCart) } },
             include: [
                 { model: this.productModel, attributes: ['id', 'name', 'basePrice', 'imageUrl', 'isActive'] },
-                { model: this.productVariantModel, attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'] }
+                {
+                    model: this.productVariantModel,
+                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'],
+                    include: [
+                        {
+                            model: this.productModel,
+                            attributes: ['id', 'name', 'basePrice', 'imageUrl', 'isActive'],
+                            required: false
+                        }
+                    ]
+                }
             ],
             order: [['id', 'ASC']]
         });
@@ -112,7 +148,14 @@ export class CartPreviewService {
             selectedVariantIds.size > 0
                 ? this.productVariantModel.findAll({
                     where: { id: { [Op.in]: Array.from(selectedVariantIds) } },
-                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive']
+                    attributes: ['id', 'name', 'size', 'type', 'modifiedPrice', 'productId', 'isActive'],
+                    include: [
+                        {
+                            model: this.productModel,
+                            attributes: ['id', 'name', 'basePrice', 'imageUrl', 'isActive'],
+                            required: false
+                        }
+                    ]
                 })
                 : []
         ]);
@@ -214,6 +257,7 @@ export class CartPreviewService {
 
         const comboData = comboInstance.dataValues;
         const defaultSlots = comboDefaultsMap.get(Number(comboData.id)) || [];
+        if (defaultSlots.length === 0) return null;
         const optionMap = new Map<string, CartItemComboOption>();
 
         (item.dataValues.comboOptions || []).forEach(option => {
@@ -236,58 +280,99 @@ export class CartPreviewService {
 
         for (const slot of defaultSlots) {
             const defaultItem = slot.comboItem;
-            const defaultProduct = defaultItem.dataValues.product;
             const defaultVariant = defaultItem.dataValues.productVariant;
-            if (!defaultProduct || !defaultVariant) continue;
-            if (defaultProduct.dataValues.isActive === false || defaultVariant.dataValues.isActive === false) continue;
+            const defaultVariantData = this.getEntityData<any>(defaultVariant);
+            const defaultProductData = this.resolveProductForVariant(defaultVariant, defaultItem.dataValues.product);
+            if (!this.isUsableProductVariantPair(defaultProductData, defaultVariantData)) {
+                return null;
+            }
 
             const option = optionMap.get(`${defaultItem.id}:${slot.slotIndex}`);
-            const selectedProduct = option
-                ? selectedProductMap.get(Number(option.dataValues.selectedProductId))
-                : defaultProduct;
-            const selectedVariant = option
-                ? selectedVariantMap.get(Number(option.dataValues.selectedProductVariantId))
-                : defaultVariant;
+            let optionData: any = null;
+            let selectedProductData = defaultProductData;
+            let selectedVariantData = defaultVariantData;
+            let canUseCustomizedSelection = false;
 
-            if (!selectedProduct || !selectedVariant) continue;
-            if (selectedProduct.dataValues.isActive === false || selectedVariant.dataValues.isActive === false) continue;
+            if (option) {
+                optionData = this.getEntityData<any>(option);
+                const selectedVariant = selectedVariantMap.get(Number(optionData?.selectedProductVariantId));
+                const selectedVariantResolvedData = this.getEntityData<any>(selectedVariant);
+                const selectedProductResolvedData = this.resolveProductForVariant(
+                    selectedVariant,
+                    selectedProductMap.get(Number(optionData?.selectedProductId))
+                );
 
-            const defaultPrice = Number(defaultProduct.dataValues.basePrice || 0) + Number(defaultVariant.dataValues.modifiedPrice || 0);
-            const selectedPrice = Number(selectedProduct.dataValues.basePrice || 0) + Number(selectedVariant.dataValues.modifiedPrice || 0);
-            let surcharge = option ? selectedPrice - defaultPrice : 0;
+                // Nếu custom selection không còn hợp lệ thì fallback về cấu hình mặc định của slot
+                // để preview không hiển thị sai sản phẩm hoặc tính sai surcharge.
+                if (this.isUsableProductVariantPair(selectedProductResolvedData, selectedVariantResolvedData)) {
+                    selectedProductData = selectedProductResolvedData;
+                    selectedVariantData = selectedVariantResolvedData;
+                    canUseCustomizedSelection = true;
+                }
+            }
+
+            const optionComboItemData = this.getEntityData<any>(optionData?.comboItem);
+            const optionComboItemVariantData = this.getEntityData<any>(optionComboItemData?.productVariant);
+            const comboItemVariantData = optionComboItemVariantData || defaultVariantData;
+            const defaultVariantId = Number(optionComboItemData?.productVariantId || comboItemVariantData?.id || 0);
+            const selectedVariantIdFromOption = Number(optionData?.selectedProductVariantId || 0);
+            const variantSurcharge =
+                canUseCustomizedSelection &&
+                selectedVariantIdFromOption > 0 &&
+                selectedVariantIdFromOption !== defaultVariantId
+                    ? Number(selectedVariantData.modifiedPrice || 0) - Number(comboItemVariantData?.modifiedPrice || 0)
+                    : 0;
+            let surcharge = variantSurcharge;
             const ingredientsDisplay: string[] = [];
             const enrichedIngredients: any[] = [];
 
-            if (option) {
-                for (const optionIngredient of option.dataValues.ingredients || []) {
-                    const ingredientData = optionIngredient.dataValues.ingredient?.dataValues;
-                    if (!ingredientData) continue;
+            if (canUseCustomizedSelection) {
+                for (const optionIngredient of optionData?.ingredients || []) {
+                    const optionIngredientData = this.getEntityData<any>(optionIngredient);
+                    const ingredientData = this.getEntityData<any>(optionIngredientData?.ingredient);
+                    if (!ingredientData || ingredientData.isActive === false) continue;
 
                     enrichedIngredients.push({
                         ingredientId: ingredientData.id,
-                        quantity: optionIngredient.dataValues.quantity,
-                        type: optionIngredient.dataValues.type,
+                        quantity: optionIngredientData.quantity,
+                        type: optionIngredientData.type,
                         name: ingredientData.name,
                         price: ingredientData.price
                     });
 
-                    if (optionIngredient.dataValues.type === 'ADD') {
-                        const toppingTotal = Number(ingredientData.price || 0) * Number(optionIngredient.dataValues.quantity || 1);
+                    if (optionIngredientData.type === 'ADD') {
+                        const toppingTotal = Number(ingredientData.price || 0) * Number(optionIngredientData.quantity || 1);
                         surcharge += toppingTotal;
-                        ingredientsDisplay.push(`+ ${ingredientData.name} (x${optionIngredient.dataValues.quantity})`);
+                        ingredientsDisplay.push(`+ ${ingredientData.name} (x${optionIngredientData.quantity})`);
                     } else {
                         ingredientsDisplay.push(`KHONG LAY ${ingredientData.name}`);
                     }
                 }
             }
 
+            this.logger.debug({
+                message: 'Combo slot pricing calculation',
+                cartItemId: item.dataValues.id,
+                comboId: comboData.id,
+                comboItemId: Number(defaultItem.id),
+                slotIndex: Number(slot.slotIndex),
+                comboItemProductVariantId: defaultVariantId,
+                selectedProductVariantId: selectedVariantIdFromOption || Number(selectedVariantData.id),
+                comboItemVariantModifiedPrice: Number(comboItemVariantData?.modifiedPrice || 0),
+                selectedVariantModifiedPrice: Number(selectedVariantData.modifiedPrice || 0),
+                variantSurcharge,
+                toppingSurcharge: surcharge - variantSurcharge,
+                surcharge,
+                unitPriceBeforeSlot: itemUnitPrice
+            });
+
             itemUnitPrice += surcharge;
             surchargeTotal += surcharge;
 
             const detailKey = JSON.stringify({
                 comboItemId: Number(defaultItem.id),
-                productId: Number(selectedProduct.dataValues.id),
-                productVariantId: Number(selectedVariant.dataValues.id),
+                productId: Number(selectedProductData.id),
+                productVariantId: Number(selectedVariantData.id),
                 ingredients: enrichedIngredients.map(ingredient => ({
                     ingredientId: ingredient.ingredientId,
                     quantity: ingredient.quantity,
@@ -303,8 +388,8 @@ export class CartPreviewService {
                 existingDetail.quantity += 1;
             } else {
                 comboDetailsDisplayMap.set(detailKey, {
-                    productName: selectedProduct.dataValues.name,
-                    variantName: `${selectedVariant.dataValues.size} - ${selectedVariant.dataValues.type}`,
+                    productName: selectedProductData.name,
+                    variantName: `${selectedVariantData.size} - ${selectedVariantData.type}`,
                     ingredients: ingredientsDisplay,
                     surcharge,
                     quantity: 1
@@ -314,24 +399,42 @@ export class CartPreviewService {
             enrichedOptions.push({
                 comboItemId: Number(defaultItem.id),
                 slotIndex: Number(slot.slotIndex),
-                productId: Number(selectedProduct.dataValues.id),
-                productVariantId: Number(selectedVariant.dataValues.id),
+                productId: Number(selectedProductData.id),
+                productVariantId: Number(selectedVariantData.id),
                 ingredients: enrichedIngredients,
                 product: {
-                    id: selectedProduct.dataValues.id,
-                    name: selectedProduct.dataValues.name,
-                    imageUrl: selectedProduct.dataValues.imageUrl || '',
-                    basePrice: selectedProduct.dataValues.basePrice
+                    id: selectedProductData.id,
+                    name: selectedProductData.name,
+                    imageUrl: selectedProductData.imageUrl || '',
+                    basePrice: selectedProductData.basePrice
                 },
                 variant: {
-                    id: selectedVariant.dataValues.id,
-                    name: selectedVariant.dataValues.name,
-                    size: selectedVariant.dataValues.size,
-                    type: selectedVariant.dataValues.type,
-                    modifiedPrice: selectedVariant.dataValues.modifiedPrice
+                    id: selectedVariantData.id,
+                    name: selectedVariantData.name,
+                    size: selectedVariantData.size,
+                    type: selectedVariantData.type,
+                    modifiedPrice: selectedVariantData.modifiedPrice
                 }
             });
         }
+
+        const quantity = Number(item.dataValues.quantity || 1);
+        const totalPrice = itemUnitPrice * quantity;
+        const originalPrice = comboBasePrice + surchargeTotal;
+
+        this.logger.debug({
+            message: 'Combo cart item pricing result',
+            cartItemId: item.dataValues.id,
+            comboId: comboData.id,
+            comboBasePrice,
+            discountPercent,
+            discountedComboBasePrice,
+            surchargeTotal,
+            unitPrice: itemUnitPrice,
+            quantity,
+            totalPrice,
+            originalPrice
+        });
 
         return {
             cartItemId: item.dataValues.id,
@@ -339,15 +442,15 @@ export class CartPreviewService {
             name: comboData.name,
             imageUrl: comboData.imageUrl,
             unitPrice: itemUnitPrice,
-            quantity: Number(item.dataValues.quantity || 1),
-            totalPrice: itemUnitPrice * Number(item.dataValues.quantity || 1),
+            quantity,
+            totalPrice,
             rawData: {
                 comboId: comboData.id,
                 comboOptions: enrichedOptions
             },
             details: {
                 comboItems: Array.from(comboDetailsDisplayMap.values()),
-                originalPrice: comboBasePrice + surchargeTotal,
+                originalPrice,
                 discountPercentage: discountPercent,
                 savedAmount: comboBasePrice - discountedComboBasePrice
             }
@@ -355,17 +458,15 @@ export class CartPreviewService {
     }
 
     private buildSinglePreviewItem(item: CartItems): CartPreviewItem | null {
-        const productData = item.dataValues.product;
-        const variantData = item.dataValues.productVariant;
+        const variantData = this.getEntityData<any>(item.dataValues.productVariant);
+        const productData = this.resolveProductForVariant(item.dataValues.productVariant, item.dataValues.product);
         const cartItemIngredients = item.dataValues.cartItemIngredients || [];
         const itemQty = Number(item.dataValues.quantity || 1);
 
-        if (!productData || !variantData) return null;
-        if (productData.dataValues.isActive === false || variantData.dataValues.isActive === false) return null;
-        if (Number(variantData.dataValues.productId) !== Number(productData.dataValues.id)) return null;
+        if (!this.isUsableProductVariantPair(productData, variantData)) return null;
 
-        const basePrice = Number(productData.dataValues.basePrice || 0);
-        const variantSurcharge = Number(variantData.dataValues.modifiedPrice || 0);
+        const basePrice = Number(productData.basePrice || 0);
+        const variantSurcharge = Number(variantData.modifiedPrice || 0);
         const ingredientsDisplay: any[] = [];
         let toppingsCost = 0;
 
@@ -373,7 +474,8 @@ export class CartPreviewService {
             const ingInstance = ing.dataValues.ingredient;
             if (!ingInstance) continue;
 
-            const ingData = ingInstance.dataValues;
+            const ingData = this.getEntityData<any>(ingInstance);
+            if (!ingData || ingData.isActive === false) continue;
             const totalIngQty = Number(ing.dataValues.quantity || 0);
             const unitQty = itemQty > 0 ? (totalIngQty / itemQty) : 0;
             const price = Number(ingData.price || 0);
@@ -401,25 +503,67 @@ export class CartPreviewService {
         }
 
         const itemUnitPrice = basePrice + variantSurcharge + toppingsCost;
+        const totalPrice = itemUnitPrice * itemQty;
+
+        this.logger.debug({
+            message: 'Single cart item pricing result',
+            cartItemId: item.dataValues.id,
+            productId: productData.id,
+            productVariantId: variantData.id,
+            basePrice,
+            variantSurcharge,
+            toppingsCost,
+            unitPrice: itemUnitPrice,
+            quantity: itemQty,
+            totalPrice
+        });
 
         return {
             cartItemId: item.dataValues.id,
             type: 'SINGLE',
-            name: productData.dataValues.name,
-            imageUrl: productData.dataValues.imageUrl,
+            name: productData.name,
+            imageUrl: productData.imageUrl,
             unitPrice: itemUnitPrice,
             quantity: itemQty,
-            totalPrice: itemUnitPrice * itemQty,
+            totalPrice,
             rawData: {
-                productId: productData.dataValues.id,
-                productVariantId: variantData.dataValues.id
+                productId: productData.id,
+                productVariantId: variantData.id
             },
             details: {
-                variantName: variantData.dataValues.name,
-                size: variantData.dataValues.size,
-                crust: variantData.dataValues.type,
+                variantName: variantData.name,
+                size: variantData.size,
+                crust: variantData.type,
                 ingredients: ingredientsDisplay
             }
         };
+    }
+
+    private getEntityData<T>(entity: any): T | null {
+        if (!entity) return null;
+        return (entity.dataValues || entity) as T;
+    }
+
+    private resolveProductForVariant(variant: any, fallbackProduct?: any): any | null {
+        const variantData = this.getEntityData<any>(variant);
+        if (!variantData) return null;
+
+        const canonicalProduct = this.getEntityData<any>(variantData.product);
+        if (canonicalProduct && Number(canonicalProduct.id) === Number(variantData.productId)) {
+            return canonicalProduct;
+        }
+
+        const fallbackProductData = this.getEntityData<any>(fallbackProduct);
+        if (fallbackProductData && Number(fallbackProductData.id) === Number(variantData.productId)) {
+            return fallbackProductData;
+        }
+
+        return null;
+    }
+
+    private isUsableProductVariantPair(productData: any, variantData: any): boolean {
+        if (!productData || !variantData) return false;
+        if (productData.isActive === false || variantData.isActive === false) return false;
+        return Number(productData.id) === Number(variantData.productId);
     }
 }
