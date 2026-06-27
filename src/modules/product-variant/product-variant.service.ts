@@ -91,10 +91,11 @@ export class ProductVariantService {
     if (eligibleProductIds.length === 0) {
       return [];
     }
-
+    
     const candidateVariants = await this.modelProductVariant.findAll({
       where: {
         productId: eligibleProductIds,
+        isComboItem: true,
         isActive: true,
         size: baseComboVariant.size,
         type: baseComboVariant.type

@@ -1,16 +1,21 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
+import { GetPricingFeatureDto, GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
 import { PricingService } from './pricing.service';
-import { GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Serialize } from '@/common/interceptors/serialize.interceptor';
 
 @Controller('pricing')
 export class PricingController {
   constructor(private readonly pricingService: PricingService) { }
 
-  @Post('get-single-pricing')
-  @ApiOperation({summary:'Lấy ra giá của variant hoặc giá cơ bản của sản phẩm chỉ truyền vào 1 trong 2 ID'})
-  async getSiglePricing(@Body() dto: GetPricingNoQuantityDto) {    
+  @Post('get-combo-variant-pricing')
+  @ApiOperation({ summary: 'Lay gia doi mon trong combo, bat buoc truyen productVariantId va comboItemId' })
+  async getSiglePricing(@Body() dto: GetPricingNoQuantityDto) {
     return await this.pricingService.getSinglePricing(dto);
+  }
+
+  @Post('get-single-pricing-feature')
+  @ApiOperation({ summary: 'Lay gia theo logic cu cua get-single-pricing' })
+  async getSinglePricingFeature(@Body() dto: GetPricingFeatureDto) {
+    return await this.pricingService.getSinglePricingFeature(dto);
   }
 }

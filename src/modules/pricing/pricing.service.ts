@@ -1,23 +1,79 @@
-import { CartItems, ComboItem, Product, ProductIngredient, ProductVariant } from '@/models';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ComboItem, Product, ProductVariant } from '@/models';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
 import { Sequelize } from 'sequelize-typescript';
+import { GetPricingFeatureDto, GetPricingNoQuantityDto } from './dto/getPricingNoQuantity.dto';
 
 @Injectable()
 export class PricingService {
-    private readonly logger = new Logger(PricingService.name)
-
     constructor(
-        @InjectModel(CartItems) private readonly modelCartItem: typeof CartItems,
         @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
         @InjectModel(Product) private readonly modelProduct: typeof Product,
         @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
-        @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
         private readonly sequelize: Sequelize
     ) { }
 
     async getSinglePricing(dto: GetPricingNoQuantityDto) {
+        const { comboItemId, productVariantId } = dto;
+
+        if (!productVariantId || !comboItemId) {
+            throw new BadRequestException(
+                'Cần truyền productVariantId và comboItemId khi tính giá đổi món trong combo'
+            );
+        }
+
+        const productVariant = await this.modelProductVariant.findByPk(productVariantId, {
+            include: [
+                {
+                    model: this.modelProduct,
+                    attributes: {
+                        include: [
+                            [
+                                this.sequelize.literal(
+                                    `"product"."basePrice" + "ProductVariant"."modifiedPrice"`
+                                ),
+                                'variantPrice',
+                            ],
+                        ],
+                    },
+                },
+            ],
+        });
+
+        if (!productVariant) {
+            throw new BadRequestException('Không có dữ liệu giá cho biến thể này');
+        }
+
+        const comboItem = await this.modelComboItem.findByPk(comboItemId, {
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    attributes: ['id', 'modifiedPrice'],
+                    required: true
+                }
+            ]
+        });
+
+        if (!comboItem?.dataValues.productVariant) {
+            throw new BadRequestException(`ComboItem with id ${comboItemId} not found!!!`);
+        }
+
+        const raw = productVariant.get({ plain: true }) as unknown as {
+            product: Product & { variantPrice: number };
+        };
+
+        const comboItemVariant = comboItem.dataValues.productVariant;
+        const variantSurcharge = Number(productVariant.dataValues.id) === Number(comboItemVariant.id)
+            ? 0
+            : Number(productVariant.dataValues.modifiedPrice || 0) - Number(comboItemVariant.dataValues.modifiedPrice || 0);
+
+        return {
+            variantPrice: raw.product.variantPrice,
+            variantSurcharge
+        };
+    }
+
+    async getSinglePricingFeature(dto: GetPricingFeatureDto) {
         const { productVariantId, productId } = dto;
 
         if (productVariantId && productId) {
@@ -73,10 +129,9 @@ export class PricingService {
 
             return { variantPrice: product.dataValues.basePrice };
         }
+
         throw new BadRequestException(
             'Cần truyền productVariantId hoặc productId'
         );
     }
-
-
 }

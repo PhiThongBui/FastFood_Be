@@ -350,21 +350,21 @@ export class CartPreviewService {
                 }
             }
 
-            this.logger.debug({
-                message: 'Combo slot pricing calculation',
-                cartItemId: item.dataValues.id,
-                comboId: comboData.id,
-                comboItemId: Number(defaultItem.id),
-                slotIndex: Number(slot.slotIndex),
-                comboItemProductVariantId: defaultVariantId,
-                selectedProductVariantId: selectedVariantIdFromOption || Number(selectedVariantData.id),
-                comboItemVariantModifiedPrice: Number(comboItemVariantData?.modifiedPrice || 0),
-                selectedVariantModifiedPrice: Number(selectedVariantData.modifiedPrice || 0),
-                variantSurcharge,
-                toppingSurcharge: surcharge - variantSurcharge,
-                surcharge,
-                unitPriceBeforeSlot: itemUnitPrice
-            });
+            // this.logger.debug({
+            //     message: 'Combo slot pricing calculation',
+            //     cartItemId: item.dataValues.id,
+            //     comboId: comboData.id,
+            //     comboItemId: Number(defaultItem.id),
+            //     slotIndex: Number(slot.slotIndex),
+            //     comboItemProductVariantId: defaultVariantId,
+            //     selectedProductVariantId: selectedVariantIdFromOption || Number(selectedVariantData.id),
+            //     comboItemVariantModifiedPrice: Number(comboItemVariantData?.modifiedPrice || 0),
+            //     selectedVariantModifiedPrice: Number(selectedVariantData.modifiedPrice || 0),
+            //     variantSurcharge,
+            //     toppingSurcharge: surcharge - variantSurcharge,
+            //     surcharge,
+            //     unitPriceBeforeSlot: itemUnitPrice
+            // });
 
             itemUnitPrice += surcharge;
             surchargeTotal += surcharge;
@@ -422,19 +422,19 @@ export class CartPreviewService {
         const totalPrice = itemUnitPrice * quantity;
         const originalPrice = comboBasePrice + surchargeTotal;
 
-        this.logger.debug({
-            message: 'Combo cart item pricing result',
-            cartItemId: item.dataValues.id,
-            comboId: comboData.id,
-            comboBasePrice,
-            discountPercent,
-            discountedComboBasePrice,
-            surchargeTotal,
-            unitPrice: itemUnitPrice,
-            quantity,
-            totalPrice,
-            originalPrice
-        });
+        // this.logger.debug({
+        //     message: 'Combo cart item pricing result',
+        //     cartItemId: item.dataValues.id,
+        //     comboId: comboData.id,
+        //     comboBasePrice,
+        //     discountPercent,
+        //     discountedComboBasePrice,
+        //     surchargeTotal,
+        //     unitPrice: itemUnitPrice,
+        //     quantity,
+        //     totalPrice,
+        //     originalPrice
+        // });
 
         return {
             cartItemId: item.dataValues.id,
@@ -505,18 +505,18 @@ export class CartPreviewService {
         const itemUnitPrice = basePrice + variantSurcharge + toppingsCost;
         const totalPrice = itemUnitPrice * itemQty;
 
-        this.logger.debug({
-            message: 'Single cart item pricing result',
-            cartItemId: item.dataValues.id,
-            productId: productData.id,
-            productVariantId: variantData.id,
-            basePrice,
-            variantSurcharge,
-            toppingsCost,
-            unitPrice: itemUnitPrice,
-            quantity: itemQty,
-            totalPrice
-        });
+        // this.logger.debug({
+        //     message: 'Single cart item pricing result',
+        //     cartItemId: item.dataValues.id,
+        //     productId: productData.id,
+        //     productVariantId: variantData.id,
+        //     basePrice,
+        //     variantSurcharge,
+        //     toppingsCost,
+        //     unitPrice: itemUnitPrice,
+        //     quantity: itemQty,
+        //     totalPrice
+        // });
 
         return {
             cartItemId: item.dataValues.id,
