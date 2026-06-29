@@ -1,4 +1,4 @@
-import { ComboItem, Product, ProductVariant } from '@/models';
+import { Combo, ComboItem, Product, ProductVariant } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
@@ -47,6 +47,11 @@ export class PricingService {
         const comboItem = await this.modelComboItem.findByPk(comboItemId, {
             include: [
                 {
+                    model: Combo,
+                    attributes: ['id', 'name', 'price', 'discountPercentage'],
+                    required: true
+                },
+                {
                     model: this.modelProductVariant,
                     attributes: ['id', 'modifiedPrice'],
                     required: true
@@ -54,7 +59,7 @@ export class PricingService {
             ]
         });
 
-        if (!comboItem?.dataValues.productVariant) {
+        if (!comboItem?.dataValues.productVariant || !comboItem?.dataValues.combo) {
             throw new BadRequestException(`ComboItem with id ${comboItemId} not found!!!`);
         }
 
@@ -63,13 +68,34 @@ export class PricingService {
         };
 
         const comboItemVariant = comboItem.dataValues.productVariant;
-        const variantSurcharge = Number(productVariant.dataValues.id) === Number(comboItemVariant.id)
+        const selectedVariantId = Number(productVariant.dataValues.id || productVariantId);
+        const comboItemProductVariantId = Number(comboItem.dataValues.productVariantId || comboItemVariant.id);
+        // Variant da nam san trong comboItem goc thi khong phai doi mon, nen khong tinh surcharge.
+        const variantSurcharge = selectedVariantId === comboItemProductVariantId
             ? 0
             : Number(productVariant.dataValues.modifiedPrice || 0) - Number(comboItemVariant.dataValues.modifiedPrice || 0);
+        const combo = comboItem.dataValues.combo;
+        const comboBasePrice = Number(combo.dataValues.price || 0);
+        const comboDiscountPercentage = Number(combo.dataValues.discountPercentage || 0);
+        const discountedComboBasePrice = Math.ceil(
+            (comboBasePrice * (1 - (comboDiscountPercentage / 100))) / 1000
+        ) * 1000;
+        // Align with cart-preview: combo unit price is discounted combo base plus change-variant surcharge.
+        const comboPriceAfterChange = discountedComboBasePrice + variantSurcharge;
+        const comboOriginalPriceAfterChange = comboBasePrice + variantSurcharge;
 
         return {
             variantPrice: raw.product.variantPrice,
-            variantSurcharge
+            variantSurcharge,
+            combo: {
+                id: combo.dataValues.id,
+                name: combo.dataValues.name,
+                basePrice: comboBasePrice,
+                discountPercentage: comboDiscountPercentage,
+                discountedBasePrice: discountedComboBasePrice,
+                priceAfterChange: comboPriceAfterChange,
+                originalPriceAfterChange: comboOriginalPriceAfterChange
+            }
         };
     }
 

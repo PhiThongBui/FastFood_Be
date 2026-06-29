@@ -8,13 +8,13 @@ export class PricingController {
   constructor(private readonly pricingService: PricingService) { }
 
   @Post('get-combo-variant-pricing')
-  @ApiOperation({ summary: 'Lay gia doi mon trong combo, bat buoc truyen productVariantId va comboItemId' })
+  @ApiOperation({ summary: 'Lấy giá đổi món trong combo, bắt buộc truyền productVariantId va comboItemId' })
   async getSiglePricing(@Body() dto: GetPricingNoQuantityDto) {
     return await this.pricingService.getSinglePricing(dto);
   }
 
   @Post('get-single-pricing-feature')
-  @ApiOperation({ summary: 'Lay gia theo logic cu cua get-single-pricing' })
+  @ApiOperation({ summary: 'Lấy giá cho sản phẩm theo tính năng' })
   async getSinglePricingFeature(@Body() dto: GetPricingFeatureDto) {
     return await this.pricingService.getSinglePricingFeature(dto);
   }
