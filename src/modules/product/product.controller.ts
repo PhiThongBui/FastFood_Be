@@ -62,36 +62,44 @@ export class ProductController {
 
   @Get('/getfeatured')
   @Serialize(GetProductFeaturedDto)
-  @ApiOperation({ summary: 'Lay danh sach san pham featured' })
-  @ApiResponse({ status: 200, description: 'Lay danh sach san pham featured' })
-  @ApiResponse({ status: 404, description: 'Khong tim thay san pham featured' })
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm featured' })
+  @ApiResponse({ status: 200, description: 'Lấy danh sách sản phẩm featured' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm featured' })
   async getProductFeatured() {
     return await this.productService.getProductFeatured()
   }
 
   @Get('/best-seller')
   // @Serialize(BestSellerDto)
-  @ApiOperation({ summary: 'Lay danh sach san pham best seller' })
-  @ApiResponse({ status: 200, description: 'Lay danh sach san pham best seller' })
-  @ApiResponse({ status: 404, description: 'Khong tim thay san pham best seller' })
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm best seller' })
+  @ApiResponse({ status: 200, description: 'Lấy danh sách sản phẩm best seller' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm best seller' })
   async getProductBestSeller() {
     return await this.productService.getBestSellerProduct()
   }
 
   @Get('/get-all-pizza')
-  @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
-  @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
-  @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm pizza' })
+  @ApiResponse({ status: 200, description: 'Lấy danh sách sản phẩm pizza' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm pizza' })
   @Serialize(GetAllPizzaResponseDto)
   async getAllPizza(@Query() filterSearch: QueryGetAllPizzaDto) {
     return await this.productService.getAllPizza(filterSearch)
   }
 
+  @Get('/pizza/:id')
+  @ApiOperation({ summary: 'Lấy chi tiết pizza theo id' })
+  @ApiResponse({ status: 200, description: 'Lấy chi tiết pizza thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy pizza' })
+  async getPizzaDetailById(@Param('id', ParseIntPipe) id: number) {
+    return await this.productService.getPizzaDetailById(id)
+  }
+
 
   @Get('/get-by-id-custom/:id/combovariant')
-  @ApiOperation({ summary: 'Lay danh sach variant và ingredient dùng cho combo detail' })
-  @ApiResponse({ status: 200, description: 'Lay danh sach variant và ingredient' })
-  @ApiResponse({ status: 404, description: 'Khong tim thay danh sach variant và ingredient' })
+  @ApiOperation({ summary: 'Lấy danh sách variant và ingredient dùng cho combo detail' })
+  @ApiResponse({ status: 200, description: 'Lấy danh sach variant và ingredient' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy danh sách variant và ingredient' })
   async getProductByIdCustom(@Param('id') id: number) {
     return await this.productService.getProductByIdCustom(id)
   }

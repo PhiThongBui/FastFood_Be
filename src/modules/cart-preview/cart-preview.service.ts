@@ -345,7 +345,7 @@ export class CartPreviewService {
                         surcharge += toppingTotal;
                         ingredientsDisplay.push(`+ ${ingredientData.name} (x${optionIngredientData.quantity})`);
                     } else {
-                        ingredientsDisplay.push(`KHONG LAY ${ingredientData.name}`);
+                        ingredientsDisplay.push(`- ${ingredientData.name}`);
                     }
                 }
             }
@@ -493,7 +493,7 @@ export class CartPreviewService {
             } else {
                 ingredientsDisplay.push({
                     ingredientId: ingData.id,
-                    name: `KHONG LAY ${ingData.name}`,
+                    name: `Không lấy ${ingData.name}`,
                     price: 0,
                     quantity: unitQty,
                     totalPrice: 0,

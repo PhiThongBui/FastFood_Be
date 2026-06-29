@@ -566,6 +566,67 @@ export class ProductService {
         };
     }
 
+    async getPizzaDetailById(id: number) {
+        const product = await this.modelProduct.findOne({
+            where: {
+                id,
+                categoryId: 1,
+                isActive: true
+            },
+            attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl', 'isFeatured'],
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    as: 'variants',
+                    required: false,
+                    where: {
+                        isActive: true
+                    },
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'productId', 'isComboItem'],
+                        include: [
+                            [
+                                this.sequelize.literal(
+                                    '"Product"."basePrice" + "variants"."modifiedPrice"'
+                                ),
+                                'variantPrice'
+                            ]
+                        ]
+                    }
+                },
+                {
+                    model: this.modelProductIngredient,
+                    required: false,
+                    attributes: ['id', 'quantity', 'isDefault'],
+                    include: [
+                        {
+                            model: this.modelIngredient,
+                            required: true,
+                            where: {
+                                isActive: true
+                            },
+                            attributes: ['id', 'name', 'description', 'imageUrl', 'price', 'isRequired']
+                        }
+                    ]
+                },
+                {
+                    model: this.modelCategory,
+                    attributes: ['id', 'name', 'slug']
+                }
+            ]
+        });
+
+        if (!product) {
+            throw new NotFoundException('Khong tim thay pizza');
+        }
+
+        const plainProduct = product.get({ plain: true }) as any;
+        plainProduct.variants = (plainProduct.variants || []).sort((a, b) => Number(a.id) - Number(b.id));
+        plainProduct.ingredients = (plainProduct.ingredients || []).sort((a, b) => Number(a.id) - Number(b.id));
+
+        return plainProduct;
+    }
+
 
     async getProductByIdCustom(id: number) {
          return await this.modelProduct.findByPk(id, {
