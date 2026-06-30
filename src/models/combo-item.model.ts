@@ -14,7 +14,7 @@ export class ComboItem extends Model<ComboItem> {
  declare comboId: number;
 
   @BelongsTo(() => Combo)
-  combo: Combo;
+  combo!: Combo;
 
   // Liên kết tới sản phẩm
   @ForeignKey(() => Product)
@@ -25,7 +25,7 @@ export class ComboItem extends Model<ComboItem> {
  declare productId: number;
 
   @BelongsTo(()=>Product)
-  product: Product
+  product!: Product
   // Liên kết tới biến thể sản phẩm cụ thể
   // Rất quan trọng: Phải liên kết tới ProductVariant
   // vì combo bao gồm "Pizza 20cm" chứ không phải "Pizza" chung chung
@@ -37,7 +37,7 @@ export class ComboItem extends Model<ComboItem> {
  declare productVariantId: number;
 
   @BelongsTo(() => ProductVariant)
-  productVariant: ProductVariant;
+  productVariant!: ProductVariant;
 
   // Số lượng của sản phẩm đó trong combo
   // Ví dụ: 2 Coca-Cola

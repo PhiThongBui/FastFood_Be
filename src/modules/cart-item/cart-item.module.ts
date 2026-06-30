@@ -8,12 +8,12 @@ import { ProductVariantModule } from '../product-variant/product-variant.module'
 import { CartModule } from '../cart/cart.module';
 import { CartItemIngredientService } from '../cart-item-ingredient/cart-item-ingredient.service';
 import { CartItemIngredientModule } from '../cart-item-ingredient/cart-item-ingredient.module';
-import { cp } from 'fs';
+import { CartPreviewModule } from '../cart-preview/cart-preview.module';
 
 @Module({
   controllers: [CartItemController],
   providers: [CartItemService],
-  imports: [SequelizeModule.forFeature([CartItems, Carts, Product, ProductVariant, CartItemsIngredient, ProductIngredient, Ingredient, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient]), ProductModule, ProductVariantModule, CartItemIngredientModule, CartModule],
+  imports: [SequelizeModule.forFeature([CartItems, Carts, Product, ProductVariant, CartItemsIngredient, ProductIngredient, Ingredient, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient]), ProductModule, ProductVariantModule, CartItemIngredientModule, CartModule, CartPreviewModule],
   exports: [CartItemService]
 })
 export class CartItemModule {}

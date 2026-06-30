@@ -11,7 +11,8 @@ import { CartService } from '../cart/cart.service';
 import { CartItemIngredientService } from '../cart-item-ingredient/cart-item-ingredient.service';
 import * as _ from 'lodash';
 import { Helper } from '@/utils/helper';
-import { UpdateCartItemDto } from './dto/update-cart-item.dto.ts';
+import { UPDATE_CART_ITEM_TYPE, UpdateCartItemDto } from './dto/update-cart-item.dto.ts';
+import { CartPreviewService } from '../cart-preview/cart-preview.service';
 interface AddToCartParams extends CreateCartItemDto {
     userId?: number;
     sessionId?: string;
@@ -60,6 +61,7 @@ export class CartItemService {
         private readonly cartItemIngredientSerivce: CartItemIngredientService,
         private readonly productVariantService: ProductVariantService,
         private readonly cartService: CartService,
+        private readonly cartPreviewService: CartPreviewService,
 
         private readonly sequelize: Sequelize
     ) { }
@@ -257,7 +259,9 @@ export class CartItemService {
 
         } catch (error) {
             console.error(error);
-            await transaction.rollback();
+            if (!(transaction as any).finished) {
+                await transaction.rollback();
+            }
             throw error;
         }
     }
@@ -878,6 +882,43 @@ export class CartItemService {
         });
     }
 
+    private async clearComboOptionsForSlots(
+        cartItemId: number,
+        optionsToReplace: ComboOptionDto[],
+        transaction: any
+    ): Promise<void> {
+        if (!optionsToReplace || optionsToReplace.length === 0) return;
+
+        const slotKeys = new Set(
+            optionsToReplace.map(option => this.comboSlotKey(
+                Number(option.comboItemId),
+                Number(option.slotIndex)
+            ))
+        );
+        const existingOptions = await this.modelCartItemComboOption.findAll({
+            where: { cartItemId },
+            attributes: ['id', 'comboItemId', 'slotIndex'],
+            transaction
+        });
+        const optionIds = existingOptions
+            .filter(option => slotKeys.has(this.comboSlotKey(
+                Number(option.dataValues.comboItemId),
+                Number(option.dataValues.slotIndex)
+            )))
+            .map(option => Number(option.id));
+
+        if (optionIds.length === 0) return;
+
+        await this.modelCartItemComboOptionIngredient.destroy({
+            where: { cartItemComboOptionId: optionIds },
+            transaction
+        });
+        await this.modelCartItemComboOption.destroy({
+            where: { id: optionIds },
+            transaction
+        });
+    }
+
     private normalizeDbComboOptions(options: CartItemComboOption[]): NormalizedComboCartOption[] {
         return (options || []).map(option => ({
             comboItemId: Number(option.dataValues.comboItemId),
@@ -1367,7 +1408,9 @@ export class CartItemService {
 
         } catch (error) {
             console.log(error);
-            await transaction.rollback();
+            if (!(transaction as any).finished) {
+                await transaction.rollback();
+            }
             throw error;
         }
     }
@@ -1432,8 +1475,9 @@ export class CartItemService {
         updateData: UpdateCartItemDto,
         userId?: number | null,
         sessionId?: string
-    ): Promise<{ message: string; data: CartItems }> {
+    ): Promise<{ message: string; data: any }> {
         const transaction = await this.sequelize.transaction();
+        let cartIdForPreview = 0;
 
         try {
             // 1. TÌM CART ITEM
@@ -1452,9 +1496,13 @@ export class CartItemService {
             }
 
             // 2. KIỂM TRA QUYỀN SỞ HỮU
-            const cart = cartItem.cart;
-            const isOwner = (userId && cart.userId === userId) ||
-                (sessionId && cart.sessionId === sessionId);
+            const cart = cartItem.dataValues.cart || cartItem.cart || await this.modelCarts.findByPk(cartItem.cartId, { transaction });
+            if (!cart) {
+                throw new NotFoundException('Cart khong ton tai!');
+            }
+            const cartData = cart.dataValues || cart;
+            const isOwner = (userId && Number(cartData.userId) === Number(userId)) ||
+                (sessionId && cartData.sessionId === sessionId);
 
             if (!isOwner) {
                 throw new ForbiddenException('Bạn không có quyền chỉnh sửa cart item này!');
@@ -1462,6 +1510,23 @@ export class CartItemService {
 
             const isCombo = !!cartItem.comboId;
             const originalQuantity = Number(cartItem.quantity || 1);
+            cartIdForPreview = Number(cartData.id || cartItem.cartId);
+
+            if (updateData.type === UPDATE_CART_ITEM_TYPE.COMBO && !isCombo) {
+                throw new BadRequestException('Cart item này không phải là combo!');
+            }
+
+            if (updateData.type === UPDATE_CART_ITEM_TYPE.SINGLE && isCombo) {
+                throw new BadRequestException('Cart item này không phải là món lẻ!');
+            }
+
+            if (isCombo && (updateData.productVariantId !== undefined || updateData.singleProductOptions !== undefined)) {
+                throw new BadRequestException('Combo item không được update productVariantId hoac singleProductOptions!');
+            }
+
+            if (!isCombo && updateData.comboOptions !== undefined) {
+                throw new BadRequestException('Món lẻ không được update comboOptions!');
+            }
 
             // 3. UPDATE QUANTITY (nếu có)
             if (updateData.quantity !== undefined) {
@@ -1473,17 +1538,19 @@ export class CartItemService {
 
             // 4. UPDATE COMBO
             if (isCombo && updateData.comboOptions !== undefined) {
-                const normalizedOptions = updateData.comboOptions.length > 0
-                    ? await this.normalizeComboOptionsForCart(
+                if (updateData.comboOptions.length === 0) {
+                    await this.clearComboOptionsForCartItem(cartItem.id, transaction);
+                } else {
+                    const normalizedOptions = await this.normalizeComboOptionsForCart(
                         Number(cartItem.comboId),
                         updateData.comboOptions,
                         transaction
-                    )
-                    : [];
+                    );
 
-                await this.clearComboOptionsForCartItem(cartItem.id, transaction);
-                if (normalizedOptions.length > 0) {
-                    await this.createComboOptionsForCartItem(cartItem.id, normalizedOptions, transaction);
+                    await this.clearComboOptionsForSlots(cartItem.id, updateData.comboOptions, transaction);
+                    if (normalizedOptions.length > 0) {
+                        await this.createComboOptionsForCartItem(cartItem.id, normalizedOptions, transaction);
+                    }
                 }
             }
 
@@ -1491,14 +1558,18 @@ export class CartItemService {
             // 5. UPDATE SINGLE PRODUCT
             if (!isCombo) {
                 // Update variant (nếu có)
-                if (updateData.productVariantId) {
-                    const variant = await this.productVariantService.findById(updateData.productVariantId);
+                if (updateData.productVariantId !== undefined) {
+                    const variant = await this.modelProductVariant.findByPk(updateData.productVariantId, { transaction });
                     if (!variant) {
                         throw new BadRequestException('Variant không tồn tại!');
                     }
 
                     // Kiểm tra variant có thuộc product này không
-                    if (variant.productId !== cartItem.productId) {
+                    if (variant.isActive === false) {
+                        throw new BadRequestException('Variant da ngung kinh doanh!');
+                    }
+
+                    if (Number(variant.productId) !== Number(cartItem.productId)) {
                         throw new BadRequestException('Variant không thuộc product này!');
                     }
 
@@ -1586,12 +1657,14 @@ export class CartItemService {
 
             return {
                 message: 'Cập nhật cart item thành công!',
-                data: cartItem
+                data: (await this.cartPreviewService.getUserCartPreview(cartIdForPreview)).data
             };
 
         } catch (error) {
             console.error('❌ Update cart item error:', error);
-            await transaction.rollback();
+            if (!(transaction as any).finished) {
+                await transaction.rollback();
+            }
             throw error;
         }
     }

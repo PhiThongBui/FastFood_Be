@@ -1,11 +1,26 @@
 // dto/update-cart-item.dto.ts
 
-import { IsNumber, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsArray, ValidateNested, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { ComboOptionDto, IngredientOptionDto } from './cart-item.dto';
 
+export enum UPDATE_CART_ITEM_TYPE {
+  COMBO = 'COMBO',
+  SINGLE = 'SINGLE'
+}
+
 export class UpdateCartItemDto {
+  @IsEnum(UPDATE_CART_ITEM_TYPE)
+  @IsOptional()
+  @ApiProperty({
+    enum: UPDATE_CART_ITEM_TYPE,
+    required: false,
+    example: UPDATE_CART_ITEM_TYPE.COMBO,
+    description: 'Loai cart item can update: COMBO hoac SINGLE'
+  })
+  type?: UPDATE_CART_ITEM_TYPE;
+
   @IsNumber()
   @Min(1)
   @IsOptional()

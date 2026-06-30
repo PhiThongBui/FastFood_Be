@@ -3,7 +3,6 @@ import { CartPreviewService } from './cart-preview.service';
 import { CartPreviewController } from './cart-preview.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Address, CartItemComboOption, CartItemComboOptionIngredient, CartItems, CartItemsIngredient, Combo, ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
-import { CartItemModule } from '../cart-item/cart-item.module';
 import { CartModule } from '../cart/cart.module';
 import { AddressModule } from '../address/address.module';
 import { CouponModule } from '../coupon/coupon.module'
@@ -11,7 +10,7 @@ import { CouponModule } from '../coupon/coupon.module'
 @Module({
   controllers: [CartPreviewController],
   providers: [CartPreviewService],
-  imports:[SequelizeModule.forFeature([CartItems, CartItemsIngredient,Product,ProductIngredient, ProductVariant, Ingredient, Address, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient]), CartItemModule, CartModule, AddressModule, CouponModule],
+  imports:[SequelizeModule.forFeature([CartItems, CartItemsIngredient,Product,ProductIngredient, ProductVariant, Ingredient, Address, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient]), CartModule, AddressModule, CouponModule],
   exports:[CartPreviewService],
 })
 export class CartPreviewModule {}

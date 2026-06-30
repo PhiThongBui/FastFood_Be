@@ -67,7 +67,7 @@ export class Combo extends Model<Combo> {
   declare categoryId: number;
 
   @BelongsTo(() => Category)
-  category: Category;
+  category!: Category;
 
 
   // Một combo sẽ có nhiều món hàng
@@ -75,7 +75,7 @@ export class Combo extends Model<Combo> {
     onDelete: 'CASCADE',
     hooks: false,
   })
-  items: ComboItem[];
+  items!: ComboItem[];
 
   @BeforeUpdate
   static updateCombo(combo: Combo) {

@@ -351,6 +351,7 @@ Bắt buộc:
       'update-combo': {
         summary: 'Update comboOptions',
         value: {
+          type: 'COMBO',
           comboOptions: [
             {
               comboItemId: 4,
@@ -384,6 +385,7 @@ Bắt buộc:
         summary: 'Update món lẻ (variant + ingredients)',
         value: {
           productVariantId: 8,
+          type: 'SINGLE',
           singleProductOptions: [
             {
               ingredientId: 1,
@@ -405,6 +407,7 @@ Bắt buộc:
     let userId: number | null = null;
 
     const authHeader = req.headers?.authorization;
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.substring(7);
