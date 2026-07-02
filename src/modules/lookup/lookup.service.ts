@@ -41,6 +41,7 @@ export class LookupService {
                             attributes: ['name']
                         }
                     ],
+                    required:false,
                     where: {
                         isDefault: true
                     }
