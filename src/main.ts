@@ -6,6 +6,8 @@ import { TransformInterceptor } from './common/interceptors/response.interceptor
 import { AllExceptionFilter } from './common/filter/all-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,6 +29,7 @@ async function bootstrap() {
 
 
   app.use(cookieParser());
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalFilters(new AllExceptionFilter());

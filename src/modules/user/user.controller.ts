@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateCategoryDto } from '../category/dto/create-category.dto';
 import { CreateUserDto } from './dto/register.dto';
@@ -11,6 +11,10 @@ import { UpdateProfileDto } from './dto/updateProfile.dto';
 import { User } from '@/models';
 import { GetAllUserDto, UserResponseDto } from './dto/getAllUser.dto';
 import { ResendRegistationDto, VerifyRegistationDto } from './dto/verifyRegistation.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { mkdirSync } from 'fs';
 
 @Controller('user')
 export class UserController {
@@ -40,6 +44,50 @@ export class UserController {
     return this.userService.resendVerificationEmail(data)
   }
 
+
+  @UseGuards(JWTGuard)
+  @Post('upload-avatar')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload avatar người dùng' })
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: diskStorage({
+        destination: (_req, _file, callback) => {
+          const uploadPath = './uploads/avatars';
+          mkdirSync(uploadPath, { recursive: true });
+          callback(null, uploadPath);
+        },
+        filename: (_req, file, callback) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          callback(null, `avatar-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (_req, file, callback) => {
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {
+          return callback(new BadRequestException('Chỉ hỗ trợ file ảnh'), false);
+        }
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 2 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadAvatar(@UploadedFile() file: { filename: string } | undefined, @Req() req: any) {
+    if (!file) throw new BadRequestException('Avatar file is required');
+
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const avatarUrl = `${protocol}://${host}/uploads/avatars/${file.filename}`;
+
+    return {
+      message: 'Upload avatar successfully',
+      data: {
+        avatar: avatarUrl,
+      },
+    };
+  }
 
   @UseGuards(JWTGuard)
   @Get('current')
