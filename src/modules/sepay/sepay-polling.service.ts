@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order } from '@/models';
+import { PAYMENTMETHOD, PAYMENTSTATUS } from '@/models/order.model';
 import { SepayService } from './sepay.service';
-import {PAYMENTMETHOD,PAYMENTSTATUS } from '@/models/order.model'
 import { SepayWebhookService } from './sepay-webhook.service';
 import { Op } from 'sequelize';
 
@@ -15,21 +15,22 @@ export class SepayPollingService {
         @InjectModel(Order) private orderModel: typeof Order,
         private readonly sepayService: SepayService,
         private readonly sepayWebhookService: SepayWebhookService
-    ) {}
+    ) { }
 
-    /**
-     * ⭐ Chạy mỗi 30 giây để check giao dịch mới
-     */
-    @Cron('*/30 * * * * *') // Mỗi 30 giây
+    @Cron('*/30 * * * * *')
     async checkPendingTransactions() {
         try {
-            // Lấy tất cả orders đang chờ thanh toán (trong vòng 20 phút gần đây)
+            if (process.env.SEPAY_POLLING_ENABLED !== 'true') {
+                return;
+            }
+
+            const lookbackMinutes = Number(process.env.SEPAY_PENDING_LOOKBACK_MINUTES) || 120;
             const pendingOrders = await this.orderModel.findAll({
                 where: {
                     paymentStatus: PAYMENTSTATUS.PENDING,
                     paymentMethod: PAYMENTMETHOD.SEPAY,
                     createdAt: {
-                        [Op.gte]: new Date(Date.now() - 20 * 60 * 1000) // 20 phút
+                        [Op.gte]: new Date(Date.now() - lookbackMinutes * 60 * 1000)
                     }
                 }
             });
@@ -38,49 +39,55 @@ export class SepayPollingService {
                 return;
             }
 
-            this.logger.log(`🔍 Checking ${pendingOrders.length} pending orders...`);
+            this.logger.log(`Checking ${pendingOrders.length} pending SePay orders...`);
 
-            // Lấy danh sách giao dịch từ SePay
             const transactions = await this.sepayService.getRecentTransactions();
 
             if (!transactions || transactions.length === 0) {
-                this.logger.warn('No recent transactions found');
+                this.logger.warn('No recent SePay transactions found');
                 return;
             }
 
-            // Match giao dịch với orders
             for (const order of pendingOrders) {
                 const transferContent = `DH ${order.dataValues.orderNumber}`;
-                
-                const matchedTransaction = transactions.find(tx => 
-                    tx.transaction_content && 
-                    tx.transaction_content.includes(transferContent) &&
-                    tx.amount_in >= order.finalTotal
-                );
+                const matchedTransaction = transactions.find((tx) => {
+                    const content = this.getTransactionContent(tx);
+                    const amount = this.getTransactionAmount(tx);
 
-                if (matchedTransaction) {
-                    this.logger.log(`✅ Found transaction for order: ${order.dataValues.orderNumber}`);
-                    
-                    // Giả lập webhook để xử lý
-                    await this.sepayWebhookService.processWebhook({
-                        id: matchedTransaction.id,
-                        gateway: matchedTransaction.gateway,
-                        transaction_date: matchedTransaction.transaction_date,
-                        account_number: matchedTransaction.account_number,
-                        sub_account: matchedTransaction.sub_account || '',
-                        amount_in: matchedTransaction.amount_in,
-                        amount_out: matchedTransaction.amount_out || 0,
-                        accumulated: matchedTransaction.accumulated || 0,
-                        code: matchedTransaction.code || '',
-                        transaction_content: matchedTransaction.transaction_content,
-                        reference_number: matchedTransaction.reference_number || '',
-                        body: matchedTransaction.body || ''
-                    });
+                    return content.includes(transferContent) && amount >= Number(order.dataValues.finalTotal);
+                });
+
+                if (!matchedTransaction) {
+                    this.logger.debug(`No SePay transaction matched order ${order.dataValues.orderNumber}`);
+                    continue;
                 }
+
+                this.logger.log(`Found SePay transaction for order: ${order.dataValues.orderNumber}`);
+                await this.sepayWebhookService.processWebhook(matchedTransaction);
             }
 
         } catch (error) {
-            this.logger.error(`❌ Polling error: ${error.message}`);
+            this.logger.error(`Polling error: ${error.message}`);
         }
+    }
+
+    private getTransactionContent(transaction: any): string {
+        return [
+            transaction?.transaction_content,
+            transaction?.content,
+            transaction?.description,
+            transaction?.body,
+            transaction?.code
+        ].filter(Boolean).join(' ');
+    }
+
+    private getTransactionAmount(transaction: any): number {
+        return Number(
+            transaction?.amount_in ??
+            transaction?.transferAmount ??
+            transaction?.amount ??
+            transaction?.value ??
+            0
+        );
     }
 }

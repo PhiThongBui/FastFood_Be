@@ -9,7 +9,9 @@ import {
     Carts,
     CartItems,
     CartItemsIngredient,
-
+    CartItemComboOption,
+    CartItemComboOptionIngredient,
+    Address,
 } from '@/models';
 import { ORDERSTATUS, PAYMENTMETHOD, PAYMENTSTATUS } from '@/models/order.model';
 import { CartPreviewService } from '../cart-preview/cart-preview.service';
@@ -17,6 +19,8 @@ import { RedisService } from '../redis/redis.service';
 import { CheckoutConfirmDto } from './dto/checkout-confirm.dto';
 import { SepayService } from '../sepay/sepay.service';
 import { Op } from 'sequelize';
+import { CouponService } from '../coupon/coupon.service';
+import { CartPreviewItem } from '../cart-preview/types/cart-prev.type';
 
 @Injectable()
 export class CheckoutService {
@@ -29,7 +33,11 @@ export class CheckoutService {
         @InjectModel(Carts) private cartsModel: typeof Carts,
         @InjectModel(CartItems) private cartItemsModel: typeof CartItems,
         @InjectModel(CartItemsIngredient) private cartItemsIngredientModel: typeof CartItemsIngredient,
+        @InjectModel(CartItemComboOption) private cartItemComboOptionModel: typeof CartItemComboOption,
+        @InjectModel(CartItemComboOptionIngredient) private cartItemComboOptionIngredientModel: typeof CartItemComboOptionIngredient,
+        @InjectModel(Address) private addressModel: typeof Address,
         private readonly cartPreviewService: CartPreviewService,
+        private readonly couponService: CouponService,
         private readonly redisService: RedisService,
         private readonly sepayService: SepayService,
         private readonly sequelize: Sequelize
@@ -42,10 +50,20 @@ export class CheckoutService {
         let createdOrder: Order;
 
         try {
-            // ⭐ BƯỚC 1: START TRANSACTION
-
-
             this.logger.log(`Starting checkout for user ${userId}, cart ${cartId}`);
+            const cartItemIds = Array.from(new Set((dto.cartItemIds || []).map(id => Number(id)).filter(id => id > 0)));
+
+            if (!userId) {
+                throw new BadRequestException('User id not found');
+            }
+
+            if (!cartId) {
+                throw new BadRequestException('Cart not found');
+            }
+
+            if (cartItemIds.length === 0) {
+                throw new BadRequestException('Cart item ids are required');
+            }
 
             // ⭐ BƯỚC 2: LOCK CART (FOR UPDATE)
             const cart = await this.cartsModel.findOne({
@@ -58,13 +76,15 @@ export class CheckoutService {
                 throw new BadRequestException('Cart not found or already checked out');
             }
 
+            const addressId = await this.resolveCheckoutAddressId(userId, dto, transaction);
+
             // ⭐ BƯỚC 3: RE-CALCULATE TOTALS
             const calculation = await this.cartPreviewService.checkoutCaculate(
                 userId,
                 cartId,
                 {
-                    cartItemId: dto.cartItemIds,
-                    addressId: dto.addressId,
+                    cartItemIds,
+                    addressId,
                     temporaryAddress: dto.temporaryAddress as any,
                     couponCode: dto.couponCode
                 },
@@ -74,6 +94,14 @@ export class CheckoutService {
                 throw new BadRequestException('Failed to calculate order totals');
             }
 
+            if (!calculation.data.items || calculation.data.items.length === 0) {
+                throw new BadRequestException('No valid cart items found for checkout');
+            }
+
+            const previewItemMap = new Map<number, CartPreviewItem>(
+                calculation.data.items.map(item => [Number(item.cartItemId), item])
+            );
+
             // ⭐ BƯỚC 4: CREATE ORDER
             const orderNumber = `ORD${Date.now()}`;
 
@@ -82,7 +110,7 @@ export class CheckoutService {
             createdOrder = await this.orderModel.create({
                 orderNumber,
                 userId,
-                addressId: dto.addressId,
+                addressId,
                 orderStatus: ORDERSTATUS.PENDING,
                 paymentMethod: dto.paymentMethod,
                 paymentStatus: dto.paymentMethod === PAYMENTMETHOD.SEPAY
@@ -103,45 +131,100 @@ export class CheckoutService {
             const cartItems = await this.cartItemsModel.findAll({
                 where: {
                     cartId,
-                    id: dto.cartItemIds
+                    id: { [Op.in]: cartItemIds }
                 },
-                include: [{
-                    model: this.cartItemsIngredientModel,
-                    as: 'cartItemIngredients'
-                }],
+                lock: transaction.LOCK.UPDATE,
                 transaction
             });
 
-            if (!cartItems || cartItems.length === 0) {
+            if (!cartItems || cartItems.length !== cartItemIds.length) {
                 throw new BadRequestException('No cart items found');
             }
 
+            const cartItemIngredients = await this.cartItemsIngredientModel.findAll({
+                where: {
+                    cartItemId: {
+                        [Op.in]: cartItemIds
+                    }
+                },
+                transaction
+            });
+            const ingredientMap = new Map<number, CartItemsIngredient[]>();
+            cartItemIngredients.forEach(ingredient => {
+                const cartItemId = Number(ingredient.dataValues.cartItemId);
+                const ingredients = ingredientMap.get(cartItemId) || [];
+                ingredients.push(ingredient);
+                ingredientMap.set(cartItemId, ingredients);
+            });
+
             for (const cartItem of cartItems) {
-                // Tạo OrderItem
+                const previewItem = previewItemMap.get(Number(cartItem.dataValues.id));
+                if (!previewItem) {
+                    throw new BadRequestException(`Cart item ${cartItem.dataValues.id} is not available for checkout`);
+                }
+
                 const orderItem = await this.orderItemsModel.create({
                     orderId: createdOrder.dataValues.id,
                     productId: cartItem.dataValues.productId,
                     productVariantId: cartItem.dataValues.productVariantId,
-                    quantity: cartItem.dataValues.quantity
+                    comboId: cartItem.dataValues.comboId,
+                    quantity: cartItem.dataValues.quantity,
+                    metadata: this.buildOrderItemMetadata(previewItem)
                 } as OrderItems, { transaction });
 
                 // ⭐ BƯỚC 6: COPY INGREDIENTS
-                if (cartItem.dataValues.cartItemIngredients && cartItem.dataValues.cartItemIngredients.length > 0) {
-                    for (const ingredient of cartItem.dataValues.cartItemIngredients) {
+                const ingredients = ingredientMap.get(Number(cartItem.dataValues.id)) || [];
+                if (ingredients.length > 0) {
+                    for (const ingredient of ingredients) {
                         await this.orderItemIngredientModel.create({
                             orderItemId: orderItem.dataValues.id,
                             ingredientId: ingredient.dataValues.ingredientId,
-                            quantity: ingredient.dataValues.quantity
+                            quantity: ingredient.dataValues.quantity,
+                            type: ingredient.dataValues.type
                         } as OrderItemIngredient, { transaction })
                     }
                 }
+            }
+
+            if (dto.couponCode) {
+                await this.couponService.markCouponUsed(userId, dto.couponCode, transaction);
+            }
+
+            const comboOptions = await this.cartItemComboOptionModel.findAll({
+                where: {
+                    cartItemId: {
+                        [Op.in]: cartItemIds
+                    }
+                },
+                attributes: ['id'],
+                transaction
+            });
+            const comboOptionIds = comboOptions.map(option => Number(option.id));
+
+            if (comboOptionIds.length > 0) {
+                await this.cartItemComboOptionIngredientModel.destroy({
+                    where: {
+                        cartItemComboOptionId: {
+                            [Op.in]: comboOptionIds
+                        }
+                    },
+                    transaction
+                });
+                await this.cartItemComboOptionModel.destroy({
+                    where: {
+                        id: {
+                            [Op.in]: comboOptionIds
+                        }
+                    },
+                    transaction
+                });
             }
 
             //⭐ Bước 7: Xóa item trong cartItem và cartItemIngredient
             await this.cartItemsIngredientModel.destroy({
                 where: {
                     cartItemId: {
-                        [Op.in]: dto.cartItemIds
+                        [Op.in]: cartItemIds
                     }
                 },
                 transaction
@@ -150,7 +233,7 @@ export class CheckoutService {
             const deletedCount = await this.cartItemsModel.destroy({
                 where: {
                     id: {
-                        [Op.in]: dto.cartItemIds,
+                        [Op.in]: cartItemIds,
                     },
                     cartId
                 },
@@ -188,6 +271,90 @@ export class CheckoutService {
                 }
             };
         }
+    }
+
+    private async resolveCheckoutAddressId(
+        userId: number,
+        dto: CheckoutConfirmDto,
+        transaction: Transaction
+    ): Promise<number> {
+        if (!dto.addressId && !dto.temporaryAddress) {
+            throw new BadRequestException('Either addressId or temporaryAddress must be provided.');
+        }
+
+        if (dto.addressId && dto.temporaryAddress) {
+            throw new BadRequestException('Cannot use both addressId and temporaryAddress at the same time.');
+        }
+
+        if (dto.addressId) {
+            const address = await this.addressModel.findByPk(dto.addressId, { transaction });
+            if (!address) {
+                throw new BadRequestException('No valid address found for checkout.');
+            }
+            if (Number(address.dataValues.userId) !== Number(userId)) {
+                throw new BadRequestException('This address does not belong to this user');
+            }
+
+            return Number(address.dataValues.id);
+        }
+
+        const temporaryAddress = dto.temporaryAddress!;
+        const address = await this.addressModel.create({
+            userId,
+            sessionId: null,
+            recipientName: temporaryAddress.recipientName || 'Khach hang',
+            recipientPhone: temporaryAddress.recipientPhone || '',
+            city: temporaryAddress.city,
+            district: temporaryAddress.district,
+            latitude: temporaryAddress.latitude,
+            longitude: temporaryAddress.longitude,
+            isDefault: false
+        } as Address, { transaction });
+
+        return Number(address.dataValues.id);
+    }
+
+    private buildOrderItemMetadata(previewItem: CartPreviewItem) {
+        const originalPrice = Number(previewItem.details?.originalPrice || previewItem.unitPrice || 0);
+        const finalPrice = Number(previewItem.unitPrice || 0);
+
+        if (previewItem.type === 'COMBO') {
+            return {
+                itemName: previewItem.name,
+                originalPrice,
+                finalPrice,
+                items: (previewItem.rawData?.comboOptions || []).map(option => ({
+                    productId: Number(option.productId),
+                    productName: option.product?.name || '',
+                    variantId: Number(option.productVariantId),
+                    variantName: option.variant
+                        ? `${option.variant.size} - ${option.variant.type}`
+                        : '',
+                    unitPrice: Number(option.variant?.modifiedPrice || 0),
+                    ingredients: (option.ingredients || []).map(ingredient => ({
+                        name: ingredient.name || `Ingredient ${ingredient.ingredientId}`,
+                        quantity: Number(ingredient.quantity || 1),
+                        price: Number(ingredient.price || 0),
+                        type: ingredient.type
+                    }))
+                }))
+            };
+        }
+
+        return {
+            itemName: previewItem.name,
+            originalPrice,
+            finalPrice,
+            singleItemMetadata: {
+                variantName: previewItem.details?.variantName || '',
+                ingredients: (previewItem.details?.ingredients || []).map(ingredient => ({
+                    name: ingredient.name || `Ingredient`,
+                    quantity: Number(ingredient.quantity || 1),
+                    price: Number(ingredient.price || 0),
+                    type: ingredient.type || 'ADD'
+                }))
+            }
+        };
     }
 
     /**

@@ -7,6 +7,7 @@ import { CreationAttributes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { UserService } from '../user/user.service';
 import { COUPONTYPE } from '@/models/coupons.model';
+import { Transaction } from 'sequelize';
 
 @Injectable()
 export class CouponService {
@@ -132,5 +133,43 @@ export class CouponService {
                 value: coupon.dataValues.value
             }
         }
+    }
+
+    async markCouponUsed(userId: number, couponCode: string, transaction?: Transaction): Promise<void> {
+        const coupon = await this.modelCoupon.findOne({
+            where: { code: couponCode },
+            transaction,
+            lock: transaction?.LOCK.UPDATE
+        });
+
+        if (!coupon) {
+            throw new BadRequestException('Coupon not found');
+        }
+
+        const [userCoupon] = await this.modelUserCoupon.findOrCreate({
+            where: {
+                userId,
+                couponId: coupon.dataValues.id
+            },
+            defaults: {
+                userId,
+                couponId: coupon.dataValues.id,
+                isUsed: false
+            } as UserCoupons,
+            transaction
+        });
+
+        if (userCoupon.dataValues.isUsed) {
+            throw new BadRequestException('Coupon already used');
+        }
+
+        await userCoupon.update({
+            isUsed: true,
+            usedAt: new Date()
+        }, { transaction });
+
+        await coupon.update({
+            currentUsers: Number(coupon.dataValues.currentUsers || 0) + 1
+        }, { transaction });
     }
 }

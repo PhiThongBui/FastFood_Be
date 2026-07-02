@@ -6,7 +6,13 @@ export class CheckoutCaculateDto {
     @IsArray()
     @IsNumber({}, { each: true })
     @Type(() => Number)
-    cartItemId: number[]
+    cartItemIds: number[]
+
+    @IsArray()
+    @IsNumber({}, { each: true })
+    @Type(() => Number)
+    @IsOptional()
+    cartItemId?: number[]
 
     @NumberNotRequired
     addressId?: number

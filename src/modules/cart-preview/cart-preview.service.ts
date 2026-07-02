@@ -195,7 +195,11 @@ export class CartPreviewService {
     }
 
     async checkoutCaculate(userId: number, cartId: number, dto: CheckoutCaculateDto): Promise<CartCheckoutOutput> {
-        const cartPrev = await this.cartPreview(cartId, dto.cartItemId);
+        const checkoutItemIds = dto.cartItemIds || dto.cartItemId || [];
+        if (checkoutItemIds.length === 0) {
+            throw new BadRequestException('Cart item ids are required for checkout.');
+        }
+        const cartPrev = await this.cartPreview(cartId, checkoutItemIds);
 
         if (!cartPrev) {
             throw new BadRequestException('No valid cart items found for preview.');
@@ -205,14 +209,23 @@ export class CartPreviewService {
 
         if (dto.temporaryAddress) {
             const distanceResult = await this.addressService.caculateDistance(dto.temporaryAddress.latitude, dto.temporaryAddress.longitude);
+            if (!Helper.validateDeliveryDistance(distanceResult.distance)) {
+                throw new BadRequestException(Helper.buildDeliveryRangeError(distanceResult.distance));
+            }
             deliveryFee = Helper.caculateDeliveryFee(distanceResult.distance);
         } else if (dto.addressId) {
             const address = await this.addressModel.findByPk(dto.addressId);
             if (!address) {
                 throw new BadRequestException('No valid address found for checkout.');
             }
+            if (Number(address.dataValues.userId) !== Number(userId)) {
+                throw new BadRequestException('This address does not belong to this user.');
+            }
 
             const distanceResult = await this.addressService.caculateDistance(address.dataValues.latitude, address.dataValues.longitude);
+            if (!Helper.validateDeliveryDistance(distanceResult.distance)) {
+                throw new BadRequestException(Helper.buildDeliveryRangeError(distanceResult.distance));
+            }
             deliveryFee = Helper.caculateDeliveryFee(distanceResult.distance);
         }
 

@@ -38,7 +38,7 @@ export class OrderService {
             const distanceResult = await this.addressService.caculateDistance(address.latitude, address.longitude);
 
             if (!Helper.validateDeliveryDistance(distanceResult.distance)) {
-                throw new BadRequestException('This address is out of delivery range');
+                throw new BadRequestException(Helper.buildDeliveryRangeError(distanceResult.distance));
             }
 
             const deliveryFee = Helper.caculateDeliveryFee(distanceResult.distance);

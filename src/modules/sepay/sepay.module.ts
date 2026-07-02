@@ -6,12 +6,11 @@ import { RedisModule } from '../redis/redis.module';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Order } from '@/models';
 import { SepayWebhookController } from './sepay-webhook.controller';
-// import { SepayPollingService } from './sepay-polling.service';
-// import { ScheduleModule } from '@nestjs/schedule';
+import { SepayPollingService } from './sepay-polling.service';
 
 @Module({
   controllers: [SepayController,SepayWebhookController],
-  providers: [SepayService,SepayWebhookService],
+  providers: [SepayService,SepayWebhookService, SepayPollingService],
   exports: [SepayService],
   imports: [SequelizeModule.forFeature([Order]) ,RedisModule],
 })

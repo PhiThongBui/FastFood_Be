@@ -36,12 +36,14 @@ import { MailModule } from './modules/mail/mail.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { LookupModule } from './modules/lookup/lookup.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Add this line
     }),
+    ScheduleModule.forRoot(),
     RedisModule,
     SequelizeModule.forRootAsync({
       inject: [ConfigService],

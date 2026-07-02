@@ -91,4 +91,27 @@ export class AddressService {
             throw new BadRequestException(error.message);
         }
     }
+
+    async createUserAddress(userId: number, address: CreateAddressDto) {
+        return this.createAddress({
+            ...address,
+            userId,
+            sessionId: undefined
+        });
+    }
+
+    async getUserAddresses(userId: number) {
+        const addresses = await this.modelAddress.findAll({
+            where: { userId },
+            order: [
+                ['isDefault', 'DESC'],
+                ['createdAt', 'DESC']
+            ]
+        });
+
+        return {
+            message: 'Lấy danh sách địa chỉ thành công',
+            data: addresses
+        };
+    }
 }

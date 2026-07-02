@@ -42,7 +42,7 @@ API sẽ tự động xác định cart tương ứng.
     schema: {
       type: 'object',
       properties: {
-        cartItemId: {
+        cartItemIds: {
           type: 'array',
           items: { type: 'number' },
           example: [12, 15, 18]
@@ -55,7 +55,7 @@ API sẽ tự động xác định cart tương ứng.
     description: 'Preview thành công'
   })
   async getCartDetail(
-    @Body('cartItemId') cartItemId: number[],
+    @Body('cartItemIds') cartItemIds: number[],
     @Req() req: Request
   ) {
     const sessionId = Helper.getSessionIdFromRequest(req);
@@ -81,7 +81,7 @@ API sẽ tự động xác định cart tương ứng.
 
     return await this.cartPreviewService.cartPreview(
       cart.id,
-      cartItemId,
+      cartItemIds,
     );
   }
 

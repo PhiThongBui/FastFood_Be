@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Get, Param } from '@nestjs/common';
 import { SepayWebhookService } from './sepay-webhook.service';
 
 @Controller('payment/sepay')
@@ -33,5 +33,10 @@ export class SepayWebhookController {
                 message: error.message
             };
         }
+    }
+
+    @Get('status/:orderNumber')
+    async checkStatus(@Param('orderNumber') orderNumber: string) {
+        return this.sepayWebhookService.checkOrderStatus(orderNumber);
     }
 }

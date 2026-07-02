@@ -70,7 +70,15 @@ export class Helper {
         return this.FEE_BRACKETS[this.FEE_BRACKETS.length - 1].basePrice
     }
 
-    static validateDeliveryDistance(distance: number, maxDistance: number = Number(process.env.MAX_DELIVERY_DISTANCE)): boolean {
+    static getMaxDeliveryDistance(): number {
+        return Number(process.env.MAX_DELIVERY_DISTANCE) || 10;
+    }
+
+    static buildDeliveryRangeError(distance: number, maxDistance: number = Helper.getMaxDeliveryDistance()): string {
+        return `This address is out of delivery range (${distance.toFixed(1)}km > ${maxDistance}km).`;
+    }
+
+    static validateDeliveryDistance(distance: number, maxDistance: number = Helper.getMaxDeliveryDistance()): boolean {
         return distance <= maxDistance;
     }
 
