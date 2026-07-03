@@ -1,5 +1,5 @@
 # 1. Dùng Node.js bản nhẹ nhất. Tạo một máy ảo cài sẵn Nodejs
-FROM node:18
+FROM node:22
 # 2. Tạo thư mục chứa code trong container. Tương đương cd/app
 WORKDIR /app
 
