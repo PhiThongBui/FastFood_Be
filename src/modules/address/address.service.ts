@@ -45,12 +45,12 @@ export class AddressService {
             console.log('Goong API Response:', JSON.stringify(response.data, null, 2));
 
             if (!response.data.rows || response.data.rows.length === 0) {
-                throw new BadGatewayException('Khong co du lieu tuyen duong tu Goong API');
+                throw new BadGatewayException('Không có dữ liệu tuyến đường từ Goong API');
             }
 
             const row = response.data.rows[0];
             if (!row.elements || row.elements.length === 0) {
-                throw new BadGatewayException('Khong tim thay elements trong du lieu');
+                throw new BadGatewayException('Không tìm thấy elements trong dữ liệu');
             }
 
             const element = row.elements[0];
@@ -65,7 +65,7 @@ export class AddressService {
 
             if (element.status === 'ZERO_RESULTS') {
                 throw new BadGatewayException(
-                    'Khong tim thay tuyen duong giua cua hang va diem giao hang'
+                    'Không tìm thấy tuyến đường giữa cửa hàng và điểm giao hàng'
                 );
             }
 
@@ -79,11 +79,11 @@ export class AddressService {
 
             if (error instanceof Error) {
                 throw new BadGatewayException(
-                    `Khong the tinh toan khoang cach: ${error.message}`
+                    `Không thể tính toán khoảng cách: ${error.message}`
                 );
             }
 
-            throw new BadGatewayException('Khong the tinh toan khoang cach');
+            throw new BadGatewayException('Không thể tính toán khoảng cách');
         }
     }
 
@@ -96,7 +96,7 @@ export class AddressService {
             await transaction.commit();
 
             return {
-                message: 'Tao dia chi thanh cong',
+                message: 'Tạo địa chỉ thành công',
                 data: newAddress,
             };
         } catch (error: unknown) {
@@ -110,7 +110,7 @@ export class AddressService {
                 throw new BadRequestException(error.message);
             }
 
-            throw new BadRequestException('Khong the tao dia chi');
+            throw new BadRequestException('Không thể tạo địa chỉ');
         }
     }
 
@@ -132,7 +132,7 @@ export class AddressService {
             });
 
             if (!existingAddress) {
-                throw new NotFoundException('Khong tim thay dia chi giao hang');
+                throw new NotFoundException('Không tìm thấy địa chỉ giao hàng');
             }
 
             const payload = await this.prepareUserAddressPayload(
@@ -166,7 +166,7 @@ export class AddressService {
             await transaction.commit();
 
             return {
-                message: 'Cap nhat dia chi thanh cong',
+                message: 'Cập nhật địa chỉ thành công',
                 data: updatedAddress,
             };
         } catch (error: unknown) {
@@ -180,7 +180,7 @@ export class AddressService {
                 throw new BadRequestException(error.message);
             }
 
-            throw new BadRequestException('Khong the cap nhat dia chi');
+            throw new BadRequestException('Không thể cập nhật địa chỉ');
         }
     }
 
@@ -194,7 +194,7 @@ export class AddressService {
         });
 
         return {
-            message: 'Lay danh sach dia chi thanh cong',
+            message: 'Lấy danh sách địa chỉ thành công',
             data: addresses,
         };
     }
