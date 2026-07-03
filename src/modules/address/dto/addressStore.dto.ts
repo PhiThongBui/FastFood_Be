@@ -1,21 +1,21 @@
 import { BooleanNotRequired, NumberNotRequired, NumberRequired, StringNotRequired, StringRequired } from "@/common/decorators";
 
 export class DistanceCalculationResultDto {
-    distance: number;
-    duration: number;
-    status: string
+    distance!: number;
+    duration!: number;
+    status!: string
 }
 
 
 export class CreateAddressDto {
     @StringRequired('Họ tên người nhận hàng')
-    recipientName: string;
+    recipientName!: string;
 
     @StringRequired('Số điện thoại người nhận hàng')
-    recipientPhone: string;
+    recipientPhone!: string;
 
     @StringRequired('Thành phố người nhận hàng')
-    city: string;
+    city!: string;
 
     @StringNotRequired
     ward?: string;
@@ -24,13 +24,13 @@ export class CreateAddressDto {
     street?: string;
 
     @StringRequired('Quận huyện người nhận hàng')
-    district: string;
+    district!: string;
 
     @NumberRequired('Kinh độ người nhận hàng')
-    latitude: number;
+    latitude!: number;
 
     @NumberRequired('Vĩ độ người nhận hàng')
-    longitude: number;
+    longitude!: number;
 
     @BooleanNotRequired
     isDefault?: boolean

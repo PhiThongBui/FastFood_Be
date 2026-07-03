@@ -1,12 +1,17 @@
-﻿import { log } from 'node:console';
 import { Address } from '@/models';
 import { HttpService } from '@nestjs/axios';
-import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
+import {
+    BadGatewayException,
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CreateAddressDto, DistanceCalculationResultDto } from './dto/addressStore.dto';
 import { firstValueFrom } from 'rxjs';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
+import { Op, Transaction } from 'sequelize';
 
 @Injectable()
 export class AddressService {
@@ -22,11 +27,14 @@ export class AddressService {
         this.GOONG_API_KEY = this.configService.get('GOONG_API_KEY') as string;
         this.StoreLocation = {
             latitude: this.configService.get('STORE_LATITUDE') as number,
-            longitude: this.configService.get('STORE_LONGITUDE') as number
-        }
+            longitude: this.configService.get('STORE_LONGITUDE') as number,
+        };
     }
 
-    async caculateDistance(customerLatitude: number, customerLongitude: number): Promise<DistanceCalculationResultDto> {
+    async caculateDistance(
+        customerLatitude: number,
+        customerLongitude: number
+    ): Promise<DistanceCalculationResultDto> {
         const origins = `${this.StoreLocation.latitude},${this.StoreLocation.longitude}`;
         const destinations = `${customerLatitude},${customerLongitude}`;
 
@@ -34,61 +42,75 @@ export class AddressService {
 
         try {
             const response = await firstValueFrom(this.httpService.get(url));
-            console.log("Goong API Response:", JSON.stringify(response.data, null, 2));
+            console.log('Goong API Response:', JSON.stringify(response.data, null, 2));
 
-            // kiá»ƒm tra rows cÃ³ tá»“n táº¡i khÃ´ng
             if (!response.data.rows || response.data.rows.length === 0) {
-                throw new BadGatewayException('KhÃ´ng cÃ³ dá»¯ liá»‡u tuyáº¿n Ä‘Æ°á»ng tá»« Goong API');
+                throw new BadGatewayException('Khong co du lieu tuyen duong tu Goong API');
             }
 
-            // Kiá»ƒm tra elements
             const row = response.data.rows[0];
             if (!row.elements || row.elements.length === 0) {
-                throw new BadGatewayException('KhÃ´ng tÃ¬m tháº¥y elements trong dá»¯ liá»‡u');
+                throw new BadGatewayException('Khong tim thay elements trong du lieu');
             }
 
             const element = row.elements[0];
 
-            // Kiá»ƒm tra status cá»§a element
             if (element.status === 'OK') {
                 return {
-                    distance: element.distance.value / 1000, // km
-                    duration: element.duration.value / 60,   // phÃºt
-                    status: element.status
+                    distance: element.distance.value / 1000,
+                    duration: element.duration.value / 60,
+                    status: element.status,
                 };
-            } else if (element.status === 'ZERO_RESULTS') {
-                throw new BadGatewayException('KhÃ´ng tÃ¬m tháº¥y tuyáº¿n Ä‘Æ°á»ng giá»¯a cá»­a hÃ ng vÃ  Ä‘iá»ƒm giao hÃ ng');
-            } else {
-                throw new BadGatewayException(`Lá»—i tÃ­nh toÃ¡n khoáº£ng cÃ¡ch: ${element.status}`);
             }
-            
-        } catch (error: any) {
-            console.error('Lá»—i tÃ­nh toÃ¡n khoáº£ng cÃ¡ch:', error);
-            
-            // Chá»‰ re-throw náº¿u Ä‘Ã£ lÃ  BadGatewayException
+
+            if (element.status === 'ZERO_RESULTS') {
+                throw new BadGatewayException(
+                    'Khong tim thay tuyen duong giua cua hang va diem giao hang'
+                );
+            }
+
+            throw new BadGatewayException(`Loi tinh toan khoang cach: ${element.status}`);
+        } catch (error: unknown) {
+            console.error('Loi tinh toan khoang cach:', error);
+
             if (error instanceof BadGatewayException) {
                 throw error;
             }
-            
-            // Náº¿u lÃ  lá»—i khÃ¡c (network, timeout, etc.)
-            throw new BadGatewayException(`KhÃ´ng thá»ƒ tÃ­nh toÃ¡n khoáº£ng cÃ¡ch: ${error.message}`);
+
+            if (error instanceof Error) {
+                throw new BadGatewayException(
+                    `Khong the tinh toan khoang cach: ${error.message}`
+                );
+            }
+
+            throw new BadGatewayException('Khong the tinh toan khoang cach');
         }
     }
 
     async createAddress(address: CreateAddressDto) {
         const transaction = await this.sequelize.transaction();
+
         try {
-            const newAddress = await this.modelAddress.create(address as Address, { transaction });
+            const payload = await this.prepareUserAddressPayload(address, transaction);
+            const newAddress = await this.modelAddress.create(payload as Address, { transaction });
             await transaction.commit();
-            
+
             return {
-                message: 'Táº¡o Ä‘á»‹a chá»‰ thÃ nh cÃ´ng',
-                data: newAddress
+                message: 'Tao dia chi thanh cong',
+                data: newAddress,
             };
-        } catch (error: any) {
-            console.log(error);
+        } catch (error: unknown) {
             await transaction.rollback();
-            throw new BadRequestException(error.message);
+
+            if (error instanceof BadRequestException || error instanceof NotFoundException) {
+                throw error;
+            }
+
+            if (error instanceof Error) {
+                throw new BadRequestException(error.message);
+            }
+
+            throw new BadRequestException('Khong the tao dia chi');
         }
     }
 
@@ -96,8 +118,70 @@ export class AddressService {
         return this.createAddress({
             ...address,
             userId,
-            sessionId: undefined
+            sessionId: undefined,
         });
+    }
+
+    async updateUserAddress(userId: number, addressId: number, address: CreateAddressDto) {
+        const transaction = await this.sequelize.transaction();
+
+        try {
+            const existingAddress = await this.modelAddress.findOne({
+                where: { id: addressId, userId },
+                transaction,
+            });
+
+            if (!existingAddress) {
+                throw new NotFoundException('Khong tim thay dia chi giao hang');
+            }
+
+            const payload = await this.prepareUserAddressPayload(
+                {
+                    ...address,
+                    userId,
+                    sessionId: undefined,
+                },
+                transaction,
+                existingAddress.id
+            );
+            await this.modelAddress.update(
+                {
+                    ...payload,
+                    userId,
+                    sessionId: null,
+                } as Partial<Address>,
+                {
+                    where: { id: addressId, userId },
+                    transaction,
+                    hooks: false,
+                    validate: false,
+                }
+            );
+
+            const updatedAddress = await this.modelAddress.findOne({
+                where: { id: addressId, userId },
+                transaction,
+            });
+
+            await transaction.commit();
+
+            return {
+                message: 'Cap nhat dia chi thanh cong',
+                data: updatedAddress,
+            };
+        } catch (error: unknown) {
+            await transaction.rollback();
+
+            if (error instanceof BadRequestException || error instanceof NotFoundException) {
+                throw error;
+            }
+
+            if (error instanceof Error) {
+                throw new BadRequestException(error.message);
+            }
+
+            throw new BadRequestException('Khong the cap nhat dia chi');
+        }
     }
 
     async getUserAddresses(userId: number) {
@@ -105,13 +189,59 @@ export class AddressService {
             where: { userId },
             order: [
                 ['isDefault', 'DESC'],
-                ['createdAt', 'DESC']
-            ]
+                ['createdAt', 'DESC'],
+            ],
         });
 
         return {
-            message: 'Láº¥y danh sÃ¡ch Ä‘á»‹a chá»‰ thÃ nh cÃ´ng',
-            data: addresses
+            message: 'Lay danh sach dia chi thanh cong',
+            data: addresses,
         };
+    }
+
+    private async prepareUserAddressPayload(
+        address: CreateAddressDto,
+        transaction: Transaction,
+        excludeAddressId?: number
+    ) {
+        const payload: CreateAddressDto = {
+            ...address,
+        };
+
+        if (!payload.userId) {
+            return payload;
+        }
+
+        if (payload.isDefault) {
+            await this.modelAddress.update(
+                { isDefault: false },
+                {
+                    where: {
+                        userId: payload.userId,
+                        ...(excludeAddressId ? { id: { [Op.ne]: excludeAddressId } } : {}),
+                    },
+                    transaction,
+                    hooks: false,
+                    validate: false,
+                }
+            );
+
+            return payload;
+        }
+
+        const defaultCount = await this.modelAddress.count({
+            where: {
+                userId: payload.userId,
+                isDefault: true,
+                ...(excludeAddressId ? { id: { [Op.ne]: excludeAddressId } } : {}),
+            },
+            transaction,
+        });
+
+        if (defaultCount === 0) {
+            payload.isDefault = true;
+        }
+
+        return payload;
     }
 }

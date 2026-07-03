@@ -84,9 +84,14 @@ export class Address extends Model<Address> {
     orders!: Order
 
     @BeforeValidate
-    static validateCreateAddress(instance: Address) {        
-        const hasSessionId = !!instance.dataValues.sessionId;
-        const hasUserId = !!instance.dataValues.userId;
+    static validateCreateAddress(instance: Address) {
+        if (!instance.isNewRecord) {
+            return;
+        }
+
+        const hasSessionId = !!instance.getDataValue('sessionId');
+        const hasUserId = !!instance.getDataValue('userId');
+
         if (!hasSessionId && !hasUserId) {
             throw new BadRequestException('Must have either sessionId or userId!');
         }
