@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order, ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
@@ -20,27 +20,27 @@ export class OrderCancellationService {
     ) { }
 
     /**
-     * ⭐ Cron job chạy mỗi 1 phút để hủy orders hết hạn
-     * Cron expression: '0 * * * * *' = mỗi phút tại giây thứ 0
+     * â­ Cron job cháº¡y má»—i 1 phÃºt Ä‘á»ƒ há»§y orders háº¿t háº¡n
+     * Cron expression: '0 * * * * *' = má»—i phÃºt táº¡i giÃ¢y thá»© 0
      */
-    @Cron('0 * * * * *') // Mỗi 1 phút
-    // @Cron('*/30 * * * * *') // Hoặc mỗi 30 giây (test)
+    @Cron('0 * * * * *') // Má»—i 1 phÃºt
+    // @Cron('*/30 * * * * *') // Hoáº·c má»—i 30 giÃ¢y (test)
     async handleExpiredOrders() {
         const startTime = Date.now();
-        this.logger.log('🔄 Starting expired orders cancellation job...');
+        this.logger.log('ðŸ”„ Starting expired orders cancellation job...');
 
         try {
-            // ⭐ BƯỚC 1: Lấy danh sách orders hết hạn từ Redis
+            // â­ BÆ¯á»šC 1: Láº¥y danh sÃ¡ch orders háº¿t háº¡n tá»« Redis
             const expiredOrderNumbers = await this.redisService.getExpiredOrders();
 
             if (expiredOrderNumbers.length === 0) {
-                this.logger.log('✅ No expired orders found');
+                this.logger.log('âœ… No expired orders found');
                 return;
             }
 
-            this.logger.log(`📋 Found ${expiredOrderNumbers.length} expired orders`);
+            this.logger.log(`ðŸ“‹ Found ${expiredOrderNumbers.length} expired orders`);
 
-            // ⭐ BƯỚC 2: Xử lý từng order
+            // â­ BÆ¯á»šC 2: Xá»­ lÃ½ tá»«ng order
             const results = {
                 cancelled: 0,
                 alreadyPaid: 0,
@@ -56,29 +56,29 @@ export class OrderCancellationService {
                     else if (result === 'already_paid') results.alreadyPaid++;
                     else if (result === 'already_cancelled') results.alreadyCancelled++;
 
-                } catch (error) {
+                } catch (error: any) {
                     this.logger.error(`Failed to cancel order ${orderNumber}: ${error.message}`);
                     results.errors++
                 }
             }
 
-            // ⭐ BƯỚC 3: Log kết quả
+            // â­ BÆ¯á»šC 3: Log káº¿t quáº£
             const duration = Date.now() - startTime;
             this.logger.log(
-                `✅ Cancellation job completed in ${duration}ms | ` +
+                `âœ… Cancellation job completed in ${duration}ms | ` +
                 `Cancelled: ${results.cancelled}, ` +
                 `Already Paid: ${results.alreadyPaid}, ` +
                 `Already Cancelled: ${results.alreadyCancelled}, ` +
                 `Errors: ${results.errors}`
             );
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Cancellation job failed: ${error.message}`)
         }
     }
 
     /**
-     * ⭐ Hủy một order cụ thể
+     * â­ Há»§y má»™t order cá»¥ thá»ƒ
      */
     private async cancelExpiredOrder(
         orderNumber: string
@@ -86,7 +86,7 @@ export class OrderCancellationService {
 
         this.logger.debug(`Processing order: ${orderNumber}`);
 
-        // ⭐ BƯỚC 1: Acquire distributed lock
+        // â­ BÆ¯á»šC 1: Acquire distributed lock
         const lockAcquired = await this.redisService.acquireLock(
             `cancel_${orderNumber}`,
             30 // 30 seconds TTL
@@ -98,7 +98,7 @@ export class OrderCancellationService {
         }
 
         try {
-            // ⭐ BƯỚC 2: Lấy order từ database
+            // â­ BÆ¯á»šC 2: Láº¥y order tá»« database
             const order = await this.orderModel.findOne({
                 where: { orderNumber },
             });
@@ -109,21 +109,21 @@ export class OrderCancellationService {
                 return 'error';
             }
 
-            // ⭐ BƯỚC 3: Check payment status
+            // â­ BÆ¯á»šC 3: Check payment status
             if (order.paymentStatus === PAYMENTSTATUS.PAID) {
                 this.logger.log(`Order ${orderNumber} already paid, removing from Redis`);
                 await this.redisService.removePendingOrder(orderNumber);
                 return 'already_paid';
             }
 
-            // ⭐ BƯỚC 4: Check order status
+            // â­ BÆ¯á»šC 4: Check order status
             if (order.orderStatus === ORDERSTATUS.CANCELLED) {
                 this.logger.log(`Order ${orderNumber} already cancelled`);
                 await this.redisService.removePendingOrder(orderNumber);
                 return 'already_cancelled';
             }
 
-            // ⭐ BƯỚC 5: Update order status to CANCELLED
+            // â­ BÆ¯á»šC 5: Update order status to CANCELLED
             await order.update({
                 orderStatus: ORDERSTATUS.CANCELLED,
                 paymentStatus: PAYMENTSTATUS.FAILED,
@@ -131,29 +131,29 @@ export class OrderCancellationService {
                 cancelReason: 'Payment timeout - Order expired after 20 minutes',
             } as Partial<Order>);
 
-            this.logger.log(`✅ Order ${orderNumber} cancelled successfully`);
+            this.logger.log(`âœ… Order ${orderNumber} cancelled successfully`);
 
-            // ⭐ BƯỚC 6: Remove from Redis
+            // â­ BÆ¯á»šC 6: Remove from Redis
             await this.redisService.removePendingOrder(orderNumber);
             this.logger.debug(`Removed ${orderNumber} from Redis pending list`);
 
-            // ⭐ BƯỚC 7: Send notification (optional - implement later)
+            // â­ BÆ¯á»šC 7: Send notification (optional - implement later)
             await this.sendCancellationEmail(order);
 
             return 'cancelled';
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Error cancelling order ${orderNumber}: ${error.message}`);
             return 'error';
 
         } finally {
-            // ⭐ BƯỚC 8: Release lock
+            // â­ BÆ¯á»šC 8: Release lock
             await this.redisService.releaseLock(`cancel_${orderNumber}`);
         }
     }
 
     /**
-     * ⭐ Gửi thông báo hủy đơn (optional - implement later)
+     * â­ Gá»­i thÃ´ng bÃ¡o há»§y Ä‘Æ¡n (optional - implement later)
      */
     private async sendCancellationEmail(order: Order): Promise<void> {
         try {
@@ -164,7 +164,7 @@ export class OrderCancellationService {
                 user = await this.userModel.findByPk(userId);
                 // Rest of your code...
             }
-            // Lấy user email
+            // Láº¥y user email
             const userEmail = user?.dataValues.email || '';
             const userName = user?.dataValues.name || '';
 
@@ -173,7 +173,7 @@ export class OrderCancellationService {
                 return;
             }
 
-            // Format giá tiền
+            // Format giÃ¡ tiá»n
             const totalAmount = new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
                 currency: 'VND',
@@ -183,8 +183,8 @@ export class OrderCancellationService {
                 ? order.dataValues.cancelledAt.toISOString()
                 : '';
 
-            const cancelReason = order.dataValues.cancelledReason || 'Hết hạn đơn hàng';
-            // Gửi email
+            const cancelReason = order.dataValues.cancelledReason || 'Háº¿t háº¡n Ä‘Æ¡n hÃ ng';
+            // Gá»­i email
             await this.mailService.sendOrderCancellationEmail(
                 userEmail,
                 userName,
@@ -195,14 +195,14 @@ export class OrderCancellationService {
                 cancelReason,
             );
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Error sending cancellation email: ${error.message}`);
             throw error;
         }
     }
 
     /**
-     * ⭐ Manual trigger để test (optional)
+     * â­ Manual trigger Ä‘á»ƒ test (optional)
      */
     async manualCancelExpiredOrders(): Promise<any> {
         this.logger.log('Manual cancellation triggered');

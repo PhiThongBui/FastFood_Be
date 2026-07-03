@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order } from '@/models';
@@ -66,7 +66,7 @@ export class SepayPollingService {
                 await this.sepayWebhookService.processWebhook(matchedTransaction);
             }
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Polling error: ${error.message}`);
         }
     }

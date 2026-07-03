@@ -1,4 +1,4 @@
-import { Address, Ingredient, Order, OrderItemIngredient, OrderItems, Product, ProductVariant, User } from '@/models';
+﻿import { Address, Combo, Ingredient, Order, OrderItemIngredient, OrderItems, Product, ProductVariant, User } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { AddressService } from '../address/address.service';
@@ -6,7 +6,17 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
 import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
-import { ppid } from 'node:process';
+import { Op } from 'sequelize';
+
+interface MyOrdersQuery {
+    page?: string | number;
+    limit?: string | number;
+    search?: string;
+    minPrice?: string | number;
+    maxPrice?: string | number;
+    orderStatus?: string;
+    paymentStatus?: string;
+}
 
 @Injectable()
 export class OrderService {
@@ -21,6 +31,124 @@ export class OrderService {
         private readonly addressService: AddressService,
         private readonly sequelize: Sequelize
     ) { }
+
+    async getMyOrders(userId: number, query: MyOrdersQuery = {}) {
+        if (!userId) throw new BadRequestException('User id not found');
+
+        const currentPage = Math.max(Number(query.page || 1), 1);
+        const limitPage = Math.min(Math.max(Number(query.limit || 5), 1), 50);
+        const offsetPage = (currentPage - 1) * limitPage;
+        const search = query.search?.trim();
+        const minPrice = Number(query.minPrice);
+        const maxPrice = Number(query.maxPrice);
+        const whereClause: any = { userId };
+
+        if (query.orderStatus) {
+            whereClause.orderStatus = query.orderStatus;
+        }
+
+        if (query.paymentStatus) {
+            whereClause.paymentStatus = query.paymentStatus;
+        }
+
+        if (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice)) {
+            whereClause.finalTotal = {};
+            if (!Number.isNaN(minPrice)) whereClause.finalTotal[Op.gte] = minPrice;
+            if (!Number.isNaN(maxPrice)) whereClause.finalTotal[Op.lte] = maxPrice;
+        }
+
+        if (search) {
+            whereClause[Op.or] = [
+                { orderNumber: { [Op.iLike]: `%${search}%` } },
+                { '$orderItems.product.name$': { [Op.iLike]: `%${search}%` } },
+                { '$orderItems.combo.name$': { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        const { count, rows: orders } = await this.orderModel.findAndCountAll({
+            where: whereClause,
+            include: [
+                {
+                    model: Address,
+                    attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city']
+                },
+                {
+                    model: OrderItems,
+                    attributes: ['id', 'productId', 'productVariantId', 'comboId', 'quantity', 'metadata'],
+                    include: [
+                        {
+                            model: Product,
+                            attributes: ['id', 'name', 'imageUrl']
+                        },
+                        {
+                            model: ProductVariant,
+                            attributes: ['id', 'size', 'type', 'modifiedPrice']
+                        },
+                        {
+                            model: Combo,
+                            attributes: ['id', 'name', 'imageUrl']
+                        }
+                    ]
+                }
+            ],
+            distinct: true,
+            subQuery: false,
+            limit: limitPage,
+            offset: offsetPage,
+            order: [['createdAt', 'DESC']]
+        });
+
+        const items = orders.map((order) => {
+            const plain = order.get({ plain: true }) as any;
+
+            return {
+                id: plain.id,
+                orderNumber: plain.orderNumber,
+                orderStatus: plain.orderStatus,
+                paymentMethod: plain.paymentMethod,
+                paymentStatus: plain.paymentStatus,
+                subTotal: plain.subTotal,
+                deliveryFee: plain.deliveryFee,
+                discount: plain.discount,
+                finalTotal: plain.finalTotal,
+                notes: plain.notes,
+                paidAt: plain.paidAt,
+                createdAt: plain.createdAt,
+                updatedAt: plain.updatedAt,
+                address: plain.address,
+                items: (plain.orderItems || []).map((item: any) => {
+                    const metadata = item.metadata || {};
+                    const singleMetadata = metadata.singleItemMetadata || {};
+
+                    return {
+                        id: item.id,
+                        productId: item.productId,
+                        productVariantId: item.productVariantId,
+                        comboId: item.comboId,
+                        quantity: item.quantity,
+                        name: metadata.itemName || item.product?.name || item.combo?.name || 'Sáº£n pháº©m',
+                        imageUrl: item.product?.imageUrl || item.combo?.imageUrl || null,
+                        variantName: singleMetadata.variantName || '',
+                        originalPrice: Number(metadata.originalPrice || 0),
+                        finalPrice: Number(metadata.finalPrice || 0),
+                        comboItems: metadata.items || [],
+                        ingredients: singleMetadata.ingredients || [],
+                        metadata
+                    };
+                })
+            };
+        });
+
+        return {
+            items,
+            pagination: {
+                page: currentPage,
+                limit: limitPage,
+                totalItems: count,
+                totalPages: Math.ceil(count / limitPage)
+            }
+        };
+    }
 
     async createOrder(orderData: CreateOrderDto): Promise<Order> {
 
@@ -105,7 +233,7 @@ export class OrderService {
 
 
 
-        } catch (error) {
+        } catch (error: any) {
             console.log(error.message);
             await transaction.rollback();
             throw error

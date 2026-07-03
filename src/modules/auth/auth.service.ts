@@ -1,4 +1,4 @@
-import { log, time } from 'node:console';
+﻿import { log, time } from 'node:console';
 import { JwtService } from '@nestjs/jwt';
 import { BadRequestException, Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
@@ -33,7 +33,7 @@ export class AuthService {
 
         await this.userService.updateRefreshToken(uid, refreshToken);
 
-        // Nếu có response object, set cookie
+        // Náº¿u cÃ³ response object, set cookie
         if (response) {
             response.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
@@ -46,7 +46,7 @@ export class AuthService {
         return {
             message: 'Login successfully!!!',
             accessToken,
-            refreshToken: response ? undefined : refreshToken // Không trả refreshToken nếu đã set cookie
+            refreshToken: response ? undefined : refreshToken // KhÃ´ng tráº£ refreshToken náº¿u Ä‘Ã£ set cookie
         };
     }
 
@@ -95,7 +95,7 @@ export class AuthService {
     async forgotPassWord(email: string) {
         const verifyEmail = await this.userService.findByEmail(email)
 
-        if (!verifyEmail) throw new UnauthorizedException('Lỗi email forgot password!!!')
+        if (!verifyEmail) throw new UnauthorizedException('Lá»—i email forgot password!!!')
 
         const passwordChangeToken = verifyEmail.createResetPasswordToken()
 
@@ -106,7 +106,7 @@ export class AuthService {
         try {
             await this.mailerService.sendMail({
                 to: email,
-                subject: `Đặt lại mật khẩu - ${this.configService.get('APP_NAME')}`,
+                subject: `Äáº·t láº¡i máº­t kháº©u - ${this.configService.get('APP_NAME')}`,
                 template: 'reset-password',
                 context: {
                     userName: verifyEmail?.dataValues?.name,
@@ -124,23 +124,23 @@ export class AuthService {
 
 
             return {
-                message: 'Email đặt lại mật khẩu đã thực hiện thành công!!!'
+                message: 'Email Ä‘áº·t láº¡i máº­t kháº©u Ä‘Ã£ thá»±c hiá»‡n thÃ nh cÃ´ng!!!'
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
         }
     }
 
     async changePassword(uid: number, oldPassword: string, newPassword: string, confirmPassword: string) {
-        if (!uid) throw new UnauthorizedException('uid không hợp lệ!!!')
-        if (newPassword.length < 6) throw new UnauthorizedException('Mật khẩu phải ít nhất 6 ky tự!!!')
+        if (!uid) throw new UnauthorizedException('uid khÃ´ng há»£p lá»‡!!!')
+        if (newPassword.length < 6) throw new UnauthorizedException('Máº­t kháº©u pháº£i Ã­t nháº¥t 6 ky tá»±!!!')
 
-        if (newPassword !== confirmPassword) throw new UnauthorizedException('Mật khẩu không khớp nhau!!!')
+        if (newPassword !== confirmPassword) throw new UnauthorizedException('Máº­t kháº©u khÃ´ng khá»›p nhau!!!')
 
         const userResponse = await this.userService.findUserById(uid)
 
         const user = userResponse?.data
-        if (!user) throw new UnauthorizedException('Không tìm thấy user!!!')
+        if (!user) throw new UnauthorizedException('KhÃ´ng tÃ¬m tháº¥y user!!!')
 
         const matchesPasssword: boolean = await user.comparePassword(oldPassword)
 
@@ -153,7 +153,7 @@ export class AuthService {
         }
 
         return {
-            message: 'Đổi mật khẩu thành công!!!'
+            message: 'Äá»•i máº­t kháº©u thÃ nh cÃ´ng!!!'
         }
     }
 
@@ -206,7 +206,7 @@ export class AuthService {
             });
         }
         return {
-            message: "Login bằng google thành công",
+            message: "Login báº±ng google thÃ nh cÃ´ng",
             accessToken,
             user: rest
         };

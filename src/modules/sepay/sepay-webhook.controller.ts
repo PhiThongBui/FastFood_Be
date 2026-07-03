@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Get, Param } from '@nestjs/common';
+﻿import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Get, Param } from '@nestjs/common';
 import { SepayWebhookService } from './sepay-webhook.service';
 
 @Controller('payment/sepay')
@@ -10,7 +10,7 @@ export class SepayWebhookController {
     ) {}
 
     /**
-     * ⭐ Webhook từ SePay khi có giao dịch mới
+     * â­ Webhook tá»« SePay khi cÃ³ giao dá»‹ch má»›i
      */
     @Post('webhook')
     @HttpCode(HttpStatus.OK)
@@ -25,7 +25,7 @@ export class SepayWebhookController {
                 message: 'Webhook processed successfully'
             };
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Webhook processing failed: ${error.message}`);
             
             return {

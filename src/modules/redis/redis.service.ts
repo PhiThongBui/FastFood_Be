@@ -1,14 +1,14 @@
-import { Injectable, Inject, OnModuleDestroy, Logger } from '@nestjs/common';
+﻿import { Injectable, Inject, OnModuleDestroy, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT, REDIS_KEYS, REDIS_CONFIG } from './redis.constants';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
     private readonly logger = new Logger(RedisService.name);
-    private subscriber: Redis; // ⭐ Redis client riêng cho Pub/Sub
+    private subscriber: Redis; // â­ Redis client riÃªng cho Pub/Sub
 
     constructor(@Inject(REDIS_CLIENT) private readonly client: Redis) {
-        // Tạo subscriber riêng (best practice cho Pub/Sub)
+        // Táº¡o subscriber riÃªng (best practice cho Pub/Sub)
         this.subscriber = this.client.duplicate();
         this.setupErrorHandlers();
     }
@@ -40,9 +40,9 @@ export class RedisService implements OnModuleDestroy {
     // ==================== SORTED SET OPERATIONS ====================
 
     /**
-     * ⭐ Thêm order vào Sorted Set với TTL
-     * @param orderNumber - Mã đơn hàng (VD: "ORD1729588800")
-     * @param ttlSeconds - Thời gian hết hạn (default: 1200s = 20 phút)
+     * â­ ThÃªm order vÃ o Sorted Set vá»›i TTL
+     * @param orderNumber - MÃ£ Ä‘Æ¡n hÃ ng (VD: "ORD1729588800")
+     * @param ttlSeconds - Thá»i gian háº¿t háº¡n (default: 1200s = 20 phÃºt)
      */
     async addPendingOrder(orderNumber: string, ttlSeconds?: number): Promise<void> {
         const ttl = ttlSeconds || REDIS_CONFIG.ORDER_TTL_SECONDS;
@@ -58,7 +58,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * ⭐ Xóa order khỏi Sorted Set (khi đã thanh toán)
+     * â­ XÃ³a order khá»i Sorted Set (khi Ä‘Ã£ thanh toÃ¡n)
      */
     async removePendingOrder(orderNumber: string): Promise<number> {
         const removed = await this.client.zrem(REDIS_KEYS.PENDING_ORDERS, orderNumber);
@@ -71,7 +71,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * ⭐ Lấy danh sách orders đã hết hạn
+     * â­ Láº¥y danh sÃ¡ch orders Ä‘Ã£ háº¿t háº¡n
      */
     async getExpiredOrders(): Promise<string[]> {
         const now = Math.floor(Date.now() / 1000);
@@ -90,7 +90,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * ⭐ Xem thời gian hết hạn của một order
+     * â­ Xem thá»i gian háº¿t háº¡n cá»§a má»™t order
      */
     async getOrderExpiry(orderNumber: string): Promise<Date | null> {
         const score = await this.client.zscore(REDIS_KEYS.PENDING_ORDERS, orderNumber);
@@ -103,8 +103,8 @@ export class RedisService implements OnModuleDestroy {
     // ==================== DISTRIBUTED LOCK ====================
 
     /**
-     * ⭐ Acquire lock (dùng cho IPN deduplication)
-     * @returns true nếu lock thành công, false nếu đã có lock
+     * â­ Acquire lock (dÃ¹ng cho IPN deduplication)
+     * @returns true náº¿u lock thÃ nh cÃ´ng, false náº¿u Ä‘Ã£ cÃ³ lock
      */
     async acquireLock(key: string, ttlSeconds?: number): Promise<boolean> {
         const ttl = ttlSeconds || REDIS_CONFIG.LOCK_TTL_SECONDS;
@@ -121,27 +121,27 @@ export class RedisService implements OnModuleDestroy {
         const acquired = result === 'OK';
 
         if (acquired) {
-            this.logger.debug(`🔒 Lock acquired: ${lockKey}`);
+            this.logger.debug(`ðŸ”’ Lock acquired: ${lockKey}`);
         } else {
-            this.logger.debug(`❌ Lock already held: ${lockKey}`);
+            this.logger.debug(`âŒ Lock already held: ${lockKey}`);
         }
 
         return acquired;
     }
 
     /**
-     * ⭐ Release lock
+     * â­ Release lock
      */
     async releaseLock(key: string): Promise<void> {
         const lockKey = `${REDIS_KEYS.IPN_LOCK}:${key}`;
         await this.client.del(lockKey);
-        this.logger.debug(`🔓 Lock released: ${lockKey}`);
+        this.logger.debug(`ðŸ”“ Lock released: ${lockKey}`);
     }
 
     // ==================== PUB/SUB ====================
 
     /**
-     * ⭐ Publish thông báo đơn hàng mới
+     * â­ Publish thÃ´ng bÃ¡o Ä‘Æ¡n hÃ ng má»›i
      */
     async publishNewOrder(orderData: any): Promise<void> {
         try {
@@ -153,33 +153,33 @@ export class RedisService implements OnModuleDestroy {
             );
 
             this.logger.log(
-                `📢 Published new order: ${orderData.orderNumber} (${subscriberCount} subscribers)`
+                `ðŸ“¢ Published new order: ${orderData.orderNumber} (${subscriberCount} subscribers)`
             );
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to publish order: ${error.message}`);
             throw error;
         }
     }
 
     /**
-     * ⭐ Subscribe để nhận thông báo đơn hàng mới
-     * @param callback - Function xử lý khi nhận message
+     * â­ Subscribe Ä‘á»ƒ nháº­n thÃ´ng bÃ¡o Ä‘Æ¡n hÃ ng má»›i
+     * @param callback - Function xá»­ lÃ½ khi nháº­n message
      */
     async subscribeNewOrders(callback: (orderData: any) => void): Promise<void> {
-        await this.subscriber.subscribe(REDIS_KEYS.NEW_ORDERS_CHANNEL); // nhận tất cả message được publish lên channel 'new_orders'.
+        await this.subscriber.subscribe(REDIS_KEYS.NEW_ORDERS_CHANNEL); // nháº­n táº¥t cáº£ message Ä‘Æ°á»£c publish lÃªn channel 'new_orders'.
 
         this.subscriber.on('message', (channel, message) => {
             if (channel === REDIS_KEYS.NEW_ORDERS_CHANNEL) {
                 try {
                     const orderData = JSON.parse(message);
                     callback(orderData);
-                } catch (error) {
+                } catch (error: any) {
                     this.logger.error(`Failed to parse order message: ${error.message}`);
                 }
             }
         });
 
-        this.logger.log(`👂 Subscribed to ${REDIS_KEYS.NEW_ORDERS_CHANNEL}`);
+        this.logger.log(`ðŸ‘‚ Subscribed to ${REDIS_KEYS.NEW_ORDERS_CHANNEL}`);
     }
 
     async unsubscribeNewOrders(): Promise<void> {
@@ -189,7 +189,7 @@ export class RedisService implements OnModuleDestroy {
 
 
     /**
-   * ⭐ Generic subscribe method (cho các channels khác)
+   * â­ Generic subscribe method (cho cÃ¡c channels khÃ¡c)
    */
 
     async subscribeChannel(
@@ -205,14 +205,14 @@ export class RedisService implements OnModuleDestroy {
                 }
             });
 
-            this.logger.log(`👂 Subscribed to channel: ${channel}`);
-        } catch (error) {
+            this.logger.log(`ðŸ‘‚ Subscribed to channel: ${channel}`);
+        } catch (error: any) {
             this.logger.error(`Failed to subscribe to ${channel}: ${error.message}`);
             throw error;
         }
     }
     /**
-     * ⭐ Generic publish method
+     * â­ Generic publish method
      */
     async publishToChannel(channel: string, data: any): Promise<number> {
         try {
@@ -220,11 +220,11 @@ export class RedisService implements OnModuleDestroy {
             const subscriberCount = await this.client.publish(channel, message);
 
             this.logger.debug(
-                `📢 Published to ${channel} (${subscriberCount} subscribers)`
+                `ðŸ“¢ Published to ${channel} (${subscriberCount} subscribers)`
             );
 
             return subscriberCount;
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to publish to ${channel}: ${error.message}`);
             throw error;
         }
@@ -233,7 +233,7 @@ export class RedisService implements OnModuleDestroy {
     // ==================== GENERAL KEY-VALUE ====================
 
     /**
-     * Set giá trị với TTL (optional)
+     * Set giÃ¡ trá»‹ vá»›i TTL (optional)
      */
     async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
         if (ttlSeconds) {
@@ -244,7 +244,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * Get giá trị
+     * Get giÃ¡ trá»‹
      */
     async get(key: string): Promise<string | null> {
         return await this.client.get(key);
@@ -258,7 +258,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * Check key có tồn tại không
+     * Check key cÃ³ tá»“n táº¡i khÃ´ng
      */
     async exists(key: string): Promise<boolean> {
         const result = await this.client.exists(key);
@@ -266,7 +266,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * ⭐ Expose raw client (cho advanced usage)
+     * â­ Expose raw client (cho advanced usage)
      */
     getClient(): Redis {
         return this.client;
@@ -274,7 +274,7 @@ export class RedisService implements OnModuleDestroy {
 
 
     /**
-     * Set với object (tự động JSON.stringify)
+     * Set vá»›i object (tá»± Ä‘á»™ng JSON.stringify)
      */
     async setObject(key: string, value: any, ttlSeconds?: number): Promise<void> {
         const jsonString = JSON.stringify(value);
@@ -282,7 +282,7 @@ export class RedisService implements OnModuleDestroy {
     }
 
     /**
-     * Get và parse object
+     * Get vÃ  parse object
      */
     async getObject<T>(key: string): Promise<T | null> {
         const value = await this.get(key);
@@ -290,26 +290,26 @@ export class RedisService implements OnModuleDestroy {
         
         try {
             return JSON.parse(value) as T;
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to parse JSON from key ${key}: ${error.message}`);
             return null;
         }
     }
     /**
-     * ⭐ Expose subscriber client
+     * â­ Expose subscriber client
      */
     getSubscriber(): Redis {
         return this.subscriber;
     }
 
     /**
-     * ⭐ Health check
+     * â­ Health check
      */
     async ping(): Promise<boolean> {
         try {
             const result = await this.client.ping();
             return result === 'PONG';
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Redis ping failed: ${error.message}`);
             return false;
         }

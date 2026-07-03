@@ -1,4 +1,4 @@
-import {
+﻿import {
     WebSocketGateway,
     WebSocketServer,
     OnGatewayInit,
@@ -30,24 +30,24 @@ export class NotificationGatewayService
     constructor(private readonly redisService: RedisService) {}
 
     /**
-     * ⭐ Khởi tạo Gateway và subscribe Redis
+     * â­ Khá»Ÿi táº¡o Gateway vÃ  subscribe Redis
      */
     async afterInit(_server: Server) {
-        this.logger.log('🔌 WebSocket Gateway initialized');
+        this.logger.log('ðŸ”Œ WebSocket Gateway initialized');
         
-        // ⭐ Subscribe Redis Pub/Sub channel
+        // â­ Subscribe Redis Pub/Sub channel
         await this.subscribeToRedisChannel();
     }
 
     /**
-     * ⭐ Client connected
+     * â­ Client connected
      */
     handleConnection(client: Socket) {
         const clientId = client.id;
         this.connectedClients.set(clientId, client);
         
         this.logger.log(
-            `✅ Client connected: ${clientId} (Total: ${this.connectedClients.size})`
+            `âœ… Client connected: ${clientId} (Total: ${this.connectedClients.size})`
         );
         
         client.emit('connected', {
@@ -58,42 +58,42 @@ export class NotificationGatewayService
     }
 
     /**
-     * ⭐ Client disconnected
+     * â­ Client disconnected
      */
     handleDisconnect(client: Socket) {
         const clientId = client.id;
         this.connectedClients.delete(clientId);
         
         this.logger.log(
-            `❌ Client disconnected: ${clientId} (Total: ${this.connectedClients.size})`
+            `âŒ Client disconnected: ${clientId} (Total: ${this.connectedClients.size})`
         );
     }
 
     /**
-     * ⭐ Subscribe Redis channel "new_orders"
+     * â­ Subscribe Redis channel "new_orders"
      */
     private async subscribeToRedisChannel() {
         try {
-            // ⭐ Sử dụng method subscribeNewOrders từ RedisService
+            // â­ Sá»­ dá»¥ng method subscribeNewOrders tá»« RedisService
             await this.redisService.subscribeNewOrders((orderData) => {
                 this.handleNewOrderNotification(orderData);
             });
 
-            this.logger.log('📡 Subscribed to Redis channel: new_orders');
+            this.logger.log('ðŸ“¡ Subscribed to Redis channel: new_orders');
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to subscribe Redis channel: ${error.message}`);
         }
     }
 
     /**
-     * ⭐ Xử lý notification từ Redis
+     * â­ Xá»­ lÃ½ notification tá»« Redis
      */
     private handleNewOrderNotification(orderData: any) {
         try {
-            this.logger.log(`🔔 New order notification: ${orderData.orderNumber}`);
+            this.logger.log(`ðŸ”” New order notification: ${orderData.orderNumber}`);
 
-            // ⭐ Emit đến TẤT CẢ clients
+            // â­ Emit Ä‘áº¿n Táº¤T Cáº¢ clients
             this.server.emit('new_order', {
                 type: 'NEW_ORDER',
                 data: orderData,
@@ -101,16 +101,16 @@ export class NotificationGatewayService
             });
 
             this.logger.log(
-                `📤 Broadcasted to ${this.connectedClients.size} clients`
+                `ðŸ“¤ Broadcasted to ${this.connectedClients.size} clients`
             );
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to handle notification: ${error.message}`);
         }
     }
 
     /**
-     * ⭐ Client join room (optional - cho targeted notifications)
+     * â­ Client join room (optional - cho targeted notifications)
      */
     @SubscribeMessage('join_room')
     handleJoinRoom(client: Socket, payload: { room: string }) {
@@ -126,23 +126,23 @@ export class NotificationGatewayService
     }
 
     /**
-     * ⭐ Emit to specific room
+     * â­ Emit to specific room
      */
     emitToRoom(room: string, event: string, data: any) {
         this.server.to(room).emit(event, data);
-        this.logger.log(`📤 Emitted ${event} to room: ${room}`);
+        this.logger.log(`ðŸ“¤ Emitted ${event} to room: ${room}`);
     }
 
     /**
-     * ⭐ Broadcast to all clients
+     * â­ Broadcast to all clients
      */
     broadcast(event: string, data: any) {
         this.server.emit(event, data);
-        this.logger.log(`📤 Broadcasted ${event} to all clients`);
+        this.logger.log(`ðŸ“¤ Broadcasted ${event} to all clients`);
     }
 
     /**
-     * ⭐ Get connected clients count
+     * â­ Get connected clients count
      */
     getConnectedClientsCount(): number {
         return this.connectedClients.size;

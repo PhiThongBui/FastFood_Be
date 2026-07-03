@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -78,7 +78,7 @@ export class SepayService {
                 transferContent,
                 amount: request.amount
             };
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`QR generation failed: ${error.message}`);
 
             if (error.response) {
@@ -127,7 +127,7 @@ export class SepayService {
             );
 
             return transaction || null;
-        } catch (error) {
+        } catch (error: any) {
             this.logApiError('check transaction', error);
             return null;
         }
@@ -149,7 +149,7 @@ export class SepayService {
             this.logger.debug(`Fetched ${transactions.length} transactions from SePay`);
 
             return transactions;
-        } catch (error) {
+        } catch (error: any) {
             this.logApiError('fetch transactions', error);
             return [];
         }

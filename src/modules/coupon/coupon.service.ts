@@ -1,4 +1,4 @@
-import { Coupons, User, UserCoupons } from '@/models';
+﻿import { Coupons, User, UserCoupons } from '@/models';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateCouponDto } from './dto/createCoupon.dto';
@@ -53,7 +53,7 @@ export class CouponService {
                     validTo: newCoupon.dataValues.validTo,
                 },
             };
-        } catch (error) {
+        } catch (error: any) {
             await transaction.rollback(); 
             throw new BadRequestException(error.message);
         }
@@ -109,7 +109,7 @@ export class CouponService {
         }
 
         if (subTotal < coupon.dataValues.minOrderAmount) {
-            throw new BadRequestException(`Đơn hàng phải đạt tối thiểu ${coupon.dataValues.minOrderAmount.toLocaleString('vi-VN')} VNĐ để sử dụng coupon này.`);
+            throw new BadRequestException(`ÄÆ¡n hÃ ng pháº£i Ä‘áº¡t tá»‘i thiá»ƒu ${coupon.dataValues.minOrderAmount.toLocaleString('vi-VN')} VNÄ Ä‘á»ƒ sá»­ dá»¥ng coupon nÃ y.`);
         }
 
         if (coupon.dataValues.currentUsers >= coupon.dataValues.maxUsers) {

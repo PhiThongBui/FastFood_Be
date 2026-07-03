@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Logger, Post, Req, UseGuards } from '@nestjs/common';
+﻿import { BadRequestException, Body, Controller, Get, Logger, Post, Req, UseGuards } from '@nestjs/common';
 import { CartPreviewService } from './cart-preview.service';
 import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
@@ -23,18 +23,18 @@ export class CartPreviewController {
   @Post('/checkout-preview')
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Xem trước thanh toán (Checkout Preview)',
-    description: 'Tính toán giá trị thanh toán cho các CartItem được chọn'
+    summary: 'Xem trÆ°á»›c thanh toÃ¡n (Checkout Preview)',
+    description: 'TÃ­nh toÃ¡n giÃ¡ trá»‹ thanh toÃ¡n cho cÃ¡c CartItem Ä‘Æ°á»£c chá»n'
   })
   @ApiOperation({
     summary: 'Checkout Preview',
     description: `
-Yêu cầu xác định giỏ hàng thông qua:
+YÃªu cáº§u xÃ¡c Ä‘á»‹nh giá» hÃ ng thÃ´ng qua:
 
-- Authorization: Bearer token (đối với user đã đăng nhập)
-- Cookie: sessionId (đối với khách vãng lai)
+- Authorization: Bearer token (Ä‘á»‘i vá»›i user Ä‘Ã£ Ä‘Äƒng nháº­p)
+- Cookie: sessionId (Ä‘á»‘i vá»›i khÃ¡ch vÃ£ng lai)
 
-API sẽ tự động xác định cart tương ứng.
+API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©ng.
 `
   })
 
@@ -52,7 +52,7 @@ API sẽ tự động xác định cart tương ứng.
   })
   @ApiResponse({
     status: 200,
-    description: 'Preview thành công'
+    description: 'Preview thÃ nh cÃ´ng'
   })
   async getCartDetail(
     @Body('cartItemIds') cartItemIds: number[],
@@ -88,17 +88,17 @@ API sẽ tự động xác định cart tương ứng.
   @Get('/cart')
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Xem giỏ hàng của mình',
+    summary: 'Xem giá» hÃ ng cá»§a mÃ¬nh',
   })
   @ApiOperation({
     summary: 'Cart Preview',
     description: `
-Yêu cầu xác định giỏ hàng thông qua:
+YÃªu cáº§u xÃ¡c Ä‘á»‹nh giá» hÃ ng thÃ´ng qua:
 
-- Authorization: Bearer token (đối với user đã đăng nhập)
-- Cookie: sessionId (đối với khách vãng lai)
+- Authorization: Bearer token (Ä‘á»‘i vá»›i user Ä‘Ã£ Ä‘Äƒng nháº­p)
+- Cookie: sessionId (Ä‘á»‘i vá»›i khÃ¡ch vÃ£ng lai)
 
-API sẽ tự động xác định cart tương ứng.
+API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©ng.
 `
   })
   async getCartPreview(
@@ -149,7 +149,7 @@ API sẽ tự động xác định cart tương ứng.
           const token = authBearer.substring(7)
           const decoded = this.jwtService.verify(token, this.configService.get('JWT_SECRET')) as any
           userId = decoded.uid
-        } catch (error) {
+        } catch (error: any) {
           userId = null
         }
       }
@@ -160,7 +160,7 @@ API sẽ tự động xác định cart tương ứng.
       const cartId = await this.cartService.getCartByContext(sessionId, userId)
 
       return await this.cartPreviewService.checkoutCaculate(userId, cartId?.dataValues?.id, dto);
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
       throw new BadRequestException(error.message)
     }

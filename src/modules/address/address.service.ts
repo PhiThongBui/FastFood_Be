@@ -1,4 +1,4 @@
-import { log } from 'node:console';
+﻿import { log } from 'node:console';
 import { Address } from '@/models';
 import { HttpService } from '@nestjs/axios';
 import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
@@ -36,42 +36,42 @@ export class AddressService {
             const response = await firstValueFrom(this.httpService.get(url));
             console.log("Goong API Response:", JSON.stringify(response.data, null, 2));
 
-            // kiểm tra rows có tồn tại không
+            // kiá»ƒm tra rows cÃ³ tá»“n táº¡i khÃ´ng
             if (!response.data.rows || response.data.rows.length === 0) {
-                throw new BadGatewayException('Không có dữ liệu tuyến đường từ Goong API');
+                throw new BadGatewayException('KhÃ´ng cÃ³ dá»¯ liá»‡u tuyáº¿n Ä‘Æ°á»ng tá»« Goong API');
             }
 
-            // Kiểm tra elements
+            // Kiá»ƒm tra elements
             const row = response.data.rows[0];
             if (!row.elements || row.elements.length === 0) {
-                throw new BadGatewayException('Không tìm thấy elements trong dữ liệu');
+                throw new BadGatewayException('KhÃ´ng tÃ¬m tháº¥y elements trong dá»¯ liá»‡u');
             }
 
             const element = row.elements[0];
 
-            // Kiểm tra status của element
+            // Kiá»ƒm tra status cá»§a element
             if (element.status === 'OK') {
                 return {
                     distance: element.distance.value / 1000, // km
-                    duration: element.duration.value / 60,   // phút
+                    duration: element.duration.value / 60,   // phÃºt
                     status: element.status
                 };
             } else if (element.status === 'ZERO_RESULTS') {
-                throw new BadGatewayException('Không tìm thấy tuyến đường giữa cửa hàng và điểm giao hàng');
+                throw new BadGatewayException('KhÃ´ng tÃ¬m tháº¥y tuyáº¿n Ä‘Æ°á»ng giá»¯a cá»­a hÃ ng vÃ  Ä‘iá»ƒm giao hÃ ng');
             } else {
-                throw new BadGatewayException(`Lỗi tính toán khoảng cách: ${element.status}`);
+                throw new BadGatewayException(`Lá»—i tÃ­nh toÃ¡n khoáº£ng cÃ¡ch: ${element.status}`);
             }
             
-        } catch (error) {
-            console.error('Lỗi tính toán khoảng cách:', error);
+        } catch (error: any) {
+            console.error('Lá»—i tÃ­nh toÃ¡n khoáº£ng cÃ¡ch:', error);
             
-            // Chỉ re-throw nếu đã là BadGatewayException
+            // Chá»‰ re-throw náº¿u Ä‘Ã£ lÃ  BadGatewayException
             if (error instanceof BadGatewayException) {
                 throw error;
             }
             
-            // Nếu là lỗi khác (network, timeout, etc.)
-            throw new BadGatewayException(`Không thể tính toán khoảng cách: ${error.message}`);
+            // Náº¿u lÃ  lá»—i khÃ¡c (network, timeout, etc.)
+            throw new BadGatewayException(`KhÃ´ng thá»ƒ tÃ­nh toÃ¡n khoáº£ng cÃ¡ch: ${error.message}`);
         }
     }
 
@@ -82,10 +82,10 @@ export class AddressService {
             await transaction.commit();
             
             return {
-                message: 'Tạo địa chỉ thành công',
+                message: 'Táº¡o Ä‘á»‹a chá»‰ thÃ nh cÃ´ng',
                 data: newAddress
             };
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
             await transaction.rollback();
             throw new BadRequestException(error.message);
@@ -110,7 +110,7 @@ export class AddressService {
         });
 
         return {
-            message: 'Lấy danh sách địa chỉ thành công',
+            message: 'Láº¥y danh sÃ¡ch Ä‘á»‹a chá»‰ thÃ nh cÃ´ng',
             data: addresses
         };
     }

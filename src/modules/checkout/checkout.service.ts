@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+﻿import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { Transaction } from 'sequelize';
@@ -65,7 +65,7 @@ export class CheckoutService {
                 throw new BadRequestException('Cart item ids are required');
             }
 
-            // ⭐ BƯỚC 2: LOCK CART (FOR UPDATE)
+            // â­ BÆ¯á»šC 2: LOCK CART (FOR UPDATE)
             const cart = await this.cartsModel.findOne({
                 where: { id: cartId, userId },
                 lock: transaction.LOCK.UPDATE,
@@ -78,7 +78,7 @@ export class CheckoutService {
 
             const addressId = await this.resolveCheckoutAddressId(userId, dto, transaction);
 
-            // ⭐ BƯỚC 3: RE-CALCULATE TOTALS
+            // â­ BÆ¯á»šC 3: RE-CALCULATE TOTALS
             const calculation = await this.cartPreviewService.checkoutCaculate(
                 userId,
                 cartId,
@@ -102,7 +102,7 @@ export class CheckoutService {
                 calculation.data.items.map(item => [Number(item.cartItemId), item])
             );
 
-            // ⭐ BƯỚC 4: CREATE ORDER
+            // â­ BÆ¯á»šC 4: CREATE ORDER
             const orderNumber = `ORD${Date.now()}`;
 
             this.logger.log(`Creating order: ${orderNumber}`);
@@ -127,7 +127,7 @@ export class CheckoutService {
                 cancelledReason: null
             } as Order, { transaction });
 
-            // ⭐ BƯỚC 5: COPY CART ITEMS → ORDER ITEMS
+            // â­ BÆ¯á»šC 5: COPY CART ITEMS â†’ ORDER ITEMS
             const cartItems = await this.cartItemsModel.findAll({
                 where: {
                     cartId,
@@ -172,7 +172,7 @@ export class CheckoutService {
                     metadata: this.buildOrderItemMetadata(previewItem)
                 } as OrderItems, { transaction });
 
-                // ⭐ BƯỚC 6: COPY INGREDIENTS
+                // â­ BÆ¯á»šC 6: COPY INGREDIENTS
                 const ingredients = ingredientMap.get(Number(cartItem.dataValues.id)) || [];
                 if (ingredients.length > 0) {
                     for (const ingredient of ingredients) {
@@ -220,7 +220,7 @@ export class CheckoutService {
                 });
             }
 
-            //⭐ Bước 7: Xóa item trong cartItem và cartItemIngredient
+            //â­ BÆ°á»›c 7: XÃ³a item trong cartItem vÃ  cartItemIngredient
             await this.cartItemsIngredientModel.destroy({
                 where: {
                     cartItemId: {
@@ -240,26 +240,26 @@ export class CheckoutService {
                 transaction
             });
 
-            this.logger.log(`✅ Deleted ${deletedCount} cart items`)
+            this.logger.log(`âœ… Deleted ${deletedCount} cart items`)
 
 
-            // ⭐ BƯỚC 9: COMMIT TRANSACTION
+            // â­ BÆ¯á»šC 9: COMMIT TRANSACTION
             await transaction.commit();
 
             this.logger.log(`Order ${orderNumber} created successfully`);
 
-        } catch (error) {
+        } catch (error: any) {
             if (transaction) await transaction.rollback();
             this.logger.error(`Checkout failed: ${error.message}`);
             throw error;
         }
 
-        // ⭐ BƯỚC 9A : XỬ LÝ THANH TOÁN
+        // â­ BÆ¯á»šC 9A : Xá»¬ LÃ THANH TOÃN
         if (dto.paymentMethod === PAYMENTMETHOD.SEPAY) {
             this.logger.log(`order: ${createdOrder}`);
             return await this.processSepayPayment(createdOrder);
         } else {
-            // Thanh toán khi nhận hàng
+            // Thanh toÃ¡n khi nháº­n hÃ ng
             return {
                 success: true,
                 message: 'Order created successfully',
@@ -358,25 +358,25 @@ export class CheckoutService {
     }
 
     /**
-     * ⭐ Xử lý thanh toán SePay
+     * â­ Xá»­ lÃ½ thanh toÃ¡n SePay
      */
     private async processSepayPayment(order: Order) {
         try {
-            // ⭐ BƯỚC 9A: THÊM VÀO REDIS SORTED SET
+            // â­ BÆ¯á»šC 9A: THÃŠM VÃ€O REDIS SORTED SET
             await this.redisService.addPendingOrder(order.dataValues.orderNumber);
 
             this.logger.log(`Added order ${order.dataValues.orderNumber} to Redis pending list`);
 
-            // ⭐ BƯỚC 9B: TẠO QR CODE SEPAY
+            // â­ BÆ¯á»šC 9B: Táº O QR CODE SEPAY
             const sepayPayment = await this.sepayService.createPayment({
                 orderNumber: order.dataValues.orderNumber,
                 amount: order.dataValues.finalTotal,
-                orderInfo: `Thanh toán đơn hàng ${order.dataValues.orderNumber}`
+                orderInfo: `Thanh toÃ¡n Ä‘Æ¡n hÃ ng ${order.dataValues.orderNumber}`
             });
 
             this.logger.log(`Sepay QR created for order ${order.dataValues.orderNumber}`);
 
-            // ⭐ BƯỚC 10: RETURN PAYMENT INFO
+            // â­ BÆ¯á»šC 10: RETURN PAYMENT INFO
             return {
                 success: true,
                 message: 'Order created successfully. Please complete bank transfer.',
@@ -396,10 +396,10 @@ export class CheckoutService {
                 }
             };
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Sepay payment failed for order ${order.dataValues.orderNumber}: ${error.message}`);
 
-            // Rollback: Xóa order khỏi Redis
+            // Rollback: XÃ³a order khá»i Redis
             await this.redisService.removePendingOrder(order.dataValues.orderNumber);
 
             throw new BadRequestException(`Payment initialization failed: ${error.message}`);

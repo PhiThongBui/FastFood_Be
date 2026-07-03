@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+﻿import { BadRequestException, Injectable } from '@nestjs/common';
 import {
     categories,
     ingredients,
@@ -72,15 +72,15 @@ export class SeederService {
         private readonly sequelize: Sequelize
     ) { }
 
-    // ✅ FIX: Xử lý null password cho Google user
+    // âœ… FIX: Xá»­ lÃ½ null password cho Google user
     private async seedUser(transaction: Transaction) {
         const userFormat = users.map((item) => {
-            // Chỉ hash password nếu có (local users)
+            // Chá»‰ hash password náº¿u cÃ³ (local users)
             if (item?.password) {
                 const hashedPassword = bcrypt.hashSync(item.password, 10);
                 return { ...item, password: hashedPassword };
             }
-            // Google users không có password
+            // Google users khÃ´ng cÃ³ password
             return { ...item, password: null };
         });
 
@@ -89,12 +89,12 @@ export class SeederService {
             validate: true 
         });
         
-        console.log(`✅ Seeded ${result.length} users`);
+        console.log(`âœ… Seeded ${result.length} users`);
         return result;
     }
 
     private async seedAddresses(transaction: Transaction) {
-        // ✅ Verify users exist trước
+        // âœ… Verify users exist trÆ°á»›c
         const userCount = await this.userModel.count({ transaction });
         if (userCount === 0) {
             throw new Error('Cannot seed addresses: No users found in database');
@@ -105,7 +105,7 @@ export class SeederService {
             validate: true 
         });
         
-        console.log(`✅ Seeded ${result.length} addresses`);
+        console.log(`âœ… Seeded ${result.length} addresses`);
         return result;
     }
 
@@ -114,7 +114,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} categories`);
+        console.log(`âœ… Seeded ${result.length} categories`);
         return result;
     }
 
@@ -123,7 +123,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} products`);
+        console.log(`âœ… Seeded ${result.length} products`);
         return result;
     }
 
@@ -132,7 +132,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} ingredients`);
+        console.log(`âœ… Seeded ${result.length} ingredients`);
         return result;
     }
 
@@ -141,7 +141,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} product variants`);
+        console.log(`âœ… Seeded ${result.length} product variants`);
         return result;
     }
 
@@ -150,7 +150,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} product ingredients`);
+        console.log(`âœ… Seeded ${result.length} product ingredients`);
         return result;
     }
 
@@ -159,7 +159,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} combos`);
+        console.log(`âœ… Seeded ${result.length} combos`);
         return result;
     }
 
@@ -168,7 +168,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} combo items`);
+        console.log(`âœ… Seeded ${result.length} combo items`);
         return result;
     }
 
@@ -177,7 +177,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} coupons`);
+        console.log(`âœ… Seeded ${result.length} coupons`);
         return result;
     }
 
@@ -186,7 +186,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} user coupons`);
+        console.log(`âœ… Seeded ${result.length} user coupons`);
         return result;
     }
 
@@ -195,7 +195,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} carts`);
+        console.log(`âœ… Seeded ${result.length} carts`);
         return result;
     }
 
@@ -204,7 +204,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} cart items`);
+        console.log(`âœ… Seeded ${result.length} cart items`);
         return result;
     }
 
@@ -213,7 +213,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} cart items ingredients`);
+        console.log(`âœ… Seeded ${result.length} cart items ingredients`);
         return result;
     }
 
@@ -222,7 +222,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} orders`);
+        console.log(`âœ… Seeded ${result.length} orders`);
         return result;
     }
 
@@ -231,7 +231,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} order items`);
+        console.log(`âœ… Seeded ${result.length} order items`);
         return result;
     }
 
@@ -240,7 +240,7 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} order item ingredients`);
+        console.log(`âœ… Seeded ${result.length} order item ingredients`);
         return result;
     }
 
@@ -249,84 +249,84 @@ export class SeederService {
             transaction,
             validate: true 
         });
-        console.log(`✅ Seeded ${result.length} reviews`);
+        console.log(`âœ… Seeded ${result.length} reviews`);
         return result;
     }
 
     async runAllSeeder() {
-        console.log('🧹 Clearing existing seed data before reseeding...');
+        console.log('ðŸ§¹ Clearing existing seed data before reseeding...');
         await this.clearAllData();
 
         const transaction = await this.sequelize.transaction();
 
         try {
-            console.log('🌱 Starting seeder...\n');
+            console.log('ðŸŒ± Starting seeder...\n');
 
-            // 1. Base data (không có dependency)
-            console.log('📝 Seeding users...');
+            // 1. Base data (khÃ´ng cÃ³ dependency)
+            console.log('ðŸ“ Seeding users...');
             await this.seedUser(transaction);
 
-            console.log('📝 Seeding categories...');
+            console.log('ðŸ“ Seeding categories...');
             await this.seedCategories(transaction);
 
             // 2. User-related data
-            console.log('📝 Seeding addresses...');
+            console.log('ðŸ“ Seeding addresses...');
             await this.seedAddresses(transaction);
 
             // 3. Product data
-            console.log('📝 Seeding products...');
+            console.log('ðŸ“ Seeding products...');
             await this.seedProducts(transaction);
 
-            console.log('📝 Seeding ingredients...');
+            console.log('ðŸ“ Seeding ingredients...');
             await this.seedIngredients(transaction);
 
-            console.log('📝 Seeding product variants...');
+            console.log('ðŸ“ Seeding product variants...');
             await this.seedProductVariants(transaction);
 
-            console.log('📝 Seeding product ingredients...');
+            console.log('ðŸ“ Seeding product ingredients...');
             await this.seedProductIngredients(transaction);
 
             // 4. Combo data
-            console.log('📝 Seeding combos...');
+            console.log('ðŸ“ Seeding combos...');
             await this.seedCombos(transaction);
 
-            console.log('📝 Seeding combo items...');
+            console.log('ðŸ“ Seeding combo items...');
             await this.seedComboItems(transaction);
 
             // 5. Coupon data
-            console.log('📝 Seeding coupons...');
+            console.log('ðŸ“ Seeding coupons...');
             await this.seedCoupons(transaction);
 
-            console.log('📝 Seeding user coupons...');
+            console.log('ðŸ“ Seeding user coupons...');
             await this.seedUserCoupons(transaction);
 
             // 6. Cart data
-            console.log('📝 Seeding carts...');
+            console.log('ðŸ“ Seeding carts...');
             await this.seedCarts(transaction);
 
-            console.log('📝 Seeding cart items...');
+            console.log('ðŸ“ Seeding cart items...');
             await this.seedCartItems(transaction);
 
-            console.log('📝 Seeding cart items ingredients...');
+            console.log('ðŸ“ Seeding cart items ingredients...');
             await this.seedCartItemsIngredients(transaction);
 
             // 7. Order data
-            console.log('📝 Seeding orders...');
+            console.log('ðŸ“ Seeding orders...');
             await this.seedOrders(transaction);
 
-            console.log('📝 Seeding order items...');
+            console.log('ðŸ“ Seeding order items...');
             await this.seedOrderItems(transaction);
 
-            console.log('📝 Seeding order item ingredients...');
+            console.log('ðŸ“ Seeding order item ingredients...');
             await this.seedOrderItemIngredients(transaction);
 
-            // 8. Review data (cuối cùng)
-            console.log('📝 Seeding reviews...');
+            // 8. Review data (cuá»‘i cÃ¹ng)
+            console.log('ðŸ“ Seeding reviews...');
             await this.seedReviews(transaction);
 
             await transaction.commit();
             
-            console.log('\n✅ Seeder completed successfully!');
+            console.log('\nâœ… Seeder completed successfully!');
             console.log('='.repeat(50));
 
             return {
@@ -352,30 +352,30 @@ export class SeederService {
                     reviews: reviews.length
                 }
             };
-        } catch (error) {
+        } catch (error: any) {
             await transaction.rollback();
-            console.error('\n❌ Seeding failed:', error.message);
+            console.error('\nâŒ Seeding failed:', error.message);
             console.error('Error details:', error);
             throw new BadRequestException(`Seed Failed: ${error.message}`);
         }
     }
 
-    // Method để clear tất cả data (useful cho testing)
-    // Sửa lại đoạn code clearAllData trong file seeder.service.ts
+    // Method Ä‘á»ƒ clear táº¥t cáº£ data (useful cho testing)
+    // Sá»­a láº¡i Ä‘oáº¡n code clearAllData trong file seeder.service.ts
 
     async clearAllData() {
         const transaction = await this.sequelize.transaction();
 
         try {
-            console.log('🗑️  Clearing all data...\n');
+            console.log('ðŸ—‘ï¸  Clearing all data...\n');
 
-            // Sử dụng option: { truncate: true, cascade: true, restartIdentity: true }
-            // restartIdentity: true -> Reset ID về 1 (Chỉ work tốt trên Postgres)
-            // cascade: true -> Xóa luôn dữ liệu bảng con liên quan (đỡ phải xóa ngược từng bảng)
+            // Sá»­ dá»¥ng option: { truncate: true, cascade: true, restartIdentity: true }
+            // restartIdentity: true -> Reset ID vá» 1 (Chá»‰ work tá»‘t trÃªn Postgres)
+            // cascade: true -> XÃ³a luÃ´n dá»¯ liá»‡u báº£ng con liÃªn quan (Ä‘á»¡ pháº£i xÃ³a ngÆ°á»£c tá»«ng báº£ng)
             
-            // Xóa theo thứ tự để an toàn, nhưng quan trọng nhất là các bảng cha (Users, Categories...) cần restartIdentity
+            // XÃ³a theo thá»© tá»± Ä‘á»ƒ an toÃ n, nhÆ°ng quan trá»ng nháº¥t lÃ  cÃ¡c báº£ng cha (Users, Categories...) cáº§n restartIdentity
             
-            // Xóa các bảng phụ trước (hoặc dùng cascade ở bảng cha cũng được, nhưng viết rõ cho an toàn)
+            // XÃ³a cÃ¡c báº£ng phá»¥ trÆ°á»›c (hoáº·c dÃ¹ng cascade á»Ÿ báº£ng cha cÅ©ng Ä‘Æ°á»£c, nhÆ°ng viáº¿t rÃµ cho an toÃ n)
             await this.reviewsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.orderItemIngredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.orderItemsModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
@@ -397,19 +397,19 @@ export class SeederService {
             await this.productVariantModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.ingredientModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             
-            // QUAN TRỌNG: Các bảng này được tham chiếu bởi bảng khác, cần reset ID về 1
+            // QUAN TRá»ŒNG: CÃ¡c báº£ng nÃ y Ä‘Æ°á»£c tham chiáº¿u bá»Ÿi báº£ng khÃ¡c, cáº§n reset ID vá» 1
             await this.productModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.addressModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.categoryModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
             await this.userModel.destroy({ truncate: true, cascade: true, restartIdentity: true, force: true, transaction });
 
             await transaction.commit();
-            console.log('✅ All data cleared and IDs reset!\n');
+            console.log('âœ… All data cleared and IDs reset!\n');
 
             return { message: "All data cleared successfully!" };
-        } catch (error) {
+        } catch (error: any) {
             await transaction.rollback();
-            console.error('❌ Clear data failed:', error);
+            console.error('âŒ Clear data failed:', error);
             throw new BadRequestException(`Clear data failed: ${error.message}`);
         }
     }

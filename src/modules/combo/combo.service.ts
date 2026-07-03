@@ -1,4 +1,4 @@
-import { ComboItem } from '@/models/combo-item.model';
+﻿import { ComboItem } from '@/models/combo-item.model';
 import { Combo } from '@/models/combo.model';
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
@@ -68,7 +68,7 @@ export class ComboService {
             await transaction.commit()
             await newCombo.reload()
             return newCombo
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(error)
             await transaction.rollback()
             throw new BadGatewayException(error.message)
@@ -89,12 +89,12 @@ export class ComboService {
             search,
         } = query;
 
-        // Kiểm tra xem có yêu cầu phân trang không
+        // Kiá»ƒm tra xem cÃ³ yÃªu cáº§u phÃ¢n trang khÃ´ng
         const hasPagination = page !== undefined && limit !== undefined;
 
-        // 1. Xây dựng điều kiện lọc (WHERE)
+        // 1. XÃ¢y dá»±ng Ä‘iá»u kiá»‡n lá»c (WHERE)
         const where: any = {
-            isActive: true, // Chỉ lấy combo đang hoạt động
+            isActive: true, // Chá»‰ láº¥y combo Ä‘ang hoáº¡t Ä‘á»™ng
         };
 
         if (search) {
@@ -104,23 +104,23 @@ export class ComboService {
             ];
         }
 
-        // 2. Xây dựng thứ tự sắp xếp (ORDER)
+        // 2. XÃ¢y dá»±ng thá»© tá»± sáº¯p xáº¿p (ORDER)
         const orderArray: any[] = [
-            ['isFeatured', 'DESC'], // Ưu tiên Combo nổi bật lên đầu
+            ['isFeatured', 'DESC'], // Æ¯u tiÃªn Combo ná»•i báº­t lÃªn Ä‘áº§u
         ];
 
         if (sortBy && sortOrder) {
             orderArray.push([sortBy, sortOrder.toUpperCase()]);
         } else {
-            orderArray.push(['createdAt', 'DESC']); // Mặc định mới nhất lên trước
+            orderArray.push(['createdAt', 'DESC']); // Máº·c Ä‘á»‹nh má»›i nháº¥t lÃªn trÆ°á»›c
         }
 
-        // 3. Cấu hình Query
+        // 3. Cáº¥u hÃ¬nh Query
         const queryOptions: any = {
             where,
             order: orderArray,
             attributes: {
-                exclude: ['categoryId'] // Không lấy categoryId, nhưng VẪN LẤY price và discountPercentage
+                exclude: ['categoryId'] // KhÃ´ng láº¥y categoryId, nhÆ°ng VáºªN Láº¤Y price vÃ  discountPercentage
             },
             distinct: true,
         };
@@ -131,17 +131,17 @@ export class ComboService {
             queryOptions.offset = offset;
         }
 
-        // 4. Thực thi Query
+        // 4. Thá»±c thi Query
         const { count, rows: combos } = await this.comboModel.findAndCountAll(queryOptions);
 
-        // 5. Xử lý dữ liệu trả về (Tính salePrice)
+        // 5. Xá»­ lÃ½ dá»¯ liá»‡u tráº£ vá» (TÃ­nh salePrice)
         const formattedCombos = combos.map(combo => {
             const plainData = combo.get({ plain: true });
 
             const originalPrice = plainData.price;
             const discount = plainData.discountPercentage || 0;
 
-            // Tính giá sau giảm (salePrice)
+            // TÃ­nh giÃ¡ sau giáº£m (salePrice)
             let salePrice = originalPrice;
             if (discount > 0) {
                 salePrice = originalPrice * (1 - discount / 100);
@@ -149,11 +149,11 @@ export class ComboService {
 
             return {
                 ...plainData,
-                salePrice: Math.ceil(salePrice / 1000) * 1000 // Làm tròn thành số nguyên
+                salePrice: Math.ceil(salePrice / 1000) * 1000 // LÃ m trÃ²n thÃ nh sá»‘ nguyÃªn
             };
         });
 
-        // 6. Trả về kết quả (Kèm Meta phân trang nếu có)
+        // 6. Tráº£ vá» káº¿t quáº£ (KÃ¨m Meta phÃ¢n trang náº¿u cÃ³)
         if (hasPagination) {
             const totalPages = Math.ceil(count / limit);
             return {
@@ -167,7 +167,7 @@ export class ComboService {
             };
         }
 
-        // Trả về kết quả (Không phân trang)
+        // Tráº£ vá» káº¿t quáº£ (KhÃ´ng phÃ¢n trang)
         return {
             data: formattedCombos,
             meta: {
@@ -179,13 +179,13 @@ export class ComboService {
 
     async getComboById(id: number) {
         const combo = await this.comboModel.findByPk(id, {
-            // ✅ 1. Thêm 'discountPercentage' vào danh sách lấy về
+            // âœ… 1. ThÃªm 'discountPercentage' vÃ o danh sÃ¡ch láº¥y vá»
             attributes: ['id', 'name', 'price', 'description', 'imageUrl', 'discountPercentage'],
             include: [
                 {
                     model: this.comboItemModel,
                     as: 'items',
-                    // 🔥 QUAN TRỌNG: Giữ separate: true để tối ưu query, tránh lỗi timeout
+                    // ðŸ”¥ QUAN TRá»ŒNG: Giá»¯ separate: true Ä‘á»ƒ tá»‘i Æ°u query, trÃ¡nh lá»—i timeout
                     separate: true,
                     attributes: {
                         exclude: ['createdAt', 'updatedAt', 'comboId', 'productId', 'productVariantId', 'quantity']
@@ -219,7 +219,7 @@ export class ComboService {
 
         if (!combo) return null;
 
-        // ✅ 2. Xử lý tính toán salePrice
+        // âœ… 2. Xá»­ lÃ½ tÃ­nh toÃ¡n salePrice
         const plainData = combo.get({ plain: true });
         
         const originalPrice = plainData.price;

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order } from '@/models';
 import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
@@ -87,7 +87,7 @@ export class SepayWebhookService {
 
             this.logger.log(`[NOTIFICATION SENT] ${orderNumber}`);
 
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`[PROCESS ERROR] ${orderNumber}: ${error.message}`);
             throw error;
         } finally {
