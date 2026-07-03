@@ -1,6 +1,5 @@
-import { ingredients } from './../seeder/data/data';
 import { Ingredient } from '@/models';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { GetIngredientPricesDto } from './dto/get-ingredient-prices.dto';

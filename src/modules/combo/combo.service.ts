@@ -3,7 +3,7 @@ import { Combo } from '@/models/combo.model';
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateComboDto } from './dto/create-combo.dto';
-import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
+import { Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { CategoryService } from '../category/category.service';
 import { Helper } from '@/utils/helper';
 import { Sequelize } from 'sequelize-typescript';
@@ -15,7 +15,6 @@ export class ComboService {
     constructor(
         @InjectModel(Combo) private readonly comboModel: typeof Combo,
         @InjectModel(ComboItem) private readonly comboItemModel: typeof ComboItem,
-        @InjectModel(Category) private readonly categoryModel: typeof Category,
         @InjectModel(Product) private readonly productModel: typeof Product,
         @InjectModel(ProductVariant) private readonly productVariantModel: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly productIngredientModel: typeof ProductIngredient,

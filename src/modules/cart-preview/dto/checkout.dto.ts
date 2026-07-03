@@ -1,4 +1,4 @@
-import { NumberNotRequired, NumberRequired, StringNotRequired } from "@/common/decorators"
+import { NumberNotRequired, StringNotRequired } from "@/common/decorators"
 import { Type } from "class-transformer"
 import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator"
 
@@ -6,7 +6,7 @@ export class CheckoutCaculateDto {
     @IsArray()
     @IsNumber({}, { each: true })
     @Type(() => Number)
-    cartItemIds: number[]
+    cartItemIds!: number[]
 
     @IsArray()
     @IsNumber({}, { each: true })
@@ -38,25 +38,25 @@ export class CheckoutCaculateDto {
 export class TemporaryAddressDto {
     @IsNumber()
     @Type(() => Number)
-    latitude: number;
+    latitude!: number;
 
     @Type(() => Number)
     @IsNumber()
-    longitude: number;
+    longitude!: number;
 
     @Type(() => String)
     @IsString()
-    recipientName: string;
+    recipientName!: string;
 
     @Type(() => String)
     @IsString()
-    recipientPhone: string;
+    recipientPhone!: string;
 
     @IsString()
     @Type(() => String)
-    city: string;
+    city!: string;
 
     @IsString()
     @Type(() => String)
-    district: string;
+    district!: string;
 }

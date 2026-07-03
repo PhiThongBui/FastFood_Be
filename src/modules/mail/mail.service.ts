@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 
@@ -14,7 +14,7 @@ export class MailService {
     // ... existing methods
 
     /**
-     * â­ Gá»­i email thÃ´ng bÃ¡o order bá»‹ há»§y
+     * ⭐ Gửi email thông báo order bị hủy
      */
     async sendOrderCancellationEmail(
         userEmail: string,
@@ -36,7 +36,7 @@ export class MailService {
 
             await this.mailerService.sendMail({
                 to: userEmail,
-                subject: `ÄÆ¡n HÃ ng ${orderNumber} ÄÃ£ Bá»‹ Há»§y - ${appName}`,
+                subject: `Đơn Hàng ${orderNumber} Đã Bị Hủy - ${appName}`,
                 template: 'order-cancelled',
                 context: {
                     appName,
@@ -54,11 +54,11 @@ export class MailService {
                 },
             });
 
-            this.logger.log(`âœ… Order cancellation email sent to ${userEmail}`);
+            this.logger.log(`✅ Order cancellation email sent to ${userEmail}`);
 
         } catch (error: any) {
             this.logger.error(
-                `âŒ Failed to send order cancellation email: ${error.message}`
+                `❌ Failed to send order cancellation email: ${error.message}`
             );
             throw error;
         }
@@ -71,12 +71,12 @@ export class MailService {
     const companyAddress = this.configService.get('COMPANY_ADDRESS');
     const companyPhone = this.configService.get('COMPANY_PHONE');
     const currentYear = new Date().getFullYear();
-    const expiryTime = 5; // 5 phÃºt
+    const expiryTime = 5; // 5 phút
 
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: `XÃ¡c thá»±c tÃ i khoáº£n - ${appName}`,
+        subject: `Xác thực tài khoản - ${appName}`,
         template: 'verifyRegistation',
         context: {
           appName,
@@ -99,7 +99,7 @@ export class MailService {
   }
 
     /**
-     * â­ Helper: Format datetime
+     * ⭐ Helper: Format datetime
      */
     private formatDateTime(date: Date): string {
         const options: Intl.DateTimeFormatOptions = {
@@ -112,15 +112,5 @@ export class MailService {
             timeZone: 'Asia/Ho_Chi_Minh',
         };
         return date.toLocaleString('vi-VN', options);
-    }
-
-    /**
-     * â­ Format currency
-     */
-    private formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(amount);
     }
 }

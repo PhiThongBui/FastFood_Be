@@ -6,7 +6,6 @@ import { CartItemComboOption, CartItemComboOptionIngredient, CartItems, CartItem
 import { ProductModule } from '../product/product.module';
 import { ProductVariantModule } from '../product-variant/product-variant.module';
 import { CartModule } from '../cart/cart.module';
-import { CartItemIngredientService } from '../cart-item-ingredient/cart-item-ingredient.service';
 import { CartItemIngredientModule } from '../cart-item-ingredient/cart-item-ingredient.module';
 import { CartPreviewModule } from '../cart-preview/cart-preview.module';
 

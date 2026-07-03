@@ -1,17 +1,13 @@
-import { ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { ComboItem, Product, ProductVariant } from '@/models';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class ProductVariantService {
   constructor(
     @InjectModel(Product) private readonly modelProduct: typeof Product,
     @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
-    @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
-    @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
     @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
-    private readonly sequelize: Sequelize
   ) { }
 
   async findOneProductVariant(idProductVariant: number, idProduct: number) {

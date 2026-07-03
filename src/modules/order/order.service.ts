@@ -26,8 +26,6 @@ export class OrderService {
         @InjectModel(Order) private readonly orderModel: typeof Order,
         @InjectModel(OrderItems) private readonly orderItemsModel: typeof OrderItems,
         @InjectModel(OrderItemIngredient) private readonly orderItemsIngredientModel: typeof OrderItemIngredient,
-        @InjectModel(OrderItemComboOption) private readonly orderItemComboOptionModel: typeof OrderItemComboOption,
-        @InjectModel(OrderItemComboOptionIngredient) private readonly orderItemComboOptionIngredientModel: typeof OrderItemComboOptionIngredient,
         @InjectModel(Address) private readonly addressModel: typeof Address,
         @InjectModel(ProductVariant) private readonly productVariantModel: typeof ProductVariant,
         @InjectModel(Product) private readonly productModel: typeof Product,

@@ -1,14 +1,10 @@
-﻿import { actionUpdateCartItem } from './types/cartItem.type';
-import { log } from 'node:console';
+import { actionUpdateCartItem } from './types/cartItem.type';
 import { CartItemComboOption, CartItemComboOptionIngredient, CartItems, CartItemsIngredient, Carts, Combo, ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadGatewayException, BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { ComboOptionDto, CreateCartItemDto } from './dto/cart-item.dto';
-import { ProductService } from '../product/product.service';
-import { ProductVariantService } from '../product-variant/product-variant.service';
 import { CartService } from '../cart/cart.service';
-import { CartItemIngredientService } from '../cart-item-ingredient/cart-item-ingredient.service';
 import * as _ from 'lodash';
 import { Helper } from '@/utils/helper';
 import { UPDATE_CART_ITEM_TYPE, UpdateCartItemDto } from './dto/update-cart-item.dto.ts';
@@ -57,9 +53,6 @@ export class CartItemService {
         @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
         @InjectModel(CartItemComboOption) private readonly modelCartItemComboOption: typeof CartItemComboOption,
         @InjectModel(CartItemComboOptionIngredient) private readonly modelCartItemComboOptionIngredient: typeof CartItemComboOptionIngredient,
-        private readonly productService: ProductService,
-        private readonly cartItemIngredientSerivce: CartItemIngredientService,
-        private readonly productVariantService: ProductVariantService,
         private readonly cartService: CartService,
         private readonly cartPreviewService: CartPreviewService,
 
@@ -82,7 +75,7 @@ export class CartItemService {
 
         try {
             if (quantity <= 0) {
-                throw new BadGatewayException('Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0!!!');
+                throw new BadGatewayException('Số lượng phải lớn hơn 0!!!');
             }
 
             const isCombo = !!comboId;
@@ -94,10 +87,10 @@ export class CartItemService {
             // 1. VALIDATION & PREPARATION
             // ==========================================
             if (isCombo) {
-                if (!comboId) throw new BadGatewayException('Thiáº¿u thÃ´ng tin Combo ID!');
+                if (!comboId) throw new BadGatewayException('Thiếu thông tin Combo ID!');
 
                 const existedCombo = await this.modelCombo.findByPk(comboId, { transaction });
-                if (!existedCombo) throw new BadGatewayException('Combo khÃ´ng tá»“n táº¡i!');
+                if (!existedCombo) throw new BadGatewayException('Combo không tồn tại!');
 
                 if (comboOptions && comboOptions.length > 0) {
                     finalComboOptions = await this.normalizeComboOptionsForCart(comboId, comboOptions, transaction);
@@ -105,20 +98,20 @@ export class CartItemService {
             }
             else {
                 if (!productId || !productVariantId) {
-                    throw new BadGatewayException('Thiáº¿u thÃ´ng tin sáº£n pháº©m!');
+                    throw new BadGatewayException('Thiếu thông tin sản phẩm!');
                 }
                 const existedProduct = await this.modelProduct.findByPk(productId, { transaction });
-                if (existedProduct?.isActive === false) throw new BadGatewayException('Sáº£n pháº©m Ä‘Ã£ ngÆ°ng kinh doanh!');
-                if (!existedProduct) throw new BadGatewayException('Sáº£n pháº©m khÃ´ng tá»“n táº¡i!');
+                if (existedProduct?.isActive === false) throw new BadGatewayException('Sản phẩm đã ngưng kinh doanh!');
+                if (!existedProduct) throw new BadGatewayException('Sản phẩm không tồn tại!');
 
                 const existedProductVariant = await this.modelProductVariant.findByPk(productVariantId, { transaction });
-                if (existedProductVariant?.isActive === false) throw new BadGatewayException('Biáº¿n thá»ƒ Ä‘Ã£ ngÆ°ng kinh doanh!');
+                if (existedProductVariant?.isActive === false) throw new BadGatewayException('Biến thể đã ngưng kinh doanh!');
                 if (existedProductVariant && Number(existedProductVariant.productId) !== Number(productId)) {
                     throw new BadRequestException(
-                        `Biáº¿n thá»ƒ ${productVariantId} khÃ´ng thuá»™c sáº£n pháº©m ${productId}! (DB: ${existedProductVariant.productId})`
+                        `Biến thể ${productVariantId} không thuộc sản phẩm ${productId}! (DB: ${existedProductVariant.productId})`
                     );
                 }
-                if (!existedProductVariant) throw new BadGatewayException('Biáº¿n thá»ƒ khÃ´ng tá»“n táº¡i!');
+                if (!existedProductVariant) throw new BadGatewayException('Biến thể không tồn tại!');
 
                 finalSingleProductOptions = await this.normalizeSingleProductOptionsForCart(
                     productId,
@@ -128,13 +121,13 @@ export class CartItemService {
             }
 
             // ==========================================
-            // 2. Láº¤Y GIá»Ž HÃ€NG
+            // 2. LẤY GIỎ HÀNG
             // ==========================================
             const cart = await this.cartService.getCartByContext(sessionId, userId, transaction);
             let matchingCartItem: CartItems | null;
 
             // ==========================================
-            // 3. TÃŒM KIáº¾M TRÃ™NG Láº¶P
+            // 3. TÌM KIẾM TRÙNG LẶP
             // ==========================================
             if (isCombo) {
                 matchingCartItem = await this.matchingComboCartItem(
@@ -153,10 +146,10 @@ export class CartItemService {
             }
 
             // ==========================================
-            // 4. Xá»¬ LÃ Káº¾T QUáº¢
+            // 4. XỬ LÝ KẾT QUẢ
             // ==========================================
             if (matchingCartItem) {
-                // === TRÆ¯á»œNG Há»¢P A: ÄÃƒ CÃ“ -> TÄ‚NG Sá» LÆ¯á»¢NG ===
+                // === TRƯỜNG HỢP A: ĐÃ CÓ -> TĂNG SỐ LƯỢNG ===
                 await matchingCartItem.increment('quantity', {
                     by: quantity,
                     transaction
@@ -199,12 +192,12 @@ export class CartItemService {
 
                 await transaction.commit();
                 return {
-                    message: 'ÄÃ£ tÄƒng sá»‘ lÆ°á»£ng thÃ nh cÃ´ng!',
+                    message: 'Đã tăng số lượng thành công!',
                     data: matchingCartItem
                 };
             }
             else {
-                // === TRÆ¯á»œNG Há»¢P B: CHÆ¯A CÃ“ -> Táº O Má»šI ===
+                // === TRƯỜNG HỢP B: CHƯA CÓ -> TẠO MỚI ===
 
                 const newCartItem = await this.modelCartItems.create({
                     cartId: cart.id,
@@ -252,7 +245,7 @@ export class CartItemService {
 
                 await transaction.commit()
                 return {
-                    message: 'ThÃªm vÃ o giá» hÃ ng thÃ nh cÃ´ng!',
+                    message: 'Thêm vào giỏ hàng thành công!',
                     data: newCartItem
                 };
             }
@@ -266,7 +259,7 @@ export class CartItemService {
         }
     }
     /**
-     * TÃ¬m cart item mÃ³n láº» khá»›p chÃ­nh xÃ¡c
+     * Tìm cart item món lẻ khớp chính xác
      */
     async matchingRegularCartItem(
         cartId: number,
@@ -287,7 +280,7 @@ export class CartItemService {
 
         if (candidates.length === 0) return null;
 
-        // Payload gá»­i lÃªn lÃ  cáº¥u hÃ¬nh cho 1 sáº£n pháº©m (VD: 2 Cheese)
+        // Payload gửi lên là cấu hình cho 1 sản phẩm (VD: 2 Cheese)
         const normalizedPayload = this.normalizeIngredients(ingredients);
         const payloadSignature = JSON.stringify(normalizedPayload);
 
@@ -311,8 +304,8 @@ export class CartItemService {
 
         return ingredients
             .map(ing => ({
-                ingredientId: Number(ing.ingredientId), // Ã‰p kiá»ƒu Number
-                quantity: Number(ing.quantity),         // Ã‰p kiá»ƒu Number
+                ingredientId: Number(ing.ingredientId), // Ép kiểu Number
+                quantity: Number(ing.quantity),         // Ép kiểu Number
                 type: String(ing.type) as 'ADD' | 'REMOVE'
             }))
             .sort((a, b) => {
@@ -369,21 +362,21 @@ export class CartItemService {
             const key = `${ingredientId}:${type}`;
 
             if (seenKeys.has(key)) {
-                throw new BadRequestException(`Duplicate ingredient ${ingredientId} (${type}) trong cÃ¹ng sáº£n pháº©m!`);
+                throw new BadRequestException(`Duplicate ingredient ${ingredientId} (${type}) trong cùng sản phẩm!`);
             }
             seenKeys.add(key);
 
             if (!existingIngredientIds.has(ingredientId)) {
-                throw new BadRequestException(`Ingredient ${ingredientId} khÃ´ng tá»“n táº¡i!`);
+                throw new BadRequestException(`Ingredient ${ingredientId} không tồn tại!`);
             }
             if (!allowedIngredientIds.has(ingredientId)) {
-                throw new BadRequestException(`Ingredient ${ingredientId} khÃ´ng há»£p lá»‡ cho sáº£n pháº©m ${productId}!`);
+                throw new BadRequestException(`Ingredient ${ingredientId} không hợp lệ cho sản phẩm ${productId}!`);
             }
             if (!['ADD', 'REMOVE'].includes(type)) {
-                throw new BadRequestException(`Type ingredient khÃ´ng há»£p lá»‡!`);
+                throw new BadRequestException(`Type ingredient không hợp lệ!`);
             }
             if (quantity <= 0) {
-                throw new BadRequestException('Sá»‘ lÆ°á»£ng ingredient pháº£i lá»›n hÆ¡n 0!');
+                throw new BadRequestException('Số lượng ingredient phải lớn hơn 0!');
             }
 
             return {
@@ -396,7 +389,7 @@ export class CartItemService {
         return this.normalizeIngredients(normalizedOptions);
     }
     /**
-     * TÃ¬m combo cart item khá»›p chÃ­nh xÃ¡c
+     * Tìm combo cart item khớp chính xác
      */
     async matchingComboCartItem(
         cartId: number,
@@ -449,25 +442,25 @@ export class CartItemService {
         return null
     }
     /**
- * Normalize combo options Ä‘á»ƒ so sÃ¡nh (deep sort)
+ * Normalize combo options để so sánh (deep sort)
  */
     private normalizeComboOptions(options: any[]): any[] {
         if (!options || !Array.isArray(options) || options.length === 0) return [];
 
-        // 1. Deep copy Ä‘á»ƒ trÃ¡nh mutate dá»¯ liá»‡u gá»‘c
+        // 1. Deep copy để tránh mutate dữ liệu gốc
         const clonedOptions = JSON.parse(JSON.stringify(options));
 
         return clonedOptions
             .map(opt => {
-                // Chuáº©n hÃ³a Ingredients: LuÃ´n tráº£ vá» máº£ng (empty náº¿u khÃ´ng cÃ³)
+                // Chuẩn hóa Ingredients: Luôn trả về mảng (empty nếu không có)
                 const rawIngredients = Array.isArray(opt.ingredients) ? opt.ingredients : [];
 
                 const normalizedIngredients = rawIngredients
-                    .filter(ing => ing && ing.ingredientId) // Lá»c rÃ¡c
+                    .filter(ing => ing && ing.ingredientId) // Lọc rác
                     .map(ing => ({
-                        ingredientId: Number(ing.ingredientId), // Ã‰p kiá»ƒu Number cho cháº¯c
+                        ingredientId: Number(ing.ingredientId), // Ép kiểu Number cho chắc
                         quantity: Number(ing.quantity),
-                        type: String(ing.type) // Ã‰p kiá»ƒu String
+                        type: String(ing.type) // Ép kiểu String
                     }))
                     .sort((a, b) => {
                         if (a.ingredientId !== b.ingredientId) return a.ingredientId - b.ingredientId;
@@ -479,7 +472,7 @@ export class CartItemService {
                     slotIndex: Number(opt.slotIndex || 0),
                     productId: Number(opt.productId),
                     productVariantId: Number(opt.productVariantId),
-                    ingredients: normalizedIngredients // LuÃ´n luÃ´n cÃ³ key ingredients
+                    ingredients: normalizedIngredients // Luôn luôn có key ingredients
                 };
             })
             .sort((a, b) => {
@@ -489,119 +482,6 @@ export class CartItemService {
                 if (a.productVariantId !== b.productVariantId) return a.productVariantId - b.productVariantId;
                 return 0;
             });
-    }
-
-    private async normalizeComboOptionsForCartLegacyUnused(
-        comboId: number,
-        options: ComboOptionDto[],
-        transaction: any
-    ): Promise<NormalizedComboCartOption[]> {
-        if (!options || options.length === 0) return [];
-
-        const variantIds = options.map(option => Number(option.productVariantId));
-        const allIngredientIds = options.flatMap(option =>
-            (option.ingredients || []).map(ingredient => Number(ingredient.ingredientId))
-        );
-
-        const [variants, ingredients] = await Promise.all([
-            this.modelProductVariant.findAll({
-                where: { id: variantIds },
-                transaction
-            }),
-            allIngredientIds.length > 0
-                ? this.modelIngredient.findAll({
-                    where: { id: allIngredientIds },
-                    transaction
-                })
-                : []
-        ]);
-
-        const variantMap = new Map(variants.map(variant => [Number(variant.id), variant]));
-        const ingredientMap = new Set(ingredients.map(ingredient => Number(ingredient.id)));
-        const canonicalProductIds = Array.from(new Set(variants.map(variant => Number(variant.productId))));
-        const products = await this.modelProduct.findAll({
-            where: { id: canonicalProductIds },
-            attributes: ['id', 'isActive'],
-            transaction
-        });
-        const productMap = new Map(products.map(product => [Number(product.id), product]));
-
-        const comboSlots = await this.getComboSlots(comboId, transaction);
-        const usedSlotKeys = new Set<string>();
-        const normalizedOptions: NormalizedComboCartOption[] = [];
-
-        for (const [index, option] of options.entries()) {
-            const variantId = Number(option.productVariantId);
-            const variant = variantMap.get(variantId);
-
-            if (!variant) {
-                throw new BadRequestException(`BiÃ¡ÂºÂ¿n thÃ¡Â»Æ’ ${variantId} khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i!`);
-            }
-            if (variant.isActive === false) {
-                throw new BadRequestException(`BiÃ¡ÂºÂ¿n thÃ¡Â»Æ’ ${variantId} Ã„â€˜ÃƒÂ£ ngÃ†Â°ng kinh doanh!`);
-            }
-            if (false) {
-                throw new BadRequestException(`BiÃ¡ÂºÂ¿n thÃ¡Â»Æ’ ${variantId} khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡ Ã„â€˜Ã¡Â»Æ’ dÃƒÂ¹ng trong combo!`);
-            }
-
-            const canonicalProductId = Number(variant.productId);
-            const requestedProductId = Number(option.productId);
-            const product = productMap.get(canonicalProductId);
-            if (!product) {
-                throw new BadRequestException(`SÃ¡ÂºÂ£n phÃ¡ÂºÂ©m ${canonicalProductId} khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i!`);
-            }
-            if (product.isActive === false) {
-                throw new BadRequestException(`SÃ¡ÂºÂ£n phÃ¡ÂºÂ©m ${canonicalProductId} Ã„â€˜ÃƒÂ£ ngÃ†Â°ng kinh doanh!`);
-            }
-
-            const seenIngredientIds = new Set<number>();
-            const normalizedIngredients = (option.ingredients || []).map(ingredient => {
-                const ingredientId = Number(ingredient.ingredientId);
-                const quantity = Number(ingredient.quantity);
-                const type = String(ingredient.type) as 'ADD' | 'REMOVE';
-
-                if (seenIngredientIds.has(ingredientId)) {
-                    throw new BadRequestException(`Duplicate ingredient ${ingredientId} trong mÃ¡Â»â„¢t mÃƒÂ³n!`);
-                }
-                seenIngredientIds.add(ingredientId);
-
-                if (!ingredientMap.has(ingredientId)) {
-                    throw new BadRequestException(`Ingredient ${ingredientId} khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i!`);
-                }
-                if (!['ADD', 'REMOVE'].includes(type)) {
-                    throw new BadRequestException(`Type ingredient khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡!`);
-                }
-                if (quantity <= 0) {
-                    throw new BadRequestException(`SÃ¡Â»â€˜ lÃ†Â°Ã¡Â»Â£ng ingredient phÃ¡ÂºÂ£i lÃ¡Â»â€ºn hÃ†Â¡n 0!`);
-                }
-
-                return {
-                    ingredientId,
-                    quantity,
-                    type
-                };
-            });
-
-            const slot = this.resolveComboSlotLegacyUnused(comboSlots, option, variant, index, usedSlotKeys, requestedProductId);
-            usedSlotKeys.add(this.comboSlotKey(slot.comboItemId, slot.slotIndex));
-
-            const isDefaultSelection =
-                slot.productId === canonicalProductId &&
-                slot.productVariantId === variantId &&
-                normalizedIngredients.length === 0;
-
-            if (!isDefaultSelection) {
-                normalizedOptions.push({
-                    comboItemId: slot.comboItemId,
-                    slotIndex: slot.slotIndex,
-                    productId: canonicalProductId,
-                    productVariantId: variantId,
-                    ingredients: normalizedIngredients
-                });
-            }
-        }
-
-        return normalizedOptions;
     }
 
     private comboSlotKey(comboItemId: number, slotIndex: number): string {
@@ -629,52 +509,6 @@ export class CartItemService {
         }
 
         return slots;
-    }
-
-    private resolveComboSlotLegacyUnused(
-        slots: ComboSlot[],
-        option: ComboOptionDto,
-        variant: ProductVariant,
-        optionIndex: number,
-        usedSlotKeys: Set<string>,
-        requestedProductId: number
-    ): ComboSlot {
-        const comboItemId = Number(option.comboItemId || 0);
-        const slotIndex = Number(option.slotIndex || 0);
-
-        if (comboItemId > 0) {
-            const explicitSlot = slots.find(slot => slot.comboItemId === comboItemId && slot.slotIndex === slotIndex);
-            if (!explicitSlot) {
-                throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} khÃ´ng há»£p lá»‡!`);
-            }
-
-            const key = this.comboSlotKey(explicitSlot.comboItemId, explicitSlot.slotIndex);
-            if (usedSlotKeys.has(key)) {
-                throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} bá»‹ trÃ¹ng!`);
-            }
-
-            return explicitSlot;
-        }
-
-        const availableSlots = slots.filter(slot => !usedSlotKeys.has(this.comboSlotKey(slot.comboItemId, slot.slotIndex)));
-        const exactDefaultSlot = availableSlots.find(slot =>
-            slot.productId === Number(variant.productId) &&
-            slot.productVariantId === Number(variant.id)
-        );
-        if (exactDefaultSlot) return exactDefaultSlot;
-
-        const requestedProductSlot = requestedProductId
-            ? availableSlots.find(slot => slot.productId === requestedProductId)
-            : null;
-        if (requestedProductSlot) return requestedProductSlot;
-
-        const indexSlot = availableSlots[optionIndex];
-        if (indexSlot) return indexSlot;
-
-        const firstSlot = availableSlots[0];
-        if (firstSlot) return firstSlot;
-
-        throw new BadRequestException('Cáº¥u hÃ¬nh combo khÃ´ng há»£p lá»‡!');
     }
 
     private async normalizeComboOptionsForCart(
@@ -738,24 +572,24 @@ export class CartItemService {
             const variant = variantMap.get(variantId);
 
             if (!variant) {
-                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} khÃ´ng tá»“n táº¡i!`);
+                throw new BadRequestException(`Biến thể ${variantId} không tồn tại!`);
             }
             if (variant.isActive === false) {
-                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} Ä‘Ã£ ngá»«ng kinh doanh!`);
+                throw new BadRequestException(`Biến thể ${variantId} đã ngừng kinh doanh!`);
             }
 
             const canonicalProductId = Number(variant.productId);
             const requestedProductId = Number(option.productId);
             if (requestedProductId !== canonicalProductId) {
-                throw new BadRequestException(`Biáº¿n thá»ƒ ${variantId} khÃ´ng thuá»™c sáº£n pháº©m ${requestedProductId}!`);
+                throw new BadRequestException(`Biến thể ${variantId} không thuộc sản phẩm ${requestedProductId}!`);
             }
 
             const product = productMap.get(canonicalProductId);
             if (!product) {
-                throw new BadRequestException(`Sáº£n pháº©m ${canonicalProductId} khÃ´ng tá»“n táº¡i!`);
+                throw new BadRequestException(`Sản phẩm ${canonicalProductId} không tồn tại!`);
             }
             if (product.isActive === false) {
-                throw new BadRequestException(`Sáº£n pháº©m ${canonicalProductId} Ä‘Ã£ ngá»«ng kinh doanh!`);
+                throw new BadRequestException(`Sản phẩm ${canonicalProductId} đã ngừng kinh doanh!`);
             }
 
             const allowedIngredientIds = allowedIngredientMap.get(canonicalProductId) || new Set<number>();
@@ -767,21 +601,21 @@ export class CartItemService {
                 const ingredientKey = `${ingredientId}:${type}`;
 
                 if (seenIngredientKeys.has(ingredientKey)) {
-                    throw new BadRequestException(`Duplicate ingredient ${ingredientId} (${type}) trong má»™t mÃ³n!`);
+                    throw new BadRequestException(`Duplicate ingredient ${ingredientId} (${type}) trong một món!`);
                 }
                 seenIngredientKeys.add(ingredientKey);
 
                 if (!ingredientMap.has(ingredientId)) {
-                    throw new BadRequestException(`Ingredient ${ingredientId} khÃ´ng tá»“n táº¡i!`);
+                    throw new BadRequestException(`Ingredient ${ingredientId} không tồn tại!`);
                 }
                 if (!allowedIngredientIds.has(ingredientId)) {
-                    throw new BadRequestException(`Ingredient ${ingredientId} khÃ´ng há»£p lá»‡ cho sáº£n pháº©m ${canonicalProductId}!`);
+                    throw new BadRequestException(`Ingredient ${ingredientId} không hợp lệ cho sản phẩm ${canonicalProductId}!`);
                 }
                 if (!['ADD', 'REMOVE'].includes(type)) {
-                    throw new BadRequestException(`Type ingredient khÃ´ng há»£p lá»‡!`);
+                    throw new BadRequestException(`Type ingredient không hợp lệ!`);
                 }
                 if (quantity <= 0) {
-                    throw new BadRequestException(`Sá»‘ lÆ°á»£ng ingredient pháº£i lá»›n hÆ¡n 0!`);
+                    throw new BadRequestException(`Số lượng ingredient phải lớn hơn 0!`);
                 }
 
                 return {
@@ -822,12 +656,12 @@ export class CartItemService {
         const slotIndex = Number(option.slotIndex);
         const explicitSlot = slots.find(slot => slot.comboItemId === comboItemId && slot.slotIndex === slotIndex);
         if (!explicitSlot) {
-            throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} khÃ´ng há»£p lá»‡!`);
+            throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} không hợp lệ!`);
         }
 
         const key = this.comboSlotKey(explicitSlot.comboItemId, explicitSlot.slotIndex);
         if (usedSlotKeys.has(key)) {
-            throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} bá»‹ trÃ¹ng!`);
+            throw new BadRequestException(`Combo item ${comboItemId} slot ${slotIndex} bị trùng!`);
         }
 
         return explicitSlot;
@@ -933,143 +767,6 @@ export class CartItemService {
         }));
     }
 
-    /**
-     * Validate cÃ¡c mÃ³n trong combo cÃ³ tá»“n táº¡i khÃ´ng
-     */
-    private async validateComboOptions(
-        options: ComboOptionDto[],
-        transaction: any
-    ): Promise<void> {
-        if (!options || options.length === 0) return;
-
-        // 1. Gom táº¥t cáº£ ID
-        const productIds = options.map(o => o.productId);
-        const variantIds = options.map(o => o.productVariantId);
-
-        const allIngredientIds: number[] = [];
-        options.forEach(opt => {
-            if (opt.ingredients) {
-                opt.ingredients.forEach(ing => allIngredientIds.push(ing.ingredientId));
-            }
-        });
-
-        // 2. Query song song
-        const [products, variants, ingredients] = await Promise.all([
-            this.modelProduct.findAll({
-                where: { id: productIds },
-                attributes: ['id'],
-                transaction
-            }),
-            this.modelProductVariant.findAll({
-                where: { id: variantIds },
-                // KhÃ´ng cáº§n attributes, láº¥y all Ä‘á»ƒ check productId
-                transaction
-            }),
-            allIngredientIds.length > 0
-                ? this.modelIngredient.findAll({ where: { id: allIngredientIds }, transaction })
-                : []
-        ]);
-
-        // 3. Convert sang Set/Map (Ã‰p kiá»ƒu Number cho Key Ä‘á»ƒ an toÃ n)
-        const productMap = new Set(products.map(p => Number(p.id)));
-        // Map: Key = VariantID, Value = Variant Instance
-        const variantMap = new Map(variants.map(v => [Number(v.id), v]));
-        const ingredientMap = new Set(ingredients.map(i => Number(i.id)));
-
-        // 4. Validate Logic
-        for (const option of options) {
-            // Ã‰p kiá»ƒu input vá» Number
-            const optProductId = Number(option.productId);
-            const optVariantId = Number(option.productVariantId);
-
-            // Check Product
-            if (!productMap.has(optProductId)) {
-                throw new BadRequestException(`Sáº£n pháº©m ${optProductId} khÃ´ng tá»“n táº¡i!`);
-            }
-
-            // Check Variant
-            const variant = variantMap.get(optVariantId);
-            if (!variant) {
-                throw new BadRequestException(`Biáº¿n thá»ƒ ${optVariantId} khÃ´ng tá»“n táº¡i!`);
-            }
-
-            // ðŸ”¥ FIX QUAN TRá»ŒNG: Ã‰p kiá»ƒu khi so sÃ¡nh productId
-            if (Number(variant.productId) !== optProductId) {
-                throw new BadRequestException(
-                    `Biáº¿n thá»ƒ ${optVariantId} khÃ´ng thuá»™c sáº£n pháº©m ${optProductId}! (DB: ${variant.productId})`
-                );
-            }
-
-            // Check Ingredients
-            if (option.ingredients && option.ingredients.length > 0) {
-                const tempIngIds = new Set();
-                for (const ing of option.ingredients) {
-                    const ingId = Number(ing.ingredientId);
-                    const ingQty = Number(ing.quantity);
-
-                    if (tempIngIds.has(ingId)) {
-                        throw new BadRequestException(`Duplicate ingredient ${ingId} trong má»™t mÃ³n!`);
-                    }
-                    tempIngIds.add(ingId);
-
-                    if (!ingredientMap.has(ingId)) {
-                        throw new BadRequestException(`Ingredient ${ingId} khÃ´ng tá»“n táº¡i!`);
-                    }
-
-                    if (!['ADD', 'REMOVE'].includes(ing.type)) {
-                        throw new BadRequestException(`Type ingredient khÃ´ng há»£p lá»‡!`);
-                    }
-                    if (ingQty <= 0) {
-                        throw new BadRequestException(`Sá»‘ lÆ°á»£ng ingredient pháº£i lá»›n hÆ¡n 0!`);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-      * ðŸ”¥ HÃ€M Má»šI: Sinh options máº·c Ä‘á»‹nh tá»« cáº¥u hÃ¬nh ComboItem trong DB
-      */
-    private async generateDefaultComboOptions(
-        comboId: number,
-        transaction: any
-    ): Promise<any[]> {
-        // 1. Láº¥y cáº¥u hÃ¬nh cÃ¡c mÃ³n trong combo
-        const comboItems = await this.modelComboItem.findAll({
-            where: { comboId },
-            transaction
-        });
-
-        if (!comboItems || comboItems.length === 0) {
-            throw new BadGatewayException('Combo nÃ y chÆ°a Ä‘Æ°á»£c cáº¥u hÃ¬nh mÃ³n Äƒn (Empty ComboItem)!');
-        }
-
-        const generatedOptions: any[] = [];
-
-        // 2. Map sang cáº¥u trÃºc JSON
-        for (const item of comboItems) {
-            // Quan trá»ng: Náº¿u quantity = 2 (VD: 2 lon Coca), ta pháº£i tÃ¡ch thÃ nh 2 object riÃªng biá»‡t
-            // Ä‘á»ƒ sau nÃ y khÃ¡ch cÃ³ thá»ƒ Ä‘á»•i 1 lon Coca thÃ nh Sprite, lon kia giá»¯ nguyÃªn.
-            const qty = item.quantity || 1;
-
-            for (let i = 0; i < qty; i++) {
-                generatedOptions.push({
-                    productId: item.productId,
-                    productVariantId: item.productVariantId, // Variant máº·c Ä‘á»‹nh (VD: Size M)
-                    ingredients: [] // Máº·c Ä‘á»‹nh khÃ´ng cÃ³ topping thÃªm
-                });
-            }
-        }
-
-        // 3. Sáº¯p xáº¿p Ä‘á»ƒ Ä‘áº£m báº£o tÃ­nh nháº¥t quÃ¡n khi so sÃ¡nh chuá»—i (Matching)
-        return generatedOptions.sort((a, b) => {
-            if (a.productId !== b.productId) return a.productId - b.productId;
-            return a.productVariantId - b.productVariantId;
-        });
-    }
-
-
-
     async increOrDecreQuantity(cartItemId: number, action: actionUpdateCartItem) {
         const transaction = await this.sequelize.transaction()
         try {
@@ -1078,7 +775,7 @@ export class CartItemService {
             })
 
             if (!cartItem) {
-                throw new BadGatewayException('Giá» hÃ ng khÃ³a chÆ°a Ä‘Æ°á»£c tÃ¬m tháº¥y!')
+                throw new BadGatewayException('Giỏ hàng khóa chưa được tìm thấy!')
             }
 
             const currentQuantity = Number(cartItem.dataValues.quantity || 1);
@@ -1111,7 +808,7 @@ export class CartItemService {
                 await transaction.commit()
 
                 return {
-                    message: 'ÄÃ£ tÄƒng sá»‘ lÆ°á»£ng thÃ nh cÃ´ng',
+                    message: 'Đã tăng số lượng thành công',
                     data: cartItem
                 }
             } else if (action === 'decrement') {
@@ -1126,7 +823,7 @@ export class CartItemService {
                     await transaction.commit()
 
                     return {
-                        message: 'ÄÃ£ xÃ³a sáº£n pháº©m thÃ nh cÃ´ng'
+                        message: 'Đã xóa sản phẩm thành công'
                     }
                 }
                 await cartItem.decrement('quantity', {
@@ -1156,7 +853,7 @@ export class CartItemService {
                 await transaction.commit()
 
                 return {
-                    message: 'ÄÃ£ giáº£m sá»‘ lÆ°á»£ng thÃ nh cÃ´ng',
+                    message: 'Đã giảm số lượng thành công',
                     data: cartItem
                 }
             }
@@ -1177,20 +874,20 @@ export class CartItemService {
             const cartItem = await this.modelCartItems.findByPk(cartItemId, { transaction })
 
             if (!cartItem) {
-                throw new NotFoundException('Cart item khÃ´ng tá»“n táº¡i!')
+                throw new NotFoundException('Cart item không tồn tại!')
             }
 
             const cart = await this.modelCarts.findByPk(cartItem.cartId, { transaction })
 
             if (!cart) {
-                throw new NotFoundException('Cart khÃ´ng tá»“n táº¡i!')
+                throw new NotFoundException('Cart không tồn tại!')
             }
 
             const isOwner = (userId && cart.userId === userId) ||
                 (sessionId && cart.sessionId === sessionId)
 
             if (!isOwner) {
-                throw new ForbiddenException('Báº¡n khÃ´ng cÃ³ quyá»n xÃ³a cart item nÃ y!')
+                throw new ForbiddenException('Bạn không có quyền xóa cart item này!')
             }
 
             await cartItem.destroy({
@@ -1199,7 +896,7 @@ export class CartItemService {
             await transaction.commit()
 
             return {
-                message: 'ÄÃ£ xÃ³a sáº£n pháº©m trong giá» hÃ ng'
+                message: 'Đã xóa sản phẩm trong giỏ hàng'
             }
         } catch (error: any) {
             console.log(error);
@@ -1214,7 +911,7 @@ export class CartItemService {
     // ========================================
 
     /**
-     * TÃ¬m cart item khá»›p chÃ­nh xÃ¡c vá»›i product + variant + ingredients
+     * Tìm cart item khớp chính xác với product + variant + ingredients
      */
     async matchingCartItem(cartId: number, productId: number, productVariantId: number, ingredientIds: number[]): Promise<CartItems | null> {
 
@@ -1249,7 +946,7 @@ export class CartItemService {
 
 
     /**
-     * TÃ¬m cart item cÃ³ cÃ¹ng productId + productVariantId nhÆ°ng KHÃ”NG cÃ³ ingredients
+     * Tìm cart item có cùng productId + productVariantId nhưng KHÔNG có ingredients
      */
     async findCartItemWithoutIngredients(
         cartId: number,
@@ -1277,14 +974,14 @@ export class CartItemService {
     };
 
     async mergerCart(sessionId: string, userId: number) {
-        // 1. DÃ¹ng transaction Ä‘á»ƒ Ä‘áº£m báº£o an toÃ n
+        // 1. Dùng transaction để đảm bảo an toàn
         const transaction = await this.sequelize.transaction();
 
         try {
             // ---------------------------------------------------------
-            // BÆ¯á»šC 1: Láº¤Y GUEST CART (KÃˆM FULL THÃ”NG TIN)
+            // BƯỚC 1: LẤY GUEST CART (KÈM FULL THÔNG TIN)
             // ---------------------------------------------------------
-            // QUAN TRá»ŒNG: Pháº£i include cáº£ CartItemsIngredient Ä‘á»ƒ check mÃ³n láº»
+            // QUAN TRỌNG: Phải include cả CartItemsIngredient để check món lẻ
             const guestCart = await this.modelCarts.findOne({
                 where: { sessionId: sessionId },
                 include: [
@@ -1302,33 +999,33 @@ export class CartItemService {
                 transaction
             });
 
-            // Náº¿u khÃ´ng cÃ³ giá» guest -> KhÃ´ng lÃ m gÃ¬ cáº£, return luÃ´n (Äá»«ng throw lá»—i)
-            // VÃ¬ user má»›i login cÃ³ thá»ƒ chÆ°a tá»«ng thÃªm gÃ¬ vÃ o giá»
+            // Nếu không có giỏ guest -> Không làm gì cả, return luôn (Đừng throw lỗi)
+            // Vì user mới login có thể chưa từng thêm gì vào giỏ
             if (!guestCart) {
                 await transaction.commit();
-                return { message: 'KhÃ´ng cÃ³ giá» hÃ ng khÃ¡ch Ä‘á»ƒ merge.' };
+                return { message: 'Không có giỏ hàng khách để merge.' };
             }
 
             const userCart = await this.cartService.getOrCreateUserCart(userId, transaction);
             const userCartId = userCart.dataValues.id;
 
             // ---------------------------------------------------------
-            // BÆ¯á»šC 2: DUYá»†T Tá»ªNG MÃ“N BÃŠN GUEST Äá»‚ Xá»¬ LÃ
+            // BƯỚC 2: DUYỆT TỪNG MÓN BÊN GUEST ĐỂ XỬ LÝ
             // ---------------------------------------------------------
             for (const guestItem of guestCart.dataValues.cartItems) {
                 let matchingUserItem: CartItems | null = null;
 
-                // --- TRÆ¯á»œNG Há»¢P A: COMBO ---
+                // --- TRƯỜNG HỢP A: COMBO ---
                 if (guestItem.comboId) {
-                    // Gá»i láº¡i hÃ m check trÃ¹ng Combo mÃ¬nh Ä‘Ã£ viáº¿t á»Ÿ CartItemService
-                    // (Giáº£ sá»­ báº¡n Ä‘ang á»Ÿ trong CartService, cáº§n inject CartItemService hoáº·c copy logic Ä‘Ã³ sang)
+                    // Gọi lại hàm check trùng Combo mình đã viết ở CartItemService
+                    // (Giả sử bạn đang ở trong CartService, cần inject CartItemService hoặc copy logic đó sang)
                     matchingUserItem = await this.matchingComboCartItem(
                         userCartId,
                         guestItem.comboId,
                         this.normalizeDbComboOptions(guestItem.comboOptions || [])
                     );
                 }
-                // --- TRÆ¯á»œNG Há»¢P B: MÃ“N Láºº ---
+                // --- TRƯỜNG HỢP B: MÓN LẺ ---
                 else if (guestItem.productId) {
                     const guestIngredientOptions = this.normalizeRegularIngredientsFromDb(
                         Number(guestItem.quantity || 1),
@@ -1345,25 +1042,25 @@ export class CartItemService {
                 }
 
                 // ---------------------------------------------------------
-                // BÆ¯á»šC 3: QUYáº¾T Äá»ŠNH MERGE HAY MOVE
+                // BƯỚC 3: QUYẾT ĐỊNH MERGE HAY MOVE
                 // ---------------------------------------------------------
 
                 if (matchingUserItem) {
-                    // === TÃŒNH HUá»NG 1: ÄÃƒ CÃ“ TRÃ™NG KHá»šP (MERGE) ===
+                    // === TÌNH HUỐNG 1: ĐÃ CÓ TRÙNG KHỚP (MERGE) ===
 
-                    // 1. Cá»™ng dá»“n sá»‘ lÆ°á»£ng vÃ o item cá»§a User
+                    // 1. Cộng dồn số lượng vào item của User
                     await matchingUserItem.increment('quantity', {
                         by: guestItem.quantity,
                         transaction
                     });
 
-                    // 2. Náº¿u lÃ  mÃ³n láº», pháº£i cá»™ng dá»“n cáº£ sá»‘ lÆ°á»£ng Topping trong báº£ng phá»¥
+                    // 2. Nếu là món lẻ, phải cộng dồn cả số lượng Topping trong bảng phụ
                     if (!guestItem.comboId && guestItem.cartItemIngredients?.length > 0) {
-                        // Logic: TÃ¬m cÃ¡c dÃ²ng ingredient tÆ°Æ¡ng á»©ng cá»§a UserItem vÃ  cá»™ng thÃªm
-                        // (Äá»ƒ Ä‘Æ¡n giáº£n, ta giáº£ Ä‘á»‹nh ingredient giá»‘ng há»‡t nhau thÃ¬ bulk update hoáº·c loop update)
+                        // Logic: Tìm các dòng ingredient tương ứng của UserItem và cộng thêm
+                        // (Để đơn giản, ta giả định ingredient giống hệt nhau thì bulk update hoặc loop update)
                         for (const guestIng of guestItem.cartItemIngredients) {
                             await this.modelCartItemIngredient.increment(
-                                { quantity: guestIng.quantity }, // Cá»™ng thÃªm sá»‘ lÆ°á»£ng tá»« guest
+                                { quantity: guestIng.quantity }, // Cộng thêm số lượng từ guest
                                 {
                                     where: {
                                         cartItemId: matchingUserItem.id,
@@ -1375,27 +1072,27 @@ export class CartItemService {
                         }
                     }
 
-                    // 3. XÃ³a item bÃªn Guest (vÃ¬ Ä‘Ã£ cá»™ng dá»“n sang User rá»“i)
+                    // 3. Xóa item bên Guest (vì đã cộng dồn sang User rồi)
                     await guestItem.destroy({ transaction });
 
                 } else {
-                    // === TÃŒNH HUá»NG 2: CHÆ¯A CÃ“ (MOVE) ===
-                    // ÄÃ¢y lÃ  cÃ¡ch tá»‘i Æ°u nháº¥t: Chá»‰ cáº§n Ä‘á»•i chá»§ sá»Ÿ há»¯u (cartId)
+                    // === TÌNH HUỐNG 2: CHƯA CÓ (MOVE) ===
+                    // Đây là cách tối ưu nhất: Chỉ cần đổi chủ sở hữu (cartId)
 
                     await guestItem.update(
                         { cartId: userCartId },
                         { transaction }
                     );
 
-                    // LÆ°u Ã½: CÃ¡c báº£ng phá»¥ (CartItemsIngredient) sáº½ tá»± Ä‘á»™ng Ä‘i theo
-                    // vÃ¬ chÃºng liÃªn káº¿t vá»›i CartItemId, mÃ  ID nÃ y khÃ´ng Ä‘á»•i, chá»‰ Ä‘á»•i cartId cha.
+                    // Lưu ý: Các bảng phụ (CartItemsIngredient) sẽ tự động đi theo
+                    // vì chúng liên kết với CartItemId, mà ID này không đổi, chỉ đổi cartId cha.
                 }
             }
 
             // ---------------------------------------------------------
-            // BÆ¯á»šC 4: Dá»ŒN Dáº¸P
+            // BƯỚC 4: DỌN DẸP
             // ---------------------------------------------------------
-            // XÃ³a vá» giá» hÃ ng Guest (Item bÃªn trong Ä‘Ã£ bá»‹ xÃ³a hoáº·c di chuyá»ƒn háº¿t rá»“i)
+            // Xóa vỏ giỏ hàng Guest (Item bên trong đã bị xóa hoặc di chuyển hết rồi)
             await this.modelCarts.destroy({
                 where: { id: guestCart.id },
                 transaction
@@ -1403,7 +1100,7 @@ export class CartItemService {
 
             await transaction.commit();
             return {
-                message: 'Äá»“ng bá»™ giá» hÃ ng thÃ nh cÃ´ng!',
+                message: 'Đồng bộ giỏ hàng thành công!',
             };
 
         } catch (error: any) {
@@ -1463,7 +1160,7 @@ export class CartItemService {
             }
         })
         return {
-            message: 'Láº¥y cartItem thanh cong',
+            message: 'Lấy cartItem thanh cong',
             data: summary
         }
     }
@@ -1480,7 +1177,7 @@ export class CartItemService {
         let cartIdForPreview = 0;
 
         try {
-            // 1. TÃŒM CART ITEM
+            // 1. TÌM CART ITEM
             const cartItem = await this.modelCartItems.findByPk(cartItemId, {
                 include: [
                     {
@@ -1492,10 +1189,10 @@ export class CartItemService {
             });
 
             if (!cartItem) {
-                throw new NotFoundException('Cart item khÃ´ng tá»“n táº¡i!');
+                throw new NotFoundException('Cart item không tồn tại!');
             }
 
-            // 2. KIá»‚M TRA QUYá»€N Sá»ž Há»®U
+            // 2. KIỂM TRA QUYỀN SỞ HỮU
             const cart = cartItem.dataValues.cart || cartItem.cart || await this.modelCarts.findByPk(cartItem.cartId, { transaction });
             if (!cart) {
                 throw new NotFoundException('Cart khong ton tai!');
@@ -1505,7 +1202,7 @@ export class CartItemService {
                 (sessionId && cartData.sessionId === sessionId);
 
             if (!isOwner) {
-                throw new ForbiddenException('Báº¡n khÃ´ng cÃ³ quyá»n chá»‰nh sá»­a cart item nÃ y!');
+                throw new ForbiddenException('Bạn không có quyền chỉnh sửa cart item này!');
             }
 
             const isCombo = !!cartItem.comboId;
@@ -1513,25 +1210,25 @@ export class CartItemService {
             cartIdForPreview = Number(cartData.id || cartItem.cartId);
 
             if (updateData.type === UPDATE_CART_ITEM_TYPE.COMBO && !isCombo) {
-                throw new BadRequestException('Cart item nÃ y khÃ´ng pháº£i lÃ  combo!');
+                throw new BadRequestException('Cart item này không phải là combo!');
             }
 
             if (updateData.type === UPDATE_CART_ITEM_TYPE.SINGLE && isCombo) {
-                throw new BadRequestException('Cart item nÃ y khÃ´ng pháº£i lÃ  mÃ³n láº»!');
+                throw new BadRequestException('Cart item này không phải là món lẻ!');
             }
 
             if (isCombo && (updateData.productVariantId !== undefined || updateData.singleProductOptions !== undefined)) {
-                throw new BadRequestException('Combo item khÃ´ng Ä‘Æ°á»£c update productVariantId hoac singleProductOptions!');
+                throw new BadRequestException('Combo item không được update productVariantId hoac singleProductOptions!');
             }
 
             if (!isCombo && updateData.comboOptions !== undefined) {
-                throw new BadRequestException('MÃ³n láº» khÃ´ng Ä‘Æ°á»£c update comboOptions!');
+                throw new BadRequestException('Món lẻ không được update comboOptions!');
             }
 
-            // 3. UPDATE QUANTITY (náº¿u cÃ³)
+            // 3. UPDATE QUANTITY (nếu có)
             if (updateData.quantity !== undefined) {
                 if (updateData.quantity <= 0) {
-                    throw new BadRequestException('Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0!');
+                    throw new BadRequestException('Số lượng phải lớn hơn 0!');
                 }
                 cartItem.quantity = updateData.quantity;
             }
@@ -1557,26 +1254,26 @@ export class CartItemService {
             // 5. UPDATE SINGLE PRODUCT
             // 5. UPDATE SINGLE PRODUCT
             if (!isCombo) {
-                // Update variant (náº¿u cÃ³)
+                // Update variant (nếu có)
                 if (updateData.productVariantId !== undefined) {
                     const variant = await this.modelProductVariant.findByPk(updateData.productVariantId, { transaction });
                     if (!variant) {
-                        throw new BadRequestException('Variant khÃ´ng tá»“n táº¡i!');
+                        throw new BadRequestException('Variant không tồn tại!');
                     }
 
-                    // Kiá»ƒm tra variant cÃ³ thuá»™c product nÃ y khÃ´ng
+                    // Kiểm tra variant có thuộc product này không
                     if (variant.isActive === false) {
                         throw new BadRequestException('Variant da ngung kinh doanh!');
                     }
 
                     if (Number(variant.productId) !== Number(cartItem.productId)) {
-                        throw new BadRequestException('Variant khÃ´ng thuá»™c product nÃ y!');
+                        throw new BadRequestException('Variant không thuộc product này!');
                     }
 
                     cartItem.productVariantId = updateData.productVariantId;
                 }
 
-                // Update ingredients (náº¿u cÃ³)
+                // Update ingredients (nếu có)
                 if (updateData.singleProductOptions !== undefined) {
                     const normalizedOptions = await this.normalizeSingleProductOptionsForCart(
                         Number(cartItem.productId),
@@ -1656,7 +1353,7 @@ export class CartItemService {
             await transaction.commit();
 
             return {
-                message: 'Cáº­p nháº­t cart item thÃ nh cÃ´ng!',
+                message: 'Cập nhật cart item thành công!',
                 data: (await this.cartPreviewService.getUserCartPreview(cartIdForPreview)).data
             };
 

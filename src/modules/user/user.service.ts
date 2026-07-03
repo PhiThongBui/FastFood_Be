@@ -1,10 +1,8 @@
-﻿import { log } from 'node:console';
-import { User } from '@/models';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+﻿import { User } from '@/models';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateUserDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { JwtService } from '@nestjs/jwt';
 import { Op } from 'sequelize';
 import { UpdateProfileDto } from './dto/updateProfile.dto';
 import { Sequelize } from 'sequelize-typescript';
@@ -19,7 +17,6 @@ import { ResendRegistationDto, VerifyRegistationDto } from './dto/verifyRegistat
 export class UserService {
     constructor(
         @InjectModel(User) private readonly UserModel: typeof User,
-        private readonly JWTService: JwtService,
         private readonly transaction: Sequelize,
         private readonly mailService: MailService
     ) { }
@@ -59,7 +56,7 @@ export class UserService {
     }
 
     async updateGoogleId(userId: string, googleId: string) {
-        const updateGoogleId = await this.UserModel.update({ googleId }, { where: { id: userId } })
+        await this.UserModel.update({ googleId }, { where: { id: userId } })
 
 
         return await this.UserModel.findOne({ where: { id: userId } });

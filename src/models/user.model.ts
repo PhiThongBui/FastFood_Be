@@ -1,4 +1,4 @@
-import { BeforeBulkUpdate, BeforeUpdate, BeforeValidate, Column, DataType, HasMany, Model, Table } from 'sequelize-typescript';
+import { BeforeValidate, Column, DataType, HasMany, Model, Table } from 'sequelize-typescript';
 import { Address } from './address.model';
 import { Order } from './order.model';
 import { Carts } from './carts.model';
@@ -6,9 +6,6 @@ import { UserCoupons } from './user-coupons.model';
 import { Reviews } from './reviews.model';
 import * as bcrypt from 'bcryptjs'
 import * as crypto from 'crypto'
-import { CreateUserDto } from '@/modules/user/dto/register.dto';
-import { LoginDto } from '@/modules/user/dto/login.dto';
-import { Col } from 'sequelize/types/utils';
 
 export enum ENUMROLE {
     ADMIN = 'ADMIN',
@@ -121,32 +118,32 @@ export class User extends Model<User> {
         onDelete: 'CASCADE',
         hooks: false
     })
-    addresses: Address[]
+    addresses!: Address[]
 
     @HasMany(() => Order, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    orders: Order[]
+    orders!: Order[]
     //
 
     @HasMany(() => Carts, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    carts: Carts[]
+    carts!: Carts[]
 
     @HasMany(() => UserCoupons, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    userCoupons: UserCoupons[]
+    userCoupons!: UserCoupons[]
 
     @HasMany(() => Reviews, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    reviews: Reviews[]
+    reviews!: Reviews[]
 
 
 

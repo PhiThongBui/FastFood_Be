@@ -1,17 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { filterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiOkResponse, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { Serialize } from '@/common/interceptors/serialize.interceptor';
-import { BestSellerDto } from './dto/bestSeller.dto';
-import { filterPizzaDto } from './dto/filter-pizza.dto';
-import { DataGetAllPizzaDto, GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
-import { RolesGuard } from '@/common/guards/role.guards';
-import { Roles } from '@/common/decorators/roles.decorator';
-import { JWTGuard } from '../auth/guards/verifyjwt.guard';
+import { GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
 
 @Controller('product')
 export class ProductController {

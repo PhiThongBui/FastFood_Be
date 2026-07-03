@@ -1,9 +1,9 @@
-﻿import { Body, Controller, Get, Param, Post, Put, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Post, Put, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local.guard';
 import { GoogleAuthGuard } from './guards/google.guard';
 import { Response, Request } from 'express';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginDto } from '../user/dto/login.dto';
 import { JWTGuard } from './guards/verifyjwt.guard';
 import { JwtService } from '@nestjs/jwt';

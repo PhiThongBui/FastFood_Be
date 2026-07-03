@@ -2,13 +2,12 @@ import { Module } from '@nestjs/common';
 import { ProductVariantService } from './product-variant.service';
 import { ProductVariantController } from './product-variant.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { ComboItem, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
-import { ProductModule } from '../product/product.module';
+import { ComboItem, Product, ProductVariant } from '@/models';
 
 @Module({
   controllers: [ProductVariantController],
   providers: [ProductVariantService],
-  imports: [SequelizeModule.forFeature([ProductVariant,Product,ProductIngredient, Ingredient, ComboItem])],
+  imports: [SequelizeModule.forFeature([ProductVariant,Product,ComboItem])],
   exports:[ProductVariantService]
 })
 export class ProductVariantModule {}

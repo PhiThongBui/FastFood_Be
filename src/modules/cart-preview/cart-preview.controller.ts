@@ -1,6 +1,5 @@
-﻿import { BadRequestException, Body, Controller, Get, Logger, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { CartPreviewService } from './cart-preview.service';
-import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -19,22 +18,21 @@ export class CartPreviewController {
     private readonly cartService: CartService
 
   ) { }
-  private readonly logger = new Logger('CartPreviewController');
   @Post('/checkout-preview')
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Xem trÆ°á»›c thanh toÃ¡n (Checkout Preview)',
-    description: 'TÃ­nh toÃ¡n giÃ¡ trá»‹ thanh toÃ¡n cho cÃ¡c CartItem Ä‘Æ°á»£c chá»n'
+    summary: 'Xem trước thanh toán (Checkout Preview)',
+    description: 'Tính toán giá trị thanh toán cho các CartItem được chọn'
   })
   @ApiOperation({
     summary: 'Checkout Preview',
     description: `
-YÃªu cáº§u xÃ¡c Ä‘á»‹nh giá» hÃ ng thÃ´ng qua:
+Yêu cầu xác định giỏ hàng thông qua:
 
-- Authorization: Bearer token (Ä‘á»‘i vá»›i user Ä‘Ã£ Ä‘Äƒng nháº­p)
-- Cookie: sessionId (Ä‘á»‘i vá»›i khÃ¡ch vÃ£ng lai)
+- Authorization: Bearer token (đối với user đã đăng nhập)
+- Cookie: sessionId (đối với khách vãng lai)
 
-API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©ng.
+API sẽ tự động xác định cart tương ứng.
 `
   })
 
@@ -52,7 +50,7 @@ API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©
   })
   @ApiResponse({
     status: 200,
-    description: 'Preview thÃ nh cÃ´ng'
+    description: 'Preview thành công'
   })
   async getCartDetail(
     @Body('cartItemIds') cartItemIds: number[],
@@ -88,17 +86,17 @@ API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©
   @Get('/cart')
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Xem giá» hÃ ng cá»§a mÃ¬nh',
+    summary: 'Xem giỏ hàng của mình',
   })
   @ApiOperation({
     summary: 'Cart Preview',
     description: `
-YÃªu cáº§u xÃ¡c Ä‘á»‹nh giá» hÃ ng thÃ´ng qua:
+Yêu cầu xác định giỏ hàng thông qua:
 
-- Authorization: Bearer token (Ä‘á»‘i vá»›i user Ä‘Ã£ Ä‘Äƒng nháº­p)
-- Cookie: sessionId (Ä‘á»‘i vá»›i khÃ¡ch vÃ£ng lai)
+- Authorization: Bearer token (đối với user đã đăng nhập)
+- Cookie: sessionId (đối với khách vãng lai)
 
-API sáº½ tá»± Ä‘á»™ng xÃ¡c Ä‘á»‹nh cart tÆ°Æ¡ng á»©ng.
+API sẽ tự động xác định cart tương ứng.
 `
   })
   async getCartPreview(

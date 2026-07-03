@@ -1,10 +1,9 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/sequelize';
 import { Order, ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
 import { RedisService } from '../redis/redis.service';
 import { MailService } from '../mail/mail.service';
-import { UserService } from '../user/user.service';
 import { User } from '@/models';
 
 @Injectable()
@@ -16,7 +15,6 @@ export class OrderCancellationService {
         @InjectModel(User) private userModel: typeof User,
         private readonly redisService: RedisService,
         private readonly mailService: MailService,
-        private readonly userService: UserService
     ) { }
 
     /**

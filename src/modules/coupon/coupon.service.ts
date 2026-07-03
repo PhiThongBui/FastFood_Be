@@ -1,11 +1,10 @@
-﻿import { Coupons, User, UserCoupons } from '@/models';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+﻿import { Coupons, UserCoupons } from '@/models';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateCouponDto } from './dto/createCoupon.dto';
 import { CreateOutputCoupon, ValidateCoupon } from './types/coupon.type';
 import { CreationAttributes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { UserService } from '../user/user.service';
 import { COUPONTYPE } from '@/models/coupons.model';
 import { Transaction } from 'sequelize';
 
@@ -13,9 +12,7 @@ import { Transaction } from 'sequelize';
 export class CouponService {
     constructor(
         @InjectModel(Coupons) private readonly modelCoupon: typeof Coupons,
-        @InjectModel(User) private readonly modelUser: typeof User,
         @InjectModel(UserCoupons) private readonly modelUserCoupon: typeof UserCoupons,
-        private readonly userService: UserService,
         private readonly sequelize: Sequelize
     ) { }
 

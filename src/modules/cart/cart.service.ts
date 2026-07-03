@@ -1,7 +1,6 @@
 import { Carts, User } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class CartService {
@@ -9,7 +8,6 @@ export class CartService {
     constructor(
         @InjectModel(Carts) private readonly modelCarts: typeof Carts,
         @InjectModel(User) private readonly modelUser: typeof User,
-        private readonly sequelize: Sequelize
     ) { }
 
     async getOrCreateUserCart(userId: number, transaction?: any) {

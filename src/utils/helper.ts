@@ -1,4 +1,3 @@
-import { BadRequestException } from "@nestjs/common";
 import { Request, Response } from "express";
 
 export class Helper {

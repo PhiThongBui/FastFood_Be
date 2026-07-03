@@ -1,5 +1,4 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, Table, HasMany } from 'sequelize-typescript';
-import { Category } from './category.model';
 import { Order } from './order.model';
 import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
@@ -68,17 +67,17 @@ export class OrderItems extends Model<OrderItems> {
     declare comboId: number | null;
 
     @BelongsTo(() => Combo)
-    combo: Combo;
+    combo!: Combo;
 
 
     @BelongsTo(() => Order)
-    order: Order;
+    order!: Order;
 
     @BelongsTo(() => Product)
-    product: Product;
+    product!: Product;
 
     @BelongsTo(() => ProductVariant)
-    productVariant: ProductVariant;
+    productVariant!: ProductVariant;
 
     @Column({
         defaultValue: 1,
@@ -98,11 +97,11 @@ export class OrderItems extends Model<OrderItems> {
         onDelete: 'CASCADE',
         hooks: false
     })
-    orderItemIngredients: OrderItemIngredient[];
+    orderItemIngredients!: OrderItemIngredient[];
 
     @HasMany(() => OrderItemComboOption, {
         onDelete: 'CASCADE',
         hooks: false
     })
-    orderItemComboOptions: OrderItemComboOption[];
+    orderItemComboOptions!: OrderItemComboOption[];
 }

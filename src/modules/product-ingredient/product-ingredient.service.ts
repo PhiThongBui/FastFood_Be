@@ -1,4 +1,4 @@
-import { Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
+import { Ingredient, ProductIngredient } from '@/models';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
@@ -6,8 +6,6 @@ import { Op } from 'sequelize';
 @Injectable()
 export class ProductIngredientService {
     constructor(
-        @InjectModel(Product) private readonly modelProduct: typeof Product,
-        @InjectModel(ProductVariant) private readonly modelProductVariant: typeof ProductVariant,
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
         @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
 

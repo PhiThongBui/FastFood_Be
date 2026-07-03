@@ -1,11 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from '@/models';
 import { InjectModel } from '@nestjs/sequelize';
-import { NotFoundError, throwError } from 'rxjs';
 import { Helper } from '@/utils/helper';
-import { Fn } from 'sequelize/types/utils';
 
 @Injectable()
 export class CategoryService {

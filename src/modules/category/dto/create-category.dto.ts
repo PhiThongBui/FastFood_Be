@@ -1,8 +1,8 @@
-import { BooleanNotRequired, NumberNotRequired, StringNotRequired, StringRequired } from "@/common/decorators";
+import { NumberNotRequired, StringNotRequired, StringRequired } from "@/common/decorators";
 export class CreateCategoryDto {
    
     @StringRequired('Tên danh mục')
-    name: string;
+    name!: string;
     
     @StringNotRequired
     description?: string;

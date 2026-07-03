@@ -1,18 +1,12 @@
-import { CartItems, CartItemsIngredient, Ingredient } from '@/models';
+import { CartItemsIngredient } from '@/models';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
-import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
 
 @Injectable()
 export class CartItemIngredientService {
     constructor(
-        @InjectModel(Ingredient) private readonly modelIngredient: typeof Ingredient,
-        @InjectModel(CartItems) private readonly modelCartItem: typeof CartItems,
-        @InjectModel(CartItemsIngredient) private readonly modelCartItemIngredient: typeof CartItemsIngredient,
-        private readonly sequelize: Sequelize,
-        private readonly configService: ConfigService,
+        @InjectModel(CartItemsIngredient) private readonly modelCartItemIngredient: typeof CartItemsIngredient
     ) { }
 
     async existedCartItemIngredient(idCartItem: number, idIngredient: number[]) {

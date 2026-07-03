@@ -12,18 +12,15 @@ import {
     Product,
     ProductVariant
 } from '@/models';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
-import { Sequelize } from 'sequelize-typescript';
 import { CheckoutCaculateDto } from './dto/checkout.dto';
 import { AddressService } from '../address/address.service';
 import { CouponService } from '../coupon/coupon.service';
 
 @Injectable()
 export class CartPreviewService {
-    private readonly logger = new Logger(CartPreviewService.name);
-
     constructor(
         @InjectModel(CartItems) private cartItemsModel: typeof CartItems,
         @InjectModel(CartItemsIngredient) private cartItemsIngredientModel: typeof CartItemsIngredient,
@@ -37,7 +34,6 @@ export class CartPreviewService {
         @InjectModel(CartItemComboOptionIngredient) private cartItemComboOptionIngredientModel: typeof CartItemComboOptionIngredient,
         private readonly addressService: AddressService,
         private readonly couponService: CouponService,
-        private readonly sequelize: Sequelize
     ) { }
 
     async getUserCartPreview(cartId: number, cartItemIds?: number[]): Promise<CartPreviewOutput> {

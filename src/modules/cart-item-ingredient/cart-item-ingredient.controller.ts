@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param } from '@nestjs/common';
 import { CartItemIngredientService } from './cart-item-ingredient.service';
-import { ingredients } from '../seeder/data/data';
 
 @Controller('cart-item-ingredient')
 export class CartItemIngredientController {

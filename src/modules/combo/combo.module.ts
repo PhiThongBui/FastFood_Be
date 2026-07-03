@@ -5,7 +5,6 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { Combo } from '@/models/combo.model';
 import { ComboItem } from '@/models/combo-item.model';
 import { Category, Ingredient, Product, ProductIngredient, ProductVariant } from '@/models';
-import { CategoryService } from '../category/category.service';
 import { CategoryModule } from '../category/category.module';
 
 @Module({

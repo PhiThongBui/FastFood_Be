@@ -1,6 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ProductVariantService } from './product-variant.service';
-import { ApiOperation, ApiProperty } from '@nestjs/swagger';
 
 @Controller('product-variant')
 export class ProductVariantController {

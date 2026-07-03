@@ -1,5 +1,5 @@
-﻿import { Sequelize } from 'sequelize-typescript';
-import { Category, Combo, ComboItem, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant } from '@/models';
+import { Sequelize } from 'sequelize-typescript';
+import { Category, Combo, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant } from '@/models';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -26,7 +26,6 @@ export class ProductService {
         @InjectModel(ProductIngredient) private readonly modelProductIngredient: typeof ProductIngredient,
         @InjectModel(Order) private readonly modelOrder: typeof Order,
         @InjectModel(Combo) private readonly modelCombo: typeof Combo,
-        @InjectModel(ComboItem) private readonly modelComboItem: typeof ComboItem,
         @InjectModel(OrderItems) private readonly modelOrderItems: typeof OrderItems,
         @InjectModel(Ingredient) private readonly modelIngredient: typeof Ingredient,
         @InjectModel(Category) private readonly modelCategory: typeof Category,
@@ -70,7 +69,7 @@ export class ProductService {
             attributes: ['name', 'slug', 'description', 'basePrice', 'imageUrl'],
         });
 
-        if (!result) throw new NotFoundException('KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m');
+        if (!result) throw new NotFoundException('Không tìm thấy sản phẩm');
         const data = plainToInstance(ResponseProductDetailDto, result.get({ plain: true }), {
             excludeExtraneousValues: true,
         });
@@ -81,14 +80,14 @@ export class ProductService {
         try {
 
             const alreadyExistedCategory = await this.categoryService.findOneCategory(productDto.categoryId)
-            if (!alreadyExistedCategory) throw new BadRequestException('Category á»©ng vá»›i product chÆ°a Ä‘Æ°á»£c tÃ¬m tháº¥y!')
+            if (!alreadyExistedCategory) throw new BadRequestException('Category ứng với product chưa được tìm thấy!')
 
             let slug: string | undefined
             if (productDto.name) {
                 slug = Helper.converttoSlug(productDto.name)
             }
             const product = await this.findOneProductBySlug(slug as string)
-            if (product) throw new BadRequestException('Sáº£n pháº©m Ä‘Ã£ tá»“n táº¡i!')
+            if (product) throw new BadRequestException('Sản phẩm đã tồn tại!')
 
             const payload: Record<string, any> = {
                 name: productDto.name,
@@ -110,14 +109,14 @@ export class ProductService {
                 const existedKeysVariant = new Set(variantKeys)
 
                 if (variantKeys.length !== existedKeysVariant.size) {
-                    throw new BadRequestException('CÃ³ má»™t vÃ i biáº¿n thá»ƒ bá»‹ trÃ¹ng láº·p size vÃ  type')
+                    throw new BadRequestException('Có một vài biến thể bị trùng lặp size và type')
                 }
 
                 for (const variant of productDto.productVariants) {
                     const existedVariantDB = await this.productVariantService.existedProductVanriantDB(productId, variant.size, variant.type)
 
                     if (existedVariantDB) {
-                        throw new BadRequestException(`Variant vá»›i size "${variant.size}" vÃ  type "${variant.type}" Ä‘Ã£ tá»“n táº¡i cho sáº£n pháº©m nÃ y!`)
+                        throw new BadRequestException(`Variant với size "${variant.size}" và type "${variant.type}" đã tồn tại cho sản phẩm này!`)
                     }
                 }
 
@@ -135,9 +134,7 @@ export class ProductService {
                 const productId = newProduct.id || newProduct.dataValues.id
 
                 const ingredientIds = productDto.productIngredients.map((ingredient) => ingredient.ingredientId)
-                const existedIdIngredients = new Set(ingredientIds)
-
-                // [Op.in] NÃ³ tÆ°Æ¡ng Ä‘Æ°Æ¡ng vá»›i cÃ¢u SQL:
+                // [Op.in] Nó tương đương với câu SQL:
                 // SELECT * FROM table WHERE column IN (1, 2, 3);
                 const alreadyExisted = await this.modelIngredient.findAll({
                     where: {
@@ -147,7 +144,7 @@ export class ProductService {
                     }
                 })
                 if (alreadyExisted.length <= 0) {
-                    throw new BadRequestException('CÃ³ má»™t vÃ i mÃ³n toping chÆ°a Ä‘Æ°á»£c tÃ¬m tháº¥y')
+                    throw new BadRequestException('Có một vài món toping chưa được tìm thấy')
                 }
 
                 const finalProductIngredient = new Map()
@@ -170,7 +167,7 @@ export class ProductService {
 
             await transaction.commit()
             return {
-                message: 'Táº¡o sáº£n pháº©m thÃ nh cÃ´ng',
+                message: 'Tạo sản phẩm thành công',
             }
         } catch (error: any) {
             console.log(error);
@@ -182,7 +179,7 @@ export class ProductService {
         const transaction = await this.sequelize.transaction()
         try {
             const alreadyExistedProduct = await this.findOneProductById(id)
-            if (!alreadyExistedProduct) throw new BadRequestException('Sáº£n pháº©m chÆ°a Ä‘Æ°á»£c tÃ¬m tháº¥y!')
+            if (!alreadyExistedProduct) throw new BadRequestException('Sản phẩm chưa được tìm thấy!')
 
 
 
@@ -193,7 +190,7 @@ export class ProductService {
             if (productDto.isFeatured) whereClause.isFeatured = productDto.isFeatured
             if (productDto.categoryId) {
                 const alreadyExistedCategory = await this.categoryService.findOneCategory(productDto.categoryId as any)
-                if (!alreadyExistedCategory) throw new BadRequestException('Category á»©ng vá»›i product chÆ°a Ä‘Æ°á»£c tÃ¬m tháº¥y!')
+                if (!alreadyExistedCategory) throw new BadRequestException('Category ứng với product chưa được tìm thấy!')
                 whereClause.categoryId = productDto.categoryId
             }
             if (productDto.basePrice) whereClause.basePrice = productDto.basePrice
@@ -203,7 +200,7 @@ export class ProductService {
                 for (const variantDto of productDto.productVariants) {
                     if (variantDto.id) {
                         if (variantDto.id <= 0) {
-                            throw new BadRequestException('Id cá»§a biáº¿n thá»ƒ pháº£i lá»›n hÆ¡n 0')
+                            throw new BadRequestException('Id của biến thể phải lớn hơn 0')
                         }
                         await this.productVariantService.findOneProductVariant(variantDto.id, id)
                         await this.modelProductVariant.update({
@@ -238,7 +235,7 @@ export class ProductService {
             await transaction.commit()
 
             return {
-                message: 'Chá»‰nh sá»­a sáº£n pháº©m thÃ nh cÃ´ng'
+                message: 'Chỉnh sửa sản phẩm thành công'
             }
         } catch (error: any) {
             console.log(error);
@@ -247,7 +244,7 @@ export class ProductService {
         }
     }
     async findAllProducts(filterSearch: filterProductDto) {
-        const { name, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder, minPrice, maxPrice } = filterSearch
+        const { name, categoryId, isFeatured, page, limit, sortBy, sortOrder, minPrice, maxPrice } = filterSearch
         const whereClause: Record<string, any> = {}
 
         if (name !== undefined) {
@@ -265,7 +262,7 @@ export class ProductService {
 
         if (minPrice !== undefined || maxPrice !== undefined) {
             whereClause.basePrice = {}
-            // gÃ¡n key [Op.gte] vÃ o basePrice => cáº§n khá»Ÿi táº¡o  whereClause.basePrice Ä‘á»ƒ trÃ¡nh undefined
+            // gán key [Op.gte] vào basePrice => cần khởi tạo  whereClause.basePrice để tránh undefined
             if (minPrice !== undefined) whereClause.basePrice[Op.gte] = minPrice
             if (maxPrice !== undefined) whereClause.basePrice[Op.lte] = maxPrice
         }
@@ -313,8 +310,8 @@ export class ProductService {
         } = pizzaFilter
 
         const whereClause: Record<string, any> = {
-            categoryId: 1,  // âœ… Chá»‰ láº¥y pizza (category 1)
-            isActive: true   // âœ… Chá»‰ láº¥y product active
+            categoryId: 1,  // ✅ Chỉ lấy pizza (category 1)
+            isActive: true   // ✅ Chỉ lấy product active
         }
 
         // Search by name
@@ -354,10 +351,10 @@ export class ProductService {
             limit: limitPage,
             offset: offsetPage,
             order: [[orderField, orderDirection]],
-            distinct: true, // âœ… Quan trá»ng: Äáº£m báº£o count Ä‘Ãºng khi cÃ³ include
+            distinct: true, // ✅ Quan trọng: Đảm bảo count đúng khi có include
             attributes: {
                 exclude: ['isActive', 'categoryId'],
-                // âœ… Pháº£i include field dÃ¹ng trong ORDER BY náº¿u nÃ³ bá»‹ exclude
+                // ✅ Phải include field dùng trong ORDER BY nếu nó bị exclude
                 ...(orderField === 'createdAt' && { include: ['createdAt'] })
             },
             include: [
@@ -373,7 +370,7 @@ export class ProductService {
                 },
                 {
                     model: this.modelProductVariant,
-                    as: 'variants', // âœ… Äáº£m báº£o alias Ä‘Ãºng
+                    as: 'variants', // ✅ Đảm bảo alias đúng
                     attributes: {
                         exclude: ['createdAt', 'updatedAt', 'isActive', 'productId'],
                         include: [
@@ -401,7 +398,7 @@ export class ProductService {
     async softDeteleProduct(id: number) {
         await this.modelProduct.update({ isActive: false }, { where: { id } })
         return {
-            message: 'XÃ³a sáº£n pháº©m thÃ nh cÃ´ng'
+            message: 'Xóa sản phẩm thành công'
         }
     }
 
@@ -409,11 +406,11 @@ export class ProductService {
         await this.modelProduct.destroy({ where: { id } })
 
         return {
-            message: 'XÃ³a sáº£n pháº©m thÃ nh cÃ´ng'
+            message: 'Xóa sản phẩm thành công'
         }
     }
 
-    async getProductFeatured() { // LÆ°u Ã½: Return type lÃºc nÃ y tráº£ vá» Model Sequelize, khÃ´ng pháº£i DTO
+    async getProductFeatured() { // Lưu ý: Return type lúc này trả về Model Sequelize, không phải DTO
         return this.modelProduct.findAll({
             where: {
                 isFeatured: true,
@@ -431,7 +428,7 @@ export class ProductService {
 
     async getBestSellerProduct() {
         // =================================================================
-        // BÆ¯á»šC 1: GIá»® NGUYÃŠN (Logic tÃ­nh toÃ¡n Top ID khÃ´ng Ä‘á»•i)
+        // BƯỚC 1: GIỮ NGUYÊN (Logic tính toán Top ID không đổi)
         // =================================================================
         const [topProducts, topCombos] = await Promise.all([
             this.modelOrderItems.findAll({
@@ -458,18 +455,18 @@ export class ProductService {
         const comboIds = topCombos.map(c => c.comboId);
 
         // =================================================================
-        // BÆ¯á»šC 2: QUERY CHI TIáº¾T (ÄÃƒ UPDATE)
+        // BƯỚC 2: QUERY CHI TIẾT (ĐÃ UPDATE)
         // =================================================================
         const [fullProducts, fullCombos] = await Promise.all([
-            // 1. Query Product láº» (Giá»¯ nguyÃªn logic cá»§a báº¡n)
+            // 1. Query Product lẻ (Giữ nguyên logic của bạn)
             this.modelProduct.findAll({
                 where: { id: { [Op.in]: productIds }, isActive: true },
                 attributes: ['id', 'name', 'basePrice', 'imageUrl'],
             }),
 
-            // 2. Query Combo (UPDATE: Láº¥y thÃªm Items -> Product -> Variant)
-            // 2. Query Combo (UPDATE: ÄÃ£ thÃªm logic tÃ­nh toÃ¡n variantPrice)
-            // 2. Query Combo (UPDATE: Sá»­a cáº¥u trÃºc Include Ä‘á»ƒ tÃ­nh toÃ¡n Ä‘Ãºng)
+            // 2. Query Combo (UPDATE: Lấy thêm Items -> Product -> Variant)
+            // 2. Query Combo (UPDATE: Đã thêm logic tính toán variantPrice)
+            // 2. Query Combo (UPDATE: Sửa cấu trúc Include để tính toán đúng)
             this.modelCombo.findAll({
                 where: { id: { [Op.in]: comboIds }, isActive: true },
                 attributes: ['id', 'name', 'price', 'imageUrl'],
@@ -477,7 +474,7 @@ export class ProductService {
         ]);
 
         // =================================================================
-        // BÆ¯á»šC 3: Sáº®P Xáº¾P VÃ€ TRáº¢ Vá»€ (GIá»® NGUYÃŠN)
+        // BƯỚC 3: SẮP XẾP VÀ TRẢ VỀ (GIỮ NGUYÊN)
         // =================================================================
         const sortedProducts = topProducts.map(top => {
             const detail = fullProducts.find(p => p.id === top.productId);
@@ -499,25 +496,25 @@ export class ProductService {
 
     async getAllPizza(query: QueryGetAllPizzaDto) {
         const { page, limit, sortBy, sortOrder } = query;
-        // Kiá»ƒm tra cÃ³ pagination hay khÃ´ng
+        // Kiểm tra có pagination hay không
         const hasPagination = page !== undefined && limit !== undefined;
 
-        // Build where conditions - luÃ´n filter theo categoryId = 1
+        // Build where conditions - luôn filter theo categoryId = 1
         const where: any = {
             isActive: true,
-            categoryId: 1  // LuÃ´n filter theo category = 1
+            categoryId: 1  // Luôn filter theo category = 1
         };
 
-        // Build order - Æ°u tiÃªn isFeatured trÆ°á»›c, sau Ä‘Ã³ má»›i sort theo cÃ¡c tiÃªu chÃ­ khÃ¡c
+        // Build order - ưu tiên isFeatured trước, sau đó mới sort theo các tiêu chí khác
         const orderArray: any[] = [
-            ['isFeatured', 'DESC'], // Featured items lÃªn Ä‘áº§u (true > false)
+            ['isFeatured', 'DESC'], // Featured items lên đầu (true > false)
         ];
 
-        // ThÃªm sort Ä‘á»™ng náº¿u cÃ³
+        // Thêm sort động nếu có
         if (sortBy && sortOrder) {
             orderArray.push([sortBy, sortOrder.toUpperCase()]);
         } else {
-            // Máº·c Ä‘á»‹nh sort theo createdAt DESC
+            // Mặc định sort theo createdAt DESC
             orderArray.push(['createdAt', 'DESC']);
         }
 
@@ -531,7 +528,7 @@ export class ProductService {
             distinct: true,
         };
 
-        // ThÃªm pagination náº¿u cÃ³
+        // Thêm pagination nếu có
         if (hasPagination) {
             const offset = (page - 1) * limit;
             queryOptions.limit = limit;

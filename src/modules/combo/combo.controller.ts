@@ -2,9 +2,7 @@ import { Controller, Post, Body, Get, Query, Param } from '@nestjs/common';
 import { ComboService } from './combo.service';
 import { CreateComboDto } from './dto/create-combo.dto';
 import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
-import { GetAllComboQueryDto, GetAllComboResponseDto } from './dto/getalls.dto';
-import { Serialize } from '@/common/interceptors/serialize.interceptor';
-import { ComboDetailDto } from './dto/getById.dto';
+import { GetAllComboQueryDto } from './dto/getalls.dto';
 
 @Controller('combo')
 export class ComboController {

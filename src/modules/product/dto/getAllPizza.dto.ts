@@ -1,4 +1,3 @@
-import { NumberRequired, StringRequired } from "@/common/decorators";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Expose, Type } from "class-transformer";
 import { IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
@@ -60,31 +59,31 @@ export class QueryGetAllPizzaDto {
 export class DataGetAllPizzaDto {
     @ApiProperty({ description: 'ID' })
     @Expose()
-    id: number;
+    id!: number;
 
     @ApiProperty({ description: 'Name' })
     @Expose()
-    name: string;
+    name!: string;
 
     @ApiProperty({ description: 'Slug' })
     @Expose()
-    slug: string;
+    slug!: string;
 
     @ApiProperty({ description: 'Description' })
     @Expose()
-    description: string;
+    description!: string;
 
     @ApiProperty({ description: 'Image' })
     @Expose()
-    imageUrl: string;
+    imageUrl!: string;
 
     @ApiProperty({ description: 'Base price' })
     @Expose()
-    basePrice: number;
+    basePrice!: number;
 
     @ApiProperty({ description: 'Is featured' })
     @Expose()
-    isFeatured: boolean;
+    isFeatured!: boolean;
 
     // @ApiProperty({ 
     //     type: [VariantPizzaDto], 
@@ -100,7 +99,7 @@ export class DataGetAllPizzaDto {
 export class PaginationMetaDto {
     @ApiProperty({ example: 50, description: 'Tổng số pizza' })
     @Expose()
-    total: number;
+    total!: number;
 
     @ApiPropertyOptional({ example: 1, description: 'Trang hiện tại' })
     @Expose()
@@ -126,7 +125,7 @@ export class GetAllPizzaResponseDto {
     })
     @Expose()
     @Type(() => DataGetAllPizzaDto)
-    data: DataGetAllPizzaDto[];
+    data!: DataGetAllPizzaDto[];
 
     @ApiProperty({ 
         type: PaginationMetaDto, 
@@ -134,5 +133,5 @@ export class GetAllPizzaResponseDto {
     })
     @Expose()
     @Type(() => PaginationMetaDto)
-    meta: PaginationMetaDto;
+    meta!: PaginationMetaDto;
 }

@@ -1,16 +1,22 @@
 import { NumberRequired } from '@/common/decorators';
-import { productIngredients } from './../../seeder/data/data';
 export class GetPricingCartDto {
     @NumberRequired('Cart Item Id', 1)
-    cartItemId: number;
+    cartItemId!: number;
 
     @NumberRequired('Ingredient Id', 1)
-    quantity: number;
+    quantity!: number;
 }
 
 export class ResponseGetPricingCartDto {
-    productId: number;
-    productVariantId: number;
-    quantity: number;
-    price: number;
+    @NumberRequired('Product Id', 1)
+    productId!: number;
+
+    @NumberRequired('Product Variant Id', 1)
+    productVariantId!: number;
+
+    @NumberRequired('Quantity', 1)
+    quantity!: number;
+
+    @NumberRequired('Price', 1)
+    price!: number;
 }

@@ -1,7 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { Dialect } from 'sequelize';
 import { sequelizeConfig } from './config/sequelize.config';
 import { CategoryModule } from './modules/category/category.module';
 import { StartTimingMiddleware } from './common/middlewares/start-timing.middleware';
@@ -31,7 +30,7 @@ import { RedisService } from './modules/redis/redis.service';
 import { SepayModule } from './modules/sepay/sepay.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { WebsocketModule } from './modules/websocket-gateway/websocket-gateway.module';
-import { CronModule } from './modules/cron/cron.module';
+// import { CronModule } from './modules/cron/cron.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { PricingModule } from './modules/pricing/pricing.module';

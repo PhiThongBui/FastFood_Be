@@ -1,9 +1,8 @@
-﻿import { log, time } from 'node:console';
-import { JwtService } from '@nestjs/jwt';
-import { BadRequestException, Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
+﻿import { JwtService } from '@nestjs/jwt';
+import {  Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginDto } from '../user/dto/login.dto';
-import e, { Response, Request, response } from 'express';
+import { Response, Request } from 'express';
 import * as crypto from 'crypto'
 import * as bcrypt from 'bcryptjs'
 import { ConfigService } from '@nestjs/config';

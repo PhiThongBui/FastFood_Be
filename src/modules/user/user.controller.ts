@@ -1,14 +1,12 @@
 ﻿import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateCategoryDto } from '../category/dto/create-category.dto';
 import { CreateUserDto } from './dto/register.dto';
 import { GetCurrentResponseDto } from './dto/getCurrent.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateProfileDto } from './dto/updateProfile.dto';
-import { User } from '@/models';
 import { GetAllUserDto, UserResponseDto } from './dto/getAllUser.dto';
 import { ResendRegistationDto, VerifyRegistationDto } from './dto/verifyRegistation.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
