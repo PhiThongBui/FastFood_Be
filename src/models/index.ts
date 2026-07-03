@@ -9,6 +9,8 @@ export { Carts } from './carts.model';
 export { Order } from './order.model';
 export { OrderItems } from './order-items.model';
 export { OrderItemIngredient } from './order-items-ingredient.model';
+export { OrderItemComboOption } from './order-item-combo-option.model';
+export { OrderItemComboOptionIngredient } from './order-item-combo-option-ingredient.model';
 export { CartItemsIngredient } from './cart-items-ingredient.model';
 export { Reviews } from './reviews.model';
 export { UserCoupons } from './user-coupons.model';

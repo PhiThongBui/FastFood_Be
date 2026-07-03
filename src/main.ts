@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
 import { join } from 'path';
+import { Sequelize } from 'sequelize-typescript';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +16,9 @@ async function bootstrap() {
   // Lấy ConfigService từ AppModule ra để dùng chuẩn hơn
   const configService = app.get(ConfigService);
   const logger = new Logger(bootstrap.name);
+  const sequelize = app.get(Sequelize);
+
+  await ensureOrderSnapshotColumns(sequelize, logger);
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
@@ -71,3 +75,40 @@ async function bootstrap() {
   logger.log(`Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`);
 }
 bootstrap();
+
+async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping order snapshot schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "OrderItemComboOptions"
+        ADD COLUMN IF NOT EXISTS "originalProductNameSnapshot" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "originalVariantNameSnapshot" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "selectedProductNameSnapshot" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "selectedVariantNameSnapshot" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "originalVariantModifiedPriceSnapshot" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "selectedVariantModifiedPriceSnapshot" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "variantSurchargeSnapshot" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "ingredientSurchargeSnapshot" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "surchargeSnapshot" INTEGER NOT NULL DEFAULT 0;
+
+      ALTER TABLE IF EXISTS "OrderItemIngredients"
+        ADD COLUMN IF NOT EXISTS "ingredientNameSnapshot" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "priceSnapshot" INTEGER;
+
+      ALTER TABLE IF EXISTS "OrderItemComboOptionIngredients"
+        ADD COLUMN IF NOT EXISTS "ingredientNameSnapshot" VARCHAR(255) NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS "priceSnapshot" INTEGER NOT NULL DEFAULT 0;
+    `);
+
+    logger.log('Order snapshot schema columns are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure order snapshot schema columns.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}

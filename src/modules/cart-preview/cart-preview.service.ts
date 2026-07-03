@@ -282,11 +282,20 @@ export class CartPreviewService {
         const discountedComboBasePrice = Math.ceil((comboBasePrice * (1 - (discountPercent / 100))) / 1000) * 1000;
         let itemUnitPrice = discountedComboBasePrice;
         let surchargeTotal = 0;
+        let variantSurchargeTotal = 0;
+        let ingredientSurchargeTotal = 0;
         const comboDetailsDisplayMap = new Map<string, {
             productName: string;
             variantName: string;
-            ingredients: string[];
+            originalProductName: string;
+            originalVariantName: string;
+            selectedProductName: string;
+            selectedVariantName: string;
+            isChanged: boolean;
+            ingredients: any[];
             surcharge: number;
+            variantSurcharge: number;
+            ingredientSurcharge: number;
             quantity: number;
         }>();
         const enrichedOptions: any[] = [];
@@ -363,6 +372,11 @@ export class CartPreviewService {
                 }
             }
 
+            const ingredientSurcharge = surcharge - variantSurcharge;
+            const isChanged =
+                Number(selectedProductData.id) !== Number(defaultProductData.id) ||
+                Number(selectedVariantData.id) !== Number(defaultVariantData.id);
+
             // this.logger.debug({
             //     message: 'Combo slot pricing calculation',
             //     cartItemId: item.dataValues.id,
@@ -381,6 +395,8 @@ export class CartPreviewService {
 
             itemUnitPrice += surcharge;
             surchargeTotal += surcharge;
+            variantSurchargeTotal += variantSurcharge;
+            ingredientSurchargeTotal += ingredientSurcharge;
 
             const detailKey = JSON.stringify({
                 comboItemId: Number(defaultItem.id),
@@ -403,8 +419,15 @@ export class CartPreviewService {
                 comboDetailsDisplayMap.set(detailKey, {
                     productName: selectedProductData.name,
                     variantName: `${selectedVariantData.size} - ${selectedVariantData.type}`,
-                    ingredients: ingredientsDisplay,
+                    originalProductName: defaultProductData.name,
+                    originalVariantName: `${defaultVariantData.size} - ${defaultVariantData.type}`,
+                    selectedProductName: selectedProductData.name,
+                    selectedVariantName: `${selectedVariantData.size} - ${selectedVariantData.type}`,
+                    isChanged,
+                    ingredients: enrichedIngredients.length > 0 ? enrichedIngredients : ingredientsDisplay,
                     surcharge,
+                    variantSurcharge,
+                    ingredientSurcharge,
                     quantity: 1
                 });
             }
@@ -414,6 +437,17 @@ export class CartPreviewService {
                 slotIndex: Number(slot.slotIndex),
                 productId: Number(selectedProductData.id),
                 productVariantId: Number(selectedVariantData.id),
+                originalProductId: Number(defaultProductData.id),
+                originalProductVariantId: Number(defaultVariantData.id),
+                originalProductName: defaultProductData.name,
+                originalVariantName: `${defaultVariantData.size} - ${defaultVariantData.type}`,
+                originalVariantModifiedPrice: Number(comboItemVariantData?.modifiedPrice || 0),
+                selectedProductName: selectedProductData.name,
+                selectedVariantName: `${selectedVariantData.size} - ${selectedVariantData.type}`,
+                selectedVariantModifiedPrice: Number(selectedVariantData.modifiedPrice || 0),
+                variantSurcharge,
+                ingredientSurcharge,
+                surcharge,
                 ingredients: enrichedIngredients,
                 product: {
                     id: selectedProductData.id,
@@ -464,8 +498,14 @@ export class CartPreviewService {
             details: {
                 comboItems: Array.from(comboDetailsDisplayMap.values()),
                 originalPrice,
+                basePrice: comboBasePrice,
+                discountedBasePrice: discountedComboBasePrice,
                 discountPercentage: discountPercent,
-                savedAmount: comboBasePrice - discountedComboBasePrice
+                savedAmount: comboBasePrice - discountedComboBasePrice,
+                totalSurcharge: surchargeTotal,
+                variantSurcharge: variantSurchargeTotal,
+                ingredientSurcharge: ingredientSurchargeTotal,
+                priceAfterChange: itemUnitPrice
             }
         };
     }

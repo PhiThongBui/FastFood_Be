@@ -5,6 +5,7 @@ import { Product } from './product.model';
 import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
 import { Combo } from './combo.model';
+import { OrderItemComboOption } from './order-item-combo-option.model';
 export interface OrderItemMetadata {
     itemName: string;
     originalPrice: number;
@@ -98,4 +99,10 @@ export class OrderItems extends Model<OrderItems> {
         hooks: false
     })
     orderItemIngredients: OrderItemIngredient[];
+
+    @HasMany(() => OrderItemComboOption, {
+        onDelete: 'CASCADE',
+        hooks: false
+    })
+    orderItemComboOptions: OrderItemComboOption[];
 }

@@ -22,6 +22,17 @@ export interface CartPreviewItem {
             productVariantId: number;
             comboItemId?: number;
             slotIndex?: number;
+            originalProductId?: number;
+            originalProductVariantId?: number;
+            originalProductName?: string;
+            originalVariantName?: string;
+            originalVariantModifiedPrice?: number;
+            selectedProductName?: string;
+            selectedVariantName?: string;
+            selectedVariantModifiedPrice?: number;
+            variantSurcharge?: number;
+            ingredientSurcharge?: number;
+            surcharge?: number;
             ingredients?: Array<{
                 ingredientId: number;
                 quantity: number;
@@ -61,12 +72,34 @@ export interface CartPreviewItem {
         discountPercentage?: number;
         savedAmount?: number;
         originalPrice?: number;  
+        basePrice?: number;
+        discountedBasePrice?: number;
+        totalSurcharge?: number;
+        variantSurcharge?: number;
+        ingredientSurcharge?: number;
+        priceAfterChange?: number;
         comboItems?: {
             productName: string;
             variantName: string;
-            ingredients: string[];
+            originalProductName?: string;
+            originalVariantName?: string;
+            selectedProductName?: string;
+            selectedVariantName?: string;
+            isChanged?: boolean;
+            ingredients: Array<string | {
+                ingredientId?: number;
+                quantity?: number;
+                type?: 'ADD' | 'REMOVE';
+                action?: 'ADD' | 'REMOVE';
+                name?: string;
+                ingredientName?: string;
+                price?: number;
+                totalPrice?: number;
+            }>;
             quantity?: number;
             surcharge?: number;
+            variantSurcharge?: number;
+            ingredientSurcharge?: number;
         }[];
     };
 }

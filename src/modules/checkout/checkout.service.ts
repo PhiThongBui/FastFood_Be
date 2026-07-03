@@ -5,6 +5,8 @@ import { Transaction } from 'sequelize';
 import {
     Order,
     OrderItems,
+    OrderItemComboOption,
+    OrderItemComboOptionIngredient,
     OrderItemIngredient,
     Carts,
     CartItems,
@@ -12,6 +14,7 @@ import {
     CartItemComboOption,
     CartItemComboOptionIngredient,
     Address,
+    Ingredient,
 } from '@/models';
 import { ORDERSTATUS, PAYMENTMETHOD, PAYMENTSTATUS } from '@/models/order.model';
 import { CartPreviewService } from '../cart-preview/cart-preview.service';
@@ -29,6 +32,8 @@ export class CheckoutService {
     constructor(
         @InjectModel(Order) private orderModel: typeof Order,
         @InjectModel(OrderItems) private orderItemsModel: typeof OrderItems,
+        @InjectModel(OrderItemComboOption) private orderItemComboOptionModel: typeof OrderItemComboOption,
+        @InjectModel(OrderItemComboOptionIngredient) private orderItemComboOptionIngredientModel: typeof OrderItemComboOptionIngredient,
         @InjectModel(OrderItemIngredient) private orderItemIngredientModel: typeof OrderItemIngredient,
         @InjectModel(Carts) private cartsModel: typeof Carts,
         @InjectModel(CartItems) private cartItemsModel: typeof CartItems,
@@ -65,7 +70,7 @@ export class CheckoutService {
                 throw new BadRequestException('Cart item ids are required');
             }
 
-            // â­ BÆ¯á»šC 2: LOCK CART (FOR UPDATE)
+            // ⭐ BƯỚC 2: KHÓA GIỎ HÀNG ĐỂ TRÁNH CẬP NHẬT ĐỒNG THỜI (FOR UPDATE)
             const cart = await this.cartsModel.findOne({
                 where: { id: cartId, userId },
                 lock: transaction.LOCK.UPDATE,
@@ -78,7 +83,7 @@ export class CheckoutService {
 
             const addressId = await this.resolveCheckoutAddressId(userId, dto, transaction);
 
-            // â­ BÆ¯á»šC 3: RE-CALCULATE TOTALS
+            // ⭐ BƯỚC 3: RE-CALCULATE TOTALS
             const calculation = await this.cartPreviewService.checkoutCaculate(
                 userId,
                 cartId,
@@ -102,7 +107,7 @@ export class CheckoutService {
                 calculation.data.items.map(item => [Number(item.cartItemId), item])
             );
 
-            // â­ BÆ¯á»šC 4: CREATE ORDER
+            // ⭐ BƯỚC 4: CREATE ORDER
             const orderNumber = `ORD${Date.now()}`;
 
             this.logger.log(`Creating order: ${orderNumber}`);
@@ -127,7 +132,7 @@ export class CheckoutService {
                 cancelledReason: null
             } as Order, { transaction });
 
-            // â­ BÆ¯á»šC 5: COPY CART ITEMS â†’ ORDER ITEMS
+            // ⭐ BƯỚC 5: COPY CART ITEMS → ORDER ITEMS
             const cartItems = await this.cartItemsModel.findAll({
                 where: {
                     cartId,
@@ -147,6 +152,12 @@ export class CheckoutService {
                         [Op.in]: cartItemIds
                     }
                 },
+                include: [
+                    {
+                        model: Ingredient,
+                        attributes: ['id', 'name', 'price']
+                    }
+                ],
                 transaction
             });
             const ingredientMap = new Map<number, CartItemsIngredient[]>();
@@ -172,18 +183,8 @@ export class CheckoutService {
                     metadata: this.buildOrderItemMetadata(previewItem)
                 } as OrderItems, { transaction });
 
-                // â­ BÆ¯á»šC 6: COPY INGREDIENTS
                 const ingredients = ingredientMap.get(Number(cartItem.dataValues.id)) || [];
-                if (ingredients.length > 0) {
-                    for (const ingredient of ingredients) {
-                        await this.orderItemIngredientModel.create({
-                            orderItemId: orderItem.dataValues.id,
-                            ingredientId: ingredient.dataValues.ingredientId,
-                            quantity: ingredient.dataValues.quantity,
-                            type: ingredient.dataValues.type
-                        } as OrderItemIngredient, { transaction })
-                    }
-                }
+                await this.persistOrderItemRelations(orderItem, previewItem, ingredients, transaction);
             }
 
             if (dto.couponCode) {
@@ -220,7 +221,7 @@ export class CheckoutService {
                 });
             }
 
-            //â­ BÆ°á»›c 7: XÃ³a item trong cartItem vÃ  cartItemIngredient
+            //⭐ BƯỚC 7: Xóa item trong cartItem và cartItemIngredient
             await this.cartItemsIngredientModel.destroy({
                 where: {
                     cartItemId: {
@@ -243,7 +244,7 @@ export class CheckoutService {
             this.logger.log(`âœ… Deleted ${deletedCount} cart items`)
 
 
-            // â­ BÆ¯á»šC 9: COMMIT TRANSACTION
+            // ⭐ BƯỚC 9: COMMIT TRANSACTION
             await transaction.commit();
 
             this.logger.log(`Order ${orderNumber} created successfully`);
@@ -254,12 +255,12 @@ export class CheckoutService {
             throw error;
         }
 
-        // â­ BÆ¯á»šC 9A : Xá»¬ LÃ THANH TOÃN
+        // ⭐ BƯỚC 9A : Xử lý thanh toán
         if (dto.paymentMethod === PAYMENTMETHOD.SEPAY) {
             this.logger.log(`order: ${createdOrder}`);
             return await this.processSepayPayment(createdOrder);
         } else {
-            // Thanh toÃ¡n khi nháº­n hÃ ng
+            // Thanh toán khi nhận hàng
             return {
                 success: true,
                 message: 'Order created successfully',
@@ -319,22 +320,55 @@ export class CheckoutService {
         const finalPrice = Number(previewItem.unitPrice || 0);
 
         if (previewItem.type === 'COMBO') {
+            const comboPricing = {
+                basePrice: Number(previewItem.details?.basePrice || 0),
+                discountedBasePrice: Number(previewItem.details?.discountedBasePrice || 0),
+                originalPrice: Number(previewItem.details?.discountedBasePrice || finalPrice),
+                changedPrice: Number(previewItem.details?.priceAfterChange || finalPrice),
+                discountPercentage: Number(previewItem.details?.discountPercentage || 0),
+                savedAmount: Number(previewItem.details?.savedAmount || 0),
+                variantSurcharge: Number(previewItem.details?.variantSurcharge || 0),
+                ingredientSurcharge: Number(previewItem.details?.ingredientSurcharge || 0),
+                totalSurcharge: Number(previewItem.details?.totalSurcharge || 0),
+                priceAfterChange: Number(previewItem.details?.priceAfterChange || finalPrice)
+            };
+
             return {
                 itemName: previewItem.name,
                 originalPrice,
                 finalPrice,
+                totalPrice: Number(previewItem.totalPrice || finalPrice * previewItem.quantity),
+                comboPricing,
                 items: (previewItem.rawData?.comboOptions || []).map(option => ({
+                    comboItemId: Number(option.comboItemId || 0),
+                    slotIndex: Number(option.slotIndex || 0),
                     productId: Number(option.productId),
                     productName: option.product?.name || '',
                     variantId: Number(option.productVariantId),
                     variantName: option.variant
                         ? `${option.variant.size} - ${option.variant.type}`
                         : '',
-                    unitPrice: Number(option.variant?.modifiedPrice || 0),
+                    originalProductName: option.originalProductName || '',
+                    originalVariantName: option.originalVariantName || '',
+                    changedProductName: Number(option.productId) !== Number(option.originalProductId) || Number(option.productVariantId) !== Number(option.originalProductVariantId)
+                        ? (option.selectedProductName || option.product?.name || '')
+                        : null,
+                    changedVariantName: Number(option.productId) !== Number(option.originalProductId) || Number(option.productVariantId) !== Number(option.originalProductVariantId)
+                        ? (option.selectedVariantName || (option.variant ? `${option.variant.size} - ${option.variant.type}` : ''))
+                        : null,
+                    unitPrice: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
+                    originalVariantModifiedPrice: Number(option.originalVariantModifiedPrice || 0),
+                    selectedVariantModifiedPrice: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
+                    variantSurcharge: Number(option.variantSurcharge || 0),
+                    ingredientSurcharge: Number(option.ingredientSurcharge || 0),
+                    surcharge: Number(option.surcharge || 0),
                     ingredients: (option.ingredients || []).map(ingredient => ({
                         name: ingredient.name || `Ingredient ${ingredient.ingredientId}`,
                         quantity: Number(ingredient.quantity || 1),
                         price: Number(ingredient.price || 0),
+                        totalPrice: ingredient.type === 'ADD'
+                            ? Number(ingredient.price || 0) * Number(ingredient.quantity || 1)
+                            : 0,
                         type: ingredient.type
                     }))
                 }))
@@ -357,26 +391,95 @@ export class CheckoutService {
         };
     }
 
+    private async persistOrderItemRelations(
+        orderItem: OrderItems,
+        previewItem: CartPreviewItem,
+        cartIngredients: CartItemsIngredient[],
+        transaction: Transaction
+    ) {
+        const orderItemId = Number(orderItem.dataValues.id);
+
+        if (previewItem.type === 'COMBO') {
+            const comboOptions = previewItem.rawData?.comboOptions || [];
+
+            for (const option of comboOptions) {
+                if (!option.comboItemId) {
+                    throw new BadRequestException(`Combo option for order item ${orderItemId} is missing comboItemId`);
+                }
+
+                const orderItemComboOption = await this.orderItemComboOptionModel.create({
+                    orderItemId,
+                    comboItemId: Number(option.comboItemId),
+                    slotIndex: Number(option.slotIndex || 0),
+                    selectedProductId: Number(option.productId),
+                    selectedProductVariantId: Number(option.productVariantId),
+                    productNameSnapshot: option.product?.name || `Product ${option.productId}`,
+                    variantNameSnapshot: option.variant
+                        ? `${option.variant.size} - ${option.variant.type}`
+                        : '',
+                    unitPriceSnapshot: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
+                    originalProductNameSnapshot: option.originalProductName || null,
+                    originalVariantNameSnapshot: option.originalVariantName || null,
+                    selectedProductNameSnapshot: option.selectedProductName || option.product?.name || null,
+                    selectedVariantNameSnapshot: option.selectedVariantName || (option.variant ? `${option.variant.size} - ${option.variant.type}` : null),
+                    originalVariantModifiedPriceSnapshot: Number(option.originalVariantModifiedPrice || 0),
+                    selectedVariantModifiedPriceSnapshot: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
+                    variantSurchargeSnapshot: Number(option.variantSurcharge || 0),
+                    ingredientSurchargeSnapshot: Number(option.ingredientSurcharge || 0),
+                    surchargeSnapshot: Number(option.surcharge || 0)
+                } as OrderItemComboOption, { transaction });
+
+                for (const ingredient of option.ingredients || []) {
+                    await this.orderItemComboOptionIngredientModel.create({
+                        orderItemComboOptionId: Number(orderItemComboOption.dataValues.id),
+                        ingredientId: Number(ingredient.ingredientId),
+                        ingredientNameSnapshot: ingredient.name || `Ingredient ${ingredient.ingredientId}`,
+                        quantity: Number(ingredient.quantity || 1),
+                        priceSnapshot: Number(ingredient.price || 0),
+                        type: ingredient.type || 'ADD'
+                    } as OrderItemComboOptionIngredient, { transaction });
+                }
+            }
+
+            return;
+        }
+
+        for (const ingredient of cartIngredients) {
+            const ingredientSnapshot = ingredient.dataValues.ingredient?.dataValues || ingredient.dataValues.ingredient;
+
+            await this.orderItemIngredientModel.create({
+                orderItemId,
+                ingredientId: ingredient.dataValues.ingredientId,
+                quantity: ingredient.dataValues.quantity,
+                type: ingredient.dataValues.type,
+                ingredientNameSnapshot: ingredientSnapshot?.name || null,
+                priceSnapshot: ingredient.dataValues.type === 'REMOVE'
+                    ? 0
+                    : Number(ingredientSnapshot?.price || 0)
+            } as OrderItemIngredient, { transaction });
+        }
+    }
+
     /**
-     * â­ Xá»­ lÃ½ thanh toÃ¡n SePay
-     */
+ * ⭐ Xử lý thanh toán SePay
+ */
     private async processSepayPayment(order: Order) {
         try {
-            // â­ BÆ¯á»šC 9A: THÃŠM VÃ€O REDIS SORTED SET
+            // ⭐ BƯỚC 9A: THÊM VÀO REDIS SORTED SET
             await this.redisService.addPendingOrder(order.dataValues.orderNumber);
 
             this.logger.log(`Added order ${order.dataValues.orderNumber} to Redis pending list`);
 
-            // â­ BÆ¯á»šC 9B: Táº O QR CODE SEPAY
+            // ⭐ BƯỚC 9B: TẠO QR CODE SEPAY
             const sepayPayment = await this.sepayService.createPayment({
                 orderNumber: order.dataValues.orderNumber,
                 amount: order.dataValues.finalTotal,
-                orderInfo: `Thanh toÃ¡n Ä‘Æ¡n hÃ ng ${order.dataValues.orderNumber}`
+                orderInfo: `Thanh toán đơn hàng ${order.dataValues.orderNumber}`
             });
 
             this.logger.log(`Sepay QR created for order ${order.dataValues.orderNumber}`);
 
-            // â­ BÆ¯á»šC 10: RETURN PAYMENT INFO
+            // ⭐ BƯỚC 10: RETURN PAYMENT INFO
             return {
                 success: true,
                 message: 'Order created successfully. Please complete bank transfer.',
@@ -399,7 +502,7 @@ export class CheckoutService {
         } catch (error: any) {
             this.logger.error(`Sepay payment failed for order ${order.dataValues.orderNumber}: ${error.message}`);
 
-            // Rollback: XÃ³a order khá»i Redis
+            // Rollback: Xóa order khỏi Redis
             await this.redisService.removePendingOrder(order.dataValues.orderNumber);
 
             throw new BadRequestException(`Payment initialization failed: ${error.message}`);

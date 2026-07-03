@@ -30,6 +30,18 @@ export class OrderItemIngredient extends Model<OrderItemIngredient> {
     })
    declare quantity: number
 
+    @Column({
+        allowNull: true,
+        type: DataType.STRING,
+    })
+   declare ingredientNameSnapshot?: string | null;
+
+    @Column({
+        allowNull: true,
+        type: DataType.INTEGER,
+    })
+   declare priceSnapshot?: number | null;
+
     // 🔥 CẦN THÊM: Để lưu trạng thái Thêm/Bớt từ Cart chuyển sang
     @Column({
         type: DataType.ENUM('ADD', 'REMOVE'),
