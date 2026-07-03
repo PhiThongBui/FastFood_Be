@@ -5,7 +5,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionFilter } from './common/filter/all-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as cookieParser from 'cookie-parser';
+import cookieParser = require('cookie-parser');
 import * as express from 'express';
 import { join } from 'path';
 import { Sequelize } from 'sequelize-typescript';

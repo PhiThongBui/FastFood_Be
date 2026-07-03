@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # 7. Mở port (Chỉ để khai báo - không tự mở port).Docker compose sẽ tự hiểu
-EXPOSE 3000
+EXPOSE 8000
 
 # 8. Lệnh chạy ứng dụng khi deploy xong
 CMD ["node", "dist/main"]
