@@ -67,12 +67,18 @@ import { ScheduleModule } from '@nestjs/schedule';
       useFactory: (configService: ConfigService) => ({
         transport: {
           host: configService.get<string>('MAIL_HOST'),
-          port: configService.get<number>('MAIL_PORT'),
+          port: Number(configService.get<string>('MAIL_PORT') || 587),
                secure: configService.get<string>('MAIL_SECURE') === 'true', // ép kiểu boolean
 
           auth: {
             user: configService.get('MAIL_USER'),
             pass: configService.get('MAIL_PASSWORD'),
+          },
+          tls: {
+            // Dev/local hay dính self-signed cert khi SMTP bị proxy hoặc máy chèn certificate.
+            rejectUnauthorized: configService.get<string>('MAIL_TLS_REJECT_UNAUTHORIZED')
+              ? configService.get<string>('MAIL_TLS_REJECT_UNAUTHORIZED') !== 'false'
+              : configService.get<string>('NODE_ENV') === 'production',
           }
         },
         defaults: {

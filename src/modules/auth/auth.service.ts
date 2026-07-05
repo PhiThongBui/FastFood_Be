@@ -1,5 +1,5 @@
 ﻿import { JwtService } from '@nestjs/jwt';
-import {  Injectable, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { LoginDto } from '../user/dto/login.dto';
 import { Response, Request } from 'express';
@@ -10,6 +10,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class AuthService {
+    private readonly logger = new Logger(AuthService.name);
+
     constructor(
         private readonly userService: UserService,
         private readonly JwtService: JwtService,
@@ -123,23 +125,33 @@ export class AuthService {
 
 
             return {
-                message: 'Email Ä‘áº·t láº¡i máº­t kháº©u Ä‘Ã£ thá»±c hiá»‡n thÃ nh cÃ´ng!!!'
+                message: 'Email lại mật khẩu đã thực hiện thành công!!!'
             }
         } catch (error: any) {
-            console.log(error);
+            await verifyEmail.update({
+                passwordResetToken: null,
+                passwordResetExpires: null,
+            });
+
+            this.logger.error(
+                `Failed to send forgot-password email to ${email}: ${error?.message || error}`,
+                error?.stack,
+            );
+
+            throw new InternalServerErrorException('Không gửi được email đặt lại mật khẩu. Vui lòng thử lại sau.');
         }
     }
 
     async changePassword(uid: number, oldPassword: string, newPassword: string, confirmPassword: string) {
-        if (!uid) throw new UnauthorizedException('uid khÃ´ng há»£p lá»‡!!!')
-        if (newPassword.length < 6) throw new UnauthorizedException('Máº­t kháº©u pháº£i Ã­t nháº¥t 6 ky tá»±!!!')
+        if (!uid) throw new UnauthorizedException('uid không hợp lệ!!!')
+        if (newPassword.length < 6) throw new UnauthorizedException('Mật khẩu phải ít nhất 6 ký tự!!!')
 
-        if (newPassword !== confirmPassword) throw new UnauthorizedException('Máº­t kháº©u khÃ´ng khá»›p nhau!!!')
+        if (newPassword !== confirmPassword) throw new UnauthorizedException('Mật khẩu không khớp!!!')
 
         const userResponse = await this.userService.findUserById(uid)
 
         const user = userResponse?.data
-        if (!user) throw new UnauthorizedException('KhÃ´ng tÃ¬m tháº¥y user!!!')
+        if (!user) throw new UnauthorizedException('Không tìm thấy user!!!')
 
         const matchesPasssword: boolean = await user.comparePassword(oldPassword)
 
@@ -152,7 +164,7 @@ export class AuthService {
         }
 
         return {
-            message: 'Äá»•i máº­t kháº©u thÃ nh cÃ´ng!!!'
+            message: 'Đổi mật khẩu thành công!!!'
         }
     }
 
@@ -162,7 +174,7 @@ export class AuthService {
 
         const user = await this.userService.checkPwResetTokenAndExprised(checkToken)
 
-        if (!user) throw new UnauthorizedException('Reset password token is wrong!!!')
+        if (!user) throw new UnauthorizedException('Reset password token is wrong or expired!!!')
 
         const hasedPassword = bcrypt.hashSync(password, 10)
 
@@ -205,7 +217,7 @@ export class AuthService {
             });
         }
         return {
-            message: "Login báº±ng google thÃ nh cÃ´ng",
+            message: "Login bằng google thành công",
             accessToken,
             user: rest
         };
