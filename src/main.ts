@@ -18,6 +18,7 @@ async function bootstrap() {
   const logger = new Logger(bootstrap.name);
   const sequelize = app.get(Sequelize);
 
+  await ensureProductVariantDefaultEnumValues(sequelize, logger);
   await ensureOrderSnapshotColumns(sequelize, logger);
   await ensureUserCouponColumns(sequelize, logger);
 
@@ -76,6 +77,37 @@ async function bootstrap() {
   logger.log(`Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`);
 }
 void bootstrap();
+
+async function ensureProductVariantDefaultEnumValues(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping product variant enum schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    const [sizeEnumRows] = await sequelize.query(`
+      SELECT 1 FROM pg_type WHERE typname = 'enum_ProductVariants_size' LIMIT 1;
+    `);
+    const [typeEnumRows] = await sequelize.query(`
+      SELECT 1 FROM pg_type WHERE typname = 'enum_ProductVariants_type' LIMIT 1;
+    `);
+
+    if (Array.isArray(sizeEnumRows) && sizeEnumRows.length > 0) {
+      await sequelize.query(`ALTER TYPE "enum_ProductVariants_size" ADD VALUE IF NOT EXISTS 'DEFAULT';`);
+    }
+
+    if (Array.isArray(typeEnumRows) && typeEnumRows.length > 0) {
+      await sequelize.query(`ALTER TYPE "enum_ProductVariants_type" ADD VALUE IF NOT EXISTS 'DEFAULT';`);
+    }
+
+    logger.log('Product variant default enum values are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure product variant default enum values.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
 
 async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) {
   const dialect = sequelize.getDialect();

@@ -16,10 +16,10 @@ export class CreateProductVariantDto {
     @StringRequired('Tên sản phẩm biến thể')
     name!: string
 
-    @EnumRequired('Kiểu đế: Mỏng, Bình thường, Dày', PRODUCTVARIANTTYPE)
+    @EnumRequired('Kiểu biến thể: DEFAULT, Mỏng, Bình thường', PRODUCTVARIANTTYPE)
     type!: PRODUCTVARIANTTYPE
 
-    @EnumRequired('Size của biến thể là 15cm, 20cm, 25cm', PRODUCTVARIANTSIZE)
+    @EnumRequired('Size của biến thể là DEFAULT, 15cm, 20cm, 25cm', PRODUCTVARIANTSIZE)
     size!: PRODUCTVARIANTSIZE
 
     @NumberRequired('Giá điều chỉnh')

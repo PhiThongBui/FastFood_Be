@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { JWTGuard } from '../auth/guards/verifyjwt.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('category')
 export class CategoryController {
@@ -25,9 +24,7 @@ export class CategoryController {
     return this.categoryService.updateCategory(updateCategoryDto, id)
   } //
 
-  @UseGuards(JWTGuard)
   @Get('all')
-  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Lấy tất cả danh mục' })
   findAllCategories() {
     return this.categoryService.findAllCategories();

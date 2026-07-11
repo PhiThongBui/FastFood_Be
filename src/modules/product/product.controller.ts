@@ -41,16 +41,25 @@ export class ProductController {
   // }
 
   @Delete('/softdelete/:id')
+  @ApiOperation({ summary: 'Xóa mềm sản phẩm' })
+  @ApiResponse({ status: 200, description: 'Xóa mềm sản phẩm thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   async softDeleteProduct(@Param('id', ParseIntPipe) id: number) {
     return await this.productService.softDeteleProduct(id)
   }
 
   @Delete('/harddelete/:id')
+  @ApiOperation({ summary: 'Xóa cứng sản phẩm' })
+  @ApiResponse({ status: 200, description: 'Xóa cứng sản phẩm thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   async hardDeleteProduct(@Param('id') id: number) {
     return await this.productService.hardDeleteProduct(id)
   }
 
   @Put('/update/:id')
+  @ApiOperation({ summary: 'Cập nhật sản phẩm' })
+  @ApiResponse({ status: 200, description: 'Cập nhật sản phẩm thành công' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
   async updateProduct(@Param('id') id: number, @Body() updateData: UpdateProductDto) {
     return await this.productService.updateProduct(id, updateData)
   }

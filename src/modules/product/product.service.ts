@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize-typescript';
-import { Category, Combo, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant } from '@/models';
+import { Category, Combo, Ingredient, Order, OrderItems, Product, ProductIngredient, ProductVariant, PRODUCTVARIANTSIZE, PRODUCTVARIANTTYPE } from '@/models';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -102,17 +102,26 @@ export class ProductService {
 
             const newProduct = await this.modelProduct.create(payload as any, { transaction })
 
-            if (newProduct && newProduct.dataValues.id && productDto.productVariants && productDto.productVariants.length > 0) {
+            const normalizedProductVariants = productDto.productVariants?.length
+                ? productDto.productVariants
+                : [{
+                    name: 'Mặc định',
+                    size: PRODUCTVARIANTSIZE.DEFAULT,
+                    type: PRODUCTVARIANTTYPE.DEFAULT,
+                    modifiedPrice: 0
+                }]
+
+            if (newProduct && newProduct.dataValues.id && normalizedProductVariants.length > 0) {
                 const productId = newProduct.id || newProduct.dataValues.id
 
-                const variantKeys = productDto.productVariants.map((v) => `${v.size}-${v.type}`)
+                const variantKeys = normalizedProductVariants.map((v) => `${v.size}-${v.type}`)
                 const existedKeysVariant = new Set(variantKeys)
 
                 if (variantKeys.length !== existedKeysVariant.size) {
                     throw new BadRequestException('Có một vài biến thể bị trùng lặp size và type')
                 }
 
-                for (const variant of productDto.productVariants) {
+                for (const variant of normalizedProductVariants) {
                     const existedVariantDB = await this.productVariantService.existedProductVanriantDB(productId, variant.size, variant.type)
 
                     if (existedVariantDB) {
@@ -120,7 +129,7 @@ export class ProductService {
                     }
                 }
 
-                const productVariants = productDto.productVariants.map((item) => (
+                const productVariants = normalizedProductVariants.map((item) => (
                     {
                         ...item,
                         productId
@@ -280,14 +289,36 @@ export class ProductService {
             limit: limitPage,
             offset: offsetPage,
             order: orderClause,
-            raw: true,
+            distinct: true,
+            attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl', 'isFeatured', 'categoryId', 'createdAt'],
+            include: [
+                {
+                    model: this.modelProductVariant,
+                    as: 'variants',
+                    required: false,
+                    where: {
+                        isActive: true
+                    },
+                    attributes: {
+                        exclude: ['createdAt', 'updatedAt', 'isActive', 'productId'],
+                        include: [
+                            [
+                                this.sequelize.literal(
+                                    '"Product"."basePrice" + "variants"."modifiedPrice"'
+                                ),
+                                'variantPrice'
+                            ]
+                        ]
+                    }
+                }
+            ]
         })
 
         return {
             totalRecords: result.count,
             page: currentPage,
             numberData: result.rows.length,
-            data: result.rows,
+            data: result.rows.map((product) => product.get({ plain: true })),
         }
     }
 
