@@ -1,30 +1,71 @@
-import { DateRequired, EnumRequired, NumberRequired, StringNotRequired, StringRequired } from "@/common/decorators"
-import { COUPONTYPE } from "@/models/coupons.model"
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+    IsBoolean,
+    IsDate,
+    IsEnum,
+    IsInt,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Min
+} from 'class-validator';
+import { COUPONTYPE } from '@/models/coupons.model';
 
-export class CreateCouponDto{
-    @StringRequired('Mã khuyến mãi')
-    code:string
-    @StringRequired('Tên khuyến mãi')
-    name:string
+export class CreateCouponDto {
+    @ApiProperty({ example: 'WELCOME10' })
+    @Type(() => String)
+    @IsString({ message: 'Mã khuyến mãi phải là chuỗi' })
+    @IsNotEmpty({ message: 'Mã khuyến mãi không được để trống' })
+    code: string;
 
-    @StringNotRequired
-    description?:string
+    @ApiProperty({ example: 'Giảm giá chào mừng' })
+    @Type(() => String)
+    @IsString({ message: 'Tên khuyến mãi phải là chuỗi' })
+    @IsNotEmpty({ message: 'Tên khuyến mãi không được để trống' })
+    name: string;
 
-    @EnumRequired('Loại khuyến mãi',COUPONTYPE)
-    type:COUPONTYPE
+    @ApiPropertyOptional({ example: 'Giảm 10% cho đơn đầu tiên' })
+    @IsOptional()
+    @Type(() => String)
+    @IsString({ message: 'Mô tả phải là chuỗi' })
+    description?: string;
 
-    @NumberRequired('Giá trị khuyến mãi',1)
-    value:number
+    @ApiProperty({ enum: COUPONTYPE, example: COUPONTYPE.PERCENT })
+    @IsEnum(COUPONTYPE, { message: 'Loại coupon không hợp lệ' })
+    type: COUPONTYPE;
 
-    @NumberRequired('Giá trị tối thiểu đơn hàng',10000)
-    minOrderValue:number
+    @ApiProperty({ example: 10, description: 'Nếu PERCENT thì nhập 1-100, FIXED thì nhập số tiền giảm' })
+    @Type(() => Number)
+    @IsInt({ message: 'Giá trị khuyến mãi phải là số nguyên' })
+    @Min(1, { message: 'Giá trị khuyến mãi phải lớn hơn 0' })
+    value: number;
 
-    @NumberRequired('Số lượng người dùng',10)
-    maxUser:number
+    @ApiProperty({ example: 100000 })
+    @Type(() => Number)
+    @IsInt({ message: 'Giá trị tối thiểu đơn hàng phải là số nguyên' })
+    @Min(0, { message: 'Giá trị tối thiểu đơn hàng không được âm' })
+    minOrderValue: number;
 
-    @DateRequired('Ngày bắt đầu sử dụng')
-    validFrom:Date
+    @ApiProperty({ example: 100 })
+    @Type(() => Number)
+    @IsInt({ message: 'Số lượng người dùng phải là số nguyên' })
+    @Min(1, { message: 'Số lượng người dùng tối đa phải lớn hơn 0' })
+    maxUser: number;
 
-    @DateRequired('Ngày kết thúc sử dụng')
-    validTo:Date
+    @ApiProperty({ type: String, format: 'date-time' })
+    @Type(() => Date)
+    @IsDate({ message: 'Ngày bắt đầu không hợp lệ' })
+    validFrom: Date;
+
+    @ApiProperty({ type: String, format: 'date-time' })
+    @Type(() => Date)
+    @IsDate({ message: 'Ngày kết thúc không hợp lệ' })
+    validTo: Date;
+
+    @ApiPropertyOptional({ example: true })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean({ message: 'isActive phải là true hoặc false' })
+    isActive?: boolean;
 }

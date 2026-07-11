@@ -5,7 +5,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionFilter } from './common/filter/all-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser = require('cookie-parser');
+import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
 import { join } from 'path';
 import { Sequelize } from 'sequelize-typescript';
@@ -19,6 +19,7 @@ async function bootstrap() {
   const sequelize = app.get(Sequelize);
 
   await ensureOrderSnapshotColumns(sequelize, logger);
+  await ensureUserCouponColumns(sequelize, logger);
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
@@ -74,7 +75,7 @@ async function bootstrap() {
   logger.log(`Application is running on port: ${port}`);
   logger.log(`Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`);
 }
-bootstrap();
+void bootstrap();
 
 async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) {
   const dialect = sequelize.getDialect();
@@ -109,6 +110,33 @@ async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) 
     logger.log('Order snapshot schema columns are ready.');
   } catch (error) {
     logger.error('Failed to ensure order snapshot schema columns.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
+
+async function ensureUserCouponColumns(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping user coupon schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "UserCoupons"
+        ADD COLUMN IF NOT EXISTS "claimedAt" TIMESTAMPTZ;
+
+      UPDATE "UserCoupons"
+      SET "claimedAt" = COALESCE("claimedAt", "createdAt");
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "user_coupons_user_id_coupon_id_unique"
+      ON "UserCoupons" ("userId", "couponId");
+    `);
+
+    logger.log('User coupon schema columns are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure user coupon schema columns.', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

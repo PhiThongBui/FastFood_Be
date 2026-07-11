@@ -22,7 +22,7 @@ export class UserController {
     private readonly configService: ConfigService
   ) { }
   @Post('/create')
-  @ApiOperation({ summary: 'Táº¡o má»›i ngÆ°á»i dÃ¹ng' })
+  @ApiOperation({ summary: 'Tạo mới người dùng' })
   @ApiBody({ type: CreateUserDto, required: true })
   Register(@Body() createData: CreateUserDto) {
     return this.userService.register(createData)
@@ -30,7 +30,7 @@ export class UserController {
 
   @Post('verify')
   @ApiBody({ type: VerifyRegistationDto, required: true })
-  @ApiOperation({ summary: 'XÃ¡c thá»±c ngÆ°á»i dÃ¹ng' })
+  @ApiOperation({ summary: 'Xác thực người dùng' })
   verifyRegistation(@Body() data: VerifyRegistationDto) {
     return this.userService.verifyRegistation(data)
   }
@@ -46,7 +46,7 @@ export class UserController {
   @UseGuards(JWTGuard)
   @Post('upload-avatar')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Upload avatar ngÆ°á»i dÃ¹ng' })
+  @ApiOperation({ summary: 'Upload avatar người dùng' })
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
@@ -62,7 +62,7 @@ export class UserController {
       }),
       fileFilter: (_req, file, callback) => {
         if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {
-          return callback(new BadRequestException('Chá»‰ há»— trá»£ file áº£nh'), false);
+          return callback(new BadRequestException('Chỉ hỗ trợ file ảnh'), false);
         }
 
         callback(null, true);
@@ -90,15 +90,15 @@ export class UserController {
   @UseGuards(JWTGuard)
   @Get('current')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Láº¥y thÃ´ng tin ngÆ°á»i dÃ¹ng hiá»‡n táº¡i' })
+  @ApiOperation({ summary: 'Lấy thông tin người dùng hiện tại' })
   @ApiResponse({
     status: 200,
-    description: 'ThÃ´ng tin ngÆ°á»i dÃ¹ng',
+    description: 'Thông tin người dùng',
     type: GetCurrentResponseDto
   })
   @ApiResponse({
     status: 401,
-    description: 'ChÆ°a Ä‘Æ°á»£c xÃ¡c thá»±c'
+    description: 'Chưa được xác thực'
   })
   async getCurrent(@Req() req: any) {
     let userId: number | null = null
@@ -119,14 +119,14 @@ export class UserController {
   @UseGuards(JWTGuard)
   @Put('update-profile')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Cáº­p nháº­t thÃ´ng tin ngÆ°á»i dÃ¹ng' })
+  @ApiOperation({ summary: 'Cập nhật thông tin người dùng' })
   @ApiResponse({
     status: 200,
-    description: 'Cáº­p nháº­t thÃ´ng tin ngÆ°á»i dÃ¹ng'
+    description: 'Cập nhật thông tin người dùng'
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' }) // ThÃªm cho auth fail
-  @ApiResponse({ status: 404, description: 'NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i' })
-  @ApiResponse({ status: 409, description: 'Email hoáº·c phone Ä‘Ã£ tá»“n táº¡i' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' }) // Thêm cho auth fail
+  @ApiResponse({ status: 404, description: 'Người dùng không tồn tại' })
+  @ApiResponse({ status: 409, description: 'Email hoặc phone đã tồn tại' })
   async updateProfileUser(@Body() data: UpdateProfileDto, @Req() req: any) {
     let userId: number | null = null
     const authBearer = req.headers?.authorization
@@ -146,13 +146,13 @@ export class UserController {
   // @UseGuards(JWTGuard)
   @Get('getUsers')
   // @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Láº¥y danh sÃ¡ch ngÆ°á»i dÃ¹ng' })
+  @ApiOperation({ summary: 'Lấy danh sách người dùng' })
   @ApiResponse({
     status: 200,
     type: UserResponseDto,
-    description: 'Danh sÃ¡ch ngÆ°á»i dÃ¹ng',
+    description: 'Danh sách người dùng',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' }) // ThÃªm cho auth fail
+  @ApiResponse({ status: 401, description: 'Unauthorized' }) // Thêm cho auth fail
   async getAllUser(@Query() query: GetAllUserDto, @Req() _req: any) {
     // let userId: number | null = null
     // const authBearer = req.headers?.authorization
@@ -170,11 +170,11 @@ export class UserController {
   }
 
   @Get('getUser/:id')
-  @ApiOperation({ summary: 'Láº¥y ngÆ°á»i dÃ¹ng theo id' })
+  @ApiOperation({ summary: 'Lấy người dùng theo id' })
   @ApiResponse({
     status: 200,
     type: UserResponseDto,
-    description: 'ThoÌ‚ng tin nguÌ›oÌ›Ì€i duÌ€ng'
+    description: 'Thông tin người dùng'
   })
   async getUserById(@Param('id') id: number) {
     return this.userService.findById(id);

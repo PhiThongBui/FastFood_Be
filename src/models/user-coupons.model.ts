@@ -5,6 +5,12 @@ import { Coupons } from './coupons.model';
 @Table
 export class UserCoupons extends Model<UserCoupons> {
     @Column({
+        allowNull: true,
+        type: DataType.DATE,
+    })
+    declare claimedAt: Date | null;
+
+    @Column({
         defaultValue: false,
         type: DataType.BOOLEAN,
     })
@@ -14,7 +20,7 @@ export class UserCoupons extends Model<UserCoupons> {
         allowNull: true,
         type: DataType.DATE,
     })
-    declare usedAt: Date;
+    declare usedAt: Date | null;
 
 
     @ForeignKey(() => User)

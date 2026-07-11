@@ -40,11 +40,11 @@ export class UserService {
 
     async validateLogin(loginData: LoginDto) {
         const alreadyUser = await this.findByEmail(loginData.email)
-        if (!alreadyUser) throw new BadRequestException('NgÆ°á»i dÃ¹ng chÆ°a tá»“n táº¡i!');            
-        if(!alreadyUser.dataValues.isEmailVerified) throw new BadRequestException('Email chÆ°a Ä‘Æ°á»£c xÃ¡c thá»±c!')
+        if (!alreadyUser) throw new BadRequestException('Người dùng chưa tồn tại!');
+        if(!alreadyUser.dataValues.isEmailVerified) throw new BadRequestException('Email chưa được xác thực!')
         const matchesPassword = await alreadyUser.comparePassword(loginData.password)
 
-        if (!matchesPassword) throw new BadRequestException('TÃ i khoáº£n hoáº·c kháº©u khÃ´ng chÃ­nh xÃ¡c')
+        if (!matchesPassword) throw new BadRequestException('Tài khoản hoặc mật khẩu không chính xác')
         const userRaw = alreadyUser.toJSON()
 
         return { uid: userRaw.id, role: userRaw.role }
@@ -75,7 +75,7 @@ export class UserService {
 
     async register(createUserDto: CreateUserDto) {
         const alreadyUser = await this.findByEmail(createUserDto.email)
-        if (alreadyUser) throw new BadRequestException('NgÆ°á»i dÃ¹ng Ä‘Ã£ tá»“n táº¡i!')
+        if (alreadyUser) throw new BadRequestException('Người dùng đã tồn tại!')
 
         const otp = this.generateOTP();
         const otpExpires = Date.now() + 10 * 60 * 1000;
@@ -107,12 +107,12 @@ export class UserService {
                 transaction
             })
 
-            if (!user) throw new BadRequestException('NgÆ°á»i dÃ¹ng chÆ°a tá»“n táº¡i!')
-            if (user.dataValues.isEmailVerified) throw new BadRequestException('Email Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c thá»±c!')
-            if (user.dataValues.passwordResetExpires && user.dataValues.passwordResetExpires < Date.now()) throw new BadRequestException('OTP háº±n chÃ­nh xÃ¡c!')
+            if (!user) throw new BadRequestException('Người dùng chưa tồn tại!')
+            if (user.dataValues.isEmailVerified) throw new BadRequestException('Email đã được xác thực!')
+            if (user.dataValues.passwordResetExpires && user.dataValues.passwordResetExpires < Date.now()) throw new BadRequestException('OTP đã hết hạn!')
             const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
-            if (user.dataValues.passwordResetToken !== hashedOtp) throw new BadRequestException('OTP khÃ´ng chÃ­nh xÃ¡c!')
+            if (user.dataValues.passwordResetToken !== hashedOtp) throw new BadRequestException('OTP không chính xác!')
 
             await user.update({
                 isEmailVerified: true,
@@ -143,7 +143,7 @@ export class UserService {
                     email: email
                 }
             })
-            if (user?.dataValues.isEmailVerified) throw new BadRequestException('Email Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c thá»±c!')
+            if (user?.dataValues.isEmailVerified) throw new BadRequestException('Email đã được xác thực!')
             const otp = this.generateOTP();
             const otpExpires = Date.now() + 5 * 60 * 1000;
 
@@ -198,9 +198,9 @@ export class UserService {
         const user = await this.UserModel.findByPk(userId);
 
         if (!user) {
-            throw new NotFoundException('NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i');
+            throw new NotFoundException('Người dùng không tồn tại');
         }
-        // Tráº£ vá» user data mÃ  khÃ´ng cÃ³ password
+        // Trả về user data mà không có password
         return user.getUserProfile();
     }
 
@@ -208,22 +208,22 @@ export class UserService {
         const { name, email, phone, avatar } = data;
         const transaction = await this.transaction.transaction();
         try {
-            if (Object.keys(data).length === 0) throw new BadRequestException('Vui lÃªn nháº­p dá»¯ liá»‡u')
+            if (Object.keys(data).length === 0) throw new BadRequestException('Vui lòng nhập dữ liệu')
             const user = await this.UserModel.findByPk(userId, { transaction });
 
             if (!user) {
-                throw new NotFoundException('NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i');
+                throw new NotFoundException('Người dùng không tồn tại');
             }
             if (email && email.trim() !== user.email) {
                 const alreadyUser = await this.UserModel.findOne({ where: { email }, transaction });
                 if (alreadyUser) {
-                    throw new BadRequestException('Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng');
+                    throw new BadRequestException('Email đã được sử dụng');
                 }
             }
             if (phone && phone.trim() !== user.phone) {
                 const alreadyUser = await this.UserModel.findOne({ where: { phone }, transaction });
                 if (alreadyUser) {
-                    throw new BadRequestException('Phone Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng');
+                    throw new BadRequestException('Phone đã được sử dụng');
                 }
             }
 
@@ -295,7 +295,7 @@ export class UserService {
         const user = await this.UserModel.findByPk(id);
 
         if (!user) {
-            throw new NotFoundException('KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng nÃ y')
+            throw new NotFoundException('Không tìm thấy người dùng này')
         }
 
         const response = plainToClass(ResponseUserByIdDto, user.get({ plain: true }), {
