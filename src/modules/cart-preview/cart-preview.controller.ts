@@ -132,10 +132,6 @@ API sẽ tự động xác định cart tương ứng.
   @Post('/checkout-calculate')
   async checkoutCaculate(@Body() dto: CheckoutCaculateDto, @Req() req: Request) {
     try {
-      if (!dto.addressId && !dto.temporaryAddress) {
-        throw new BadRequestException('Either addressId or temporaryAddress must be provided.');
-      }
-
       if (dto.addressId && dto.temporaryAddress) {
         throw new BadRequestException('Cannot use both addressId and temporaryAddress at the same time.');
       }
