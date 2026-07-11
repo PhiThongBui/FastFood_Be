@@ -3,7 +3,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateCouponDto } from './dto/createCoupon.dto';
 import { CreateOutputCoupon, USER_COUPON_STATUS, UserCouponItem, ValidateCoupon } from './types/coupon.type';
-import { CreationAttributes, Includeable, Op, Transaction } from 'sequelize';
+import { CreationAttributes, Op, Transaction } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { COUPONTYPE } from '@/models/coupons.model';
 import { UpdateCouponDto } from './dto/updateCoupon.dto';
@@ -240,12 +240,27 @@ export class CouponService {
 
         const coupons = await this.modelCoupon.findAll({
             where: this.buildUserCouponWhereClause(query),
-            include: [this.buildUserCouponInclude(userId)],
             order: [['createdAt', 'DESC']],
         });
 
+        const couponIds = coupons.map(coupon => Number(coupon.dataValues.id));
+        const userCoupons = couponIds.length
+            ? await this.modelUserCoupon.findAll({
+                where: {
+                    userId,
+                    couponId: {
+                        [Op.in]: couponIds
+                    }
+                }
+            })
+            : [];
+
+        const userCouponMap = new Map(
+            userCoupons.map(userCoupon => [Number(userCoupon.dataValues.couponId), userCoupon])
+        );
+
         const mappedData = coupons
-            .map(coupon => this.mapUserCouponItem(coupon, userId))
+            .map(coupon => this.mapUserCouponItem(coupon, userCouponMap.get(Number(coupon.dataValues.id)) || null))
             .filter(item => this.matchesUserCouponStatus(item, query.status));
 
         return this.buildPaginatedUserCouponResponse('Get available coupons successfully!', mappedData, query);
@@ -293,14 +308,30 @@ export class CouponService {
                 usedAt: null
             } as UserCoupons, { transaction });
 
+            await coupon.update({
+                currentUsers: Number(coupon.dataValues.currentUsers || 0) + 1
+            }, { transaction });
+
+            const claimedCouponDetail = await this.modelUserCoupon.findOne({
+                where: { id: claimedCoupon.dataValues.id },
+                include: [{ model: Coupons, required: true }],
+                transaction
+            });
+
+            if (!claimedCouponDetail) {
+                throw new NotFoundException('Claimed coupon not found');
+            }
+
             await transaction.commit();
 
             return {
                 message: 'Claim coupon successfully!',
-                data: await this.getMyCouponItemByCouponId(userId, couponId, claimedCoupon)
+                data: await this.getMyCouponItemByCouponId(userId, couponId, claimedCouponDetail)
             };
         } catch (error: unknown) {
-            await transaction.rollback();
+            if (!(transaction as Transaction & { finished?: string }).finished) {
+                await transaction.rollback();
+            }
             if (error instanceof BadRequestException || error instanceof NotFoundException) {
                 throw error;
             }
@@ -323,9 +354,26 @@ export class CouponService {
             order: [['claimedAt', 'DESC'], ['createdAt', 'DESC']],
         });
 
-        const mappedData = userCoupons
-            .map(userCoupon => this.mapClaimedCouponItem(userCoupon))
-            .filter(item => this.matchesUserCouponStatus(item, query.status));
+        const mappedItems = await Promise.all(
+            userCoupons.map(async (userCoupon) => {
+                try {
+                    return await this.getMyCouponItemByCouponId(
+                        userId,
+                        Number(userCoupon.dataValues.couponId),
+                        userCoupon
+                    );
+                } catch (error: unknown) {
+                    if (error instanceof NotFoundException) {
+                        return null;
+                    }
+
+                    throw error;
+                }
+            })
+        );
+
+        const availableItems = mappedItems.filter((item): item is UserCouponItem => item !== null);
+        const mappedData = availableItems.filter(item => this.matchesUserCouponStatus(item, query.status));
 
         return this.buildPaginatedUserCouponResponse('Get my coupons successfully!', mappedData, query);
     }
@@ -344,7 +392,7 @@ export class CouponService {
 
         return {
             message: 'Get my coupon successfully!',
-            data: this.mapClaimedCouponItem(userCoupon)
+            data: await this.getMyCouponItemByCouponId(userId, couponId, userCoupon)
         };
     }
 
@@ -449,10 +497,6 @@ export class CouponService {
             isUsed: true,
             usedAt: new Date()
         }, { transaction });
-
-        await coupon.update({
-            currentUsers: Number(coupon.dataValues.currentUsers || 0) + 1
-        }, { transaction });
     }
 
     private async getMyCouponItemByCouponId(userId: number, couponId: number, userCoupon?: UserCoupons): Promise<UserCouponItem> {
@@ -465,19 +509,17 @@ export class CouponService {
             throw new NotFoundException('Claimed coupon not found');
         }
 
-        if (!claimedCoupon.coupon) {
+        const attachedCoupon = claimedCoupon.coupon ?? await this.modelCoupon.findByPk(
+            Number(claimedCoupon.dataValues.couponId || couponId)
+        );
+
+        if (!attachedCoupon) {
             throw new NotFoundException('Coupon not found');
         }
 
-        return this.mapClaimedCouponItem(claimedCoupon);
-    }
+        claimedCoupon.coupon = attachedCoupon;
 
-    private buildUserCouponInclude(userId: number): Includeable {
-        return {
-            model: UserCoupons,
-            where: { userId },
-            required: false,
-        };
+        return this.mapClaimedCouponItem(claimedCoupon);
     }
 
     private buildUserCouponWhereClause(query: QueryUserCouponDto): Record<string, unknown> {
@@ -528,10 +570,8 @@ export class CouponService {
         return item.status === status;
     }
 
-    private mapUserCouponItem(coupon: Coupons, userId: number): UserCouponItem {
+    private mapUserCouponItem(coupon: Coupons, matchedUserCoupon: UserCoupons | null): UserCouponItem {
         const couponData = coupon.dataValues;
-        const userCoupons = coupon.userCoupons || [];
-        const matchedUserCoupon = userCoupons.find(item => Number(item.dataValues.userId) === Number(userId)) || null;
         const lifecycleStatus = this.getCouponLifecycleStatus(coupon);
         const claimedAt = matchedUserCoupon?.dataValues.claimedAt ?? null;
         const usedAt = matchedUserCoupon?.dataValues.usedAt ?? null;

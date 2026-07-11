@@ -36,7 +36,7 @@ export class UserController {
   }
 
   @Post('resend-verify')
-  @ApiBody({ type: ResendRegistationDto , required: true })
+  @ApiBody({ type: ResendRegistationDto, required: true })
   @ApiOperation({ summary: 'Resend verification email' })
   resendVerificationEmail(@Body() data: ResendRegistationDto) {
     return this.userService.resendVerificationEmail(data)
