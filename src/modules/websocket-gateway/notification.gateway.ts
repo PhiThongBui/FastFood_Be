@@ -20,36 +20,36 @@ import { RedisService } from '../redis/redis.service';
 })
 export class NotificationGatewayService
     implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-    
+
     @WebSocketServer()
     server: Server;
 
     private readonly logger = new Logger(NotificationGatewayService.name);
     private connectedClients = new Map<string, Socket>();
 
-    constructor(private readonly redisService: RedisService) {}
+    constructor(private readonly redisService: RedisService) { }
 
     /**
-     * â­ Khá»Ÿi táº¡o Gateway vÃ  subscribe Redis
+     * Khởi tạo Gateway và subscribe Redis
      */
     async afterInit(_server: Server) {
-        this.logger.log('ðŸ”Œ WebSocket Gateway initialized');
-        
-        // â­ Subscribe Redis Pub/Sub channel
+        this.logger.log('WebSocket Gateway initialized');
+
+        // Subscribe Redis Pub/Sub channel
         await this.subscribeToRedisChannel();
     }
 
     /**
-     * â­ Client connected
+     * Client connected
      */
     handleConnection(client: Socket) {
         const clientId = client.id;
         this.connectedClients.set(clientId, client);
-        
+
         this.logger.log(
-            `âœ… Client connected: ${clientId} (Total: ${this.connectedClients.size})`
+            `Client connected: ${clientId} (Total: ${this.connectedClients.size})`
         );
-        
+
         client.emit('connected', {
             message: 'Connected to notification server',
             clientId: clientId,
@@ -58,28 +58,28 @@ export class NotificationGatewayService
     }
 
     /**
-     * â­ Client disconnected
+     * Client disconnected
      */
     handleDisconnect(client: Socket) {
         const clientId = client.id;
         this.connectedClients.delete(clientId);
-        
+
         this.logger.log(
-            `âŒ Client disconnected: ${clientId} (Total: ${this.connectedClients.size})`
+            `Client disconnected: ${clientId} (Total: ${this.connectedClients.size})`
         );
     }
 
     /**
-     * â­ Subscribe Redis channel "new_orders"
+     * Subscribe Redis channel "new_orders"
      */
     private async subscribeToRedisChannel() {
         try {
-            // â­ Sá»­ dá»¥ng method subscribeNewOrders tá»« RedisService
+            // Sử dụng method subscribeNewOrders từ RedisService
             await this.redisService.subscribeNewOrders((orderData) => {
                 this.handleNewOrderNotification(orderData);
             });
 
-            this.logger.log('ðŸ“¡ Subscribed to Redis channel: new_orders');
+            this.logger.log('Subscribed to Redis channel: new_orders');
 
         } catch (error: any) {
             this.logger.error(`Failed to subscribe Redis channel: ${error.message}`);
@@ -87,13 +87,13 @@ export class NotificationGatewayService
     }
 
     /**
-     * â­ Xá»­ lÃ½ notification tá»« Redis
+     * Xử lý notification từ Redis
      */
     private handleNewOrderNotification(orderData: any) {
         try {
-            this.logger.log(`ðŸ”” New order notification: ${orderData.orderNumber}`);
+            this.logger.log(`New order notification: ${orderData.orderNumber}`);
 
-            // â­ Emit Ä‘áº¿n Táº¤T Cáº¢ clients
+            // Emit đến TẤT CẢ clients
             this.server.emit('new_order', {
                 type: 'NEW_ORDER',
                 data: orderData,
@@ -101,7 +101,7 @@ export class NotificationGatewayService
             });
 
             this.logger.log(
-                `ðŸ“¤ Broadcasted to ${this.connectedClients.size} clients`
+                `Broadcasted to ${this.connectedClients.size} clients`
             );
 
         } catch (error: any) {
@@ -110,15 +110,15 @@ export class NotificationGatewayService
     }
 
     /**
-     * â­ Client join room (optional - cho targeted notifications)
+     * Client join room optional, dùng cho targeted notifications
      */
     @SubscribeMessage('join_room')
     handleJoinRoom(client: Socket, payload: { room: string }) {
         const { room } = payload;
         client.join(room);
-        
+
         this.logger.log(`Client ${client.id} joined room: ${room}`);
-        
+
         client.emit('room_joined', {
             room: room,
             message: `Successfully joined ${room}`
@@ -126,23 +126,23 @@ export class NotificationGatewayService
     }
 
     /**
-     * â­ Emit to specific room
+     * Emit to specific room
      */
     emitToRoom(room: string, event: string, data: any) {
         this.server.to(room).emit(event, data);
-        this.logger.log(`ðŸ“¤ Emitted ${event} to room: ${room}`);
+        this.logger.log(`Emitted ${event} to room: ${room}`);
     }
 
     /**
-     * â­ Broadcast to all clients
+     * Broadcast to all clients
      */
     broadcast(event: string, data: any) {
         this.server.emit(event, data);
-        this.logger.log(`ðŸ“¤ Broadcasted ${event} to all clients`);
+        this.logger.log(`Broadcasted ${event} to all clients`);
     }
 
     /**
-     * â­ Get connected clients count
+     * Get connected clients count
      */
     getConnectedClientsCount(): number {
         return this.connectedClients.size;

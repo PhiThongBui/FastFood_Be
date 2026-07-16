@@ -4,6 +4,7 @@ export const REDIS_KEYS = {
     PENDING_ORDERS: 'pending_orders_ttl',
     IPN_LOCK: 'ipn_lock',
     NEW_ORDERS_CHANNEL: 'new_orders',
+    CHAT_EVENTS_CHANNEL: 'chat_events',
 };
 
 export const REDIS_CONFIG = {

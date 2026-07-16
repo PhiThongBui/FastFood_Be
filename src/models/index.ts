@@ -1,6 +1,6 @@
 export { ProductVariant,PRODUCTVARIANTSIZE,PRODUCTVARIANTTYPE } from './product-variant.model';
 export { Category } from './category.model';
-export { User } from './user.model';
+export { User, ENUMROLE, AuthProvider } from './user.model';
 export { Product } from './product.model';
 export { ProductIngredient } from './product-ingredient.model';
 export { Ingredient } from './ingredient.model';
@@ -20,3 +20,5 @@ export { ComboItem } from './combo-item.model';
 export { CartItemComboOption } from './cart-item-combo-option.model';
 export { CartItemComboOptionIngredient } from './cart-item-combo-option-ingredient.model';
 export { Address } from './address.model';
+export { ChatConversation, CHAT_CONVERSATION_STATUS } from './chat-conversation.model';
+export { ChatMessage, CHAT_MESSAGE_TYPE, CHAT_SENDER_ROLE } from './chat-message.model';

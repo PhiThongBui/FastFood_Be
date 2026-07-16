@@ -36,6 +36,7 @@ import { ComboModule } from './modules/combo/combo.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { LookupModule } from './modules/lookup/lookup.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -113,7 +114,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     MailModule,
     ComboModule,
     PricingModule,
-    LookupModule
+    LookupModule,
+    ChatModule
   ],
   providers:[
     RedisService
