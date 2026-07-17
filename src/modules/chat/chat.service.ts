@@ -9,16 +9,21 @@ import { InjectModel } from '@nestjs/sequelize';
 import {
     ChatConversation,
     ChatMessage,
+    ChatQuickReply,
     CHAT_CONVERSATION_STATUS,
     CHAT_MESSAGE_TYPE,
+    CHAT_QUICK_REPLY_ROLE,
     CHAT_SENDER_ROLE,
     ENUMROLE,
     Order,
     User,
 } from '@/models';
+import { AdminQuickRepliesQueryDto } from './dto/admin-quick-replies-query.dto';
 import { AdminConversationsQueryDto } from './dto/admin-conversations-query.dto';
 import { ChatPaginationDto } from './dto/chat-pagination.dto';
+import { CreateChatQuickReplyDto } from './dto/create-chat-quick-reply.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import { UpdateChatQuickReplyDto } from './dto/update-chat-quick-reply.dto';
 import { RedisService } from '../redis/redis.service';
 import { REDIS_KEYS } from '../redis/redis.constants';
 import { Op, WhereOptions } from 'sequelize';
@@ -85,6 +90,8 @@ export class ChatService {
         private readonly chatConversationModel: typeof ChatConversation,
         @InjectModel(ChatMessage)
         private readonly chatMessageModel: typeof ChatMessage,
+        @InjectModel(ChatQuickReply)
+        private readonly chatQuickReplyModel: typeof ChatQuickReply,
         @InjectModel(User)
         private readonly userModel: typeof User,
         @InjectModel(Order)
@@ -92,16 +99,31 @@ export class ChatService {
         private readonly redisService: RedisService,
     ) {}
 
-    async getOrCreateMyConversation(userId: number) {
-        const conversation = await this.getOrCreateConversationEntity(userId);
-        const hydratedConversation = await this.getConversationById(conversation.id, true);
+    async getMyConversation(userId: number) {
+        const conversation = await this.getConversationByUserId(userId, true);
+        if (!conversation) {
+            return null;
+        }
 
-        return this.buildConversationSummary(hydratedConversation || conversation);
+        return this.buildConversationSummary(conversation);
     }
 
     async getMyMessages(userId: number, query: ChatPaginationDto) {
-        const conversation = await this.getOrCreateConversationEntity(userId);
         const pagination = this.resolvePagination(query);
+        const conversation = await this.getConversationByUserId(userId, true);
+        if (!conversation) {
+            return {
+                conversation: null,
+                items: [],
+                pagination: {
+                    page: pagination.page,
+                    limit: pagination.limit,
+                    totalItems: 0,
+                    totalPages: 0,
+                },
+            };
+        }
+
         const result = await this.chatMessageModel.findAndCountAll({
             where: { conversationId: conversation.id },
             include: [this.buildOrderInclude()],
@@ -110,10 +132,8 @@ export class ChatService {
             offset: pagination.offset,
         });
 
-        const summaryConversation = await this.getConversationById(conversation.id, true);
-
         return {
-            conversation: await this.buildConversationSummary(summaryConversation || conversation),
+            conversation: await this.buildConversationSummary(conversation),
             items: result.rows.slice().reverse().map((message) => this.serializeMessage(message)),
             pagination: {
                 page: pagination.page,
@@ -137,7 +157,15 @@ export class ChatService {
     }
 
     async markMyConversationAsRead(userId: number) {
-        const conversation = await this.getOrCreateConversationEntity(userId);
+        const conversation = await this.getConversationByUserId(userId, true);
+        if (!conversation) {
+            return {
+                conversationId: null,
+                readBy: CHAT_SENDER_ROLE.USER,
+                readAt: new Date(),
+            };
+        }
+
         return this.markConversationAsReadInternal(conversation, CHAT_SENDER_ROLE.USER);
     }
 
@@ -204,6 +232,113 @@ export class ChatService {
         };
     }
 
+    async getMyQuickReplies(role: ENUMROLE) {
+        const quickReplyRole =
+            role === ENUMROLE.ADMIN ? CHAT_QUICK_REPLY_ROLE.ADMIN : CHAT_QUICK_REPLY_ROLE.USER;
+
+        const items = await this.chatQuickReplyModel.findAll({
+            where: {
+                role: quickReplyRole,
+                isActive: true,
+            },
+            order: [
+                ['sortOrder', 'ASC'],
+                ['updatedAt', 'DESC'],
+            ],
+        });
+
+        return items.map((item) => this.serializeQuickReply(item));
+    }
+
+    async getAdminQuickReplies(query: AdminQuickRepliesQueryDto) {
+        const pagination = this.resolvePagination(query);
+        const where: WhereOptions<ChatQuickReply> = {};
+
+        if (query.role) {
+            where.role = query.role;
+        }
+
+        if (query.categoryKey?.trim()) {
+            where.categoryKey = query.categoryKey.trim();
+        }
+
+        if (query.isActive) {
+            where.isActive = query.isActive === 'true';
+        }
+
+        if (query.search?.trim()) {
+            const searchPattern = `%${query.search.trim()}%`;
+            where[Op.or] = [
+                { title: { [Op.like]: searchPattern } },
+                { content: { [Op.like]: searchPattern } },
+                { categoryKey: { [Op.like]: searchPattern } },
+            ];
+        }
+
+        const result = await this.chatQuickReplyModel.findAndCountAll({
+            where,
+            order: [
+                ['sortOrder', 'ASC'],
+                ['updatedAt', 'DESC'],
+            ],
+            limit: pagination.limit,
+            offset: pagination.offset,
+        });
+
+        return {
+            items: result.rows.map((item) => this.serializeQuickReply(item)),
+            pagination: {
+                page: pagination.page,
+                limit: pagination.limit,
+                totalItems: this.resolveCount(result.count),
+                totalPages: Math.ceil(this.resolveCount(result.count) / pagination.limit),
+            },
+        };
+    }
+
+    async getAdminQuickReplyById(id: number) {
+        const quickReply = await this.findQuickReplyOrThrow(id);
+        return this.serializeQuickReply(quickReply);
+    }
+
+    async createQuickReply(dto: CreateChatQuickReplyDto) {
+        const quickReply = await this.chatQuickReplyModel.create({
+            role: dto.role,
+            title: dto.title.trim(),
+            content: dto.content.trim(),
+            categoryKey: dto.categoryKey?.trim() || null,
+            sortOrder: dto.sortOrder ?? 0,
+            isActive: dto.isActive ?? true,
+        } as ChatQuickReply);
+
+        return this.serializeQuickReply(quickReply);
+    }
+
+    async updateQuickReply(id: number, dto: UpdateChatQuickReplyDto) {
+        const quickReply = await this.findQuickReplyOrThrow(id);
+
+        await quickReply.update({
+            ...(dto.role ? { role: dto.role } : {}),
+            ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+            ...(dto.content !== undefined ? { content: dto.content.trim() } : {}),
+            ...(dto.categoryKey !== undefined ? { categoryKey: dto.categoryKey?.trim() || null } : {}),
+            ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+            ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        });
+
+        return this.serializeQuickReply(quickReply);
+    }
+
+    async removeQuickReply(id: number) {
+        const quickReply = await this.findQuickReplyOrThrow(id);
+        await quickReply.destroy();
+
+        return {
+            id,
+            deleted: true,
+        };
+    }
+
     async sendMessageAsAdmin(adminId: number, conversationId: number, dto: SendChatMessageDto) {
         const conversation = await this.getConversationById(conversationId, true);
         if (!conversation) {
@@ -242,9 +377,15 @@ export class ChatService {
             return conversation;
         }
 
-        const conversation = await this.getOrCreateConversationEntity(actor.uid);
+        const conversation = conversationId
+            ? await this.getConversationById(conversationId, true)
+            : await this.getConversationByUserId(actor.uid, true);
 
-        if (conversationId && conversationId !== conversation.id) {
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        if (conversation.userId !== actor.uid) {
             throw new ForbiddenException('You cannot access this conversation');
         }
 
@@ -406,6 +547,24 @@ export class ChatService {
         } as ChatConversation);
     }
 
+    private async getConversationByUserId(userId: number, includeUser = false) {
+        return this.chatConversationModel.findOne({
+            where: { userId },
+            include: includeUser ? [this.buildUserInclude()] : undefined,
+            order: [['updatedAt', 'DESC']],
+        });
+    }
+
+    private async findQuickReplyOrThrow(id: number) {
+        const quickReply = await this.chatQuickReplyModel.findByPk(id);
+
+        if (!quickReply) {
+            throw new NotFoundException('Quick reply not found');
+        }
+
+        return quickReply;
+    }
+
     private async getConversationById(conversationId: number, includeUser = false) {
         return this.chatConversationModel.findByPk(conversationId, {
             include: includeUser ? [this.buildUserInclude()] : undefined,
@@ -487,6 +646,22 @@ export class ChatService {
                       finalTotal: order.finalTotal,
                   }
                 : null,
+        };
+    }
+
+    private serializeQuickReply(quickReply: ChatQuickReply) {
+        const plainQuickReply = quickReply.get({ plain: true }) as ChatQuickReply;
+
+        return {
+            id: plainQuickReply.id,
+            role: plainQuickReply.role,
+            title: plainQuickReply.title,
+            content: plainQuickReply.content,
+            categoryKey: plainQuickReply.categoryKey,
+            sortOrder: plainQuickReply.sortOrder,
+            isActive: plainQuickReply.isActive,
+            createdAt: plainQuickReply.createdAt,
+            updatedAt: plainQuickReply.updatedAt,
         };
     }
 

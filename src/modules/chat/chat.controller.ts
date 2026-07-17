@@ -1,7 +1,9 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
+    Patch,
     Param,
     ParseIntPipe,
     Post,
@@ -15,8 +17,11 @@ import { GetUser } from '@/common/decorators/user.decorator';
 import { RolesGuard } from '@/common/guards/role.guards';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { ENUMROLE } from '@/models';
+import { AdminQuickRepliesQueryDto } from './dto/admin-quick-replies-query.dto';
 import { ChatPaginationDto } from './dto/chat-pagination.dto';
+import { CreateChatQuickReplyDto } from './dto/create-chat-quick-reply.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import { UpdateChatQuickReplyDto } from './dto/update-chat-quick-reply.dto';
 import { AdminConversationsQueryDto } from './dto/admin-conversations-query.dto';
 
 @Controller('chat')
@@ -28,7 +33,7 @@ export class ChatController {
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Lấy hoặc tạo conversation chat của user hiện tại' })
     async getMyConversation(@GetUser('uid') userId: number) {
-        return this.chatService.getOrCreateMyConversation(userId);
+        return this.chatService.getMyConversation(userId);
     }
 
     @Post('me/conversation')
@@ -36,7 +41,7 @@ export class ChatController {
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Tạo conversation chat của user hiện tại nếu chưa có' })
     async openMyConversation(@GetUser('uid') userId: number) {
-        return this.chatService.getOrCreateMyConversation(userId);
+        return this.chatService.getMyConversation(userId);
     }
 
     @Get('me/messages')
@@ -67,6 +72,14 @@ export class ChatController {
     @ApiOperation({ summary: 'User đánh dấu conversation đã đọc' })
     async markMyConversationAsRead(@GetUser('uid') userId: number) {
         return this.chatService.markMyConversationAsRead(userId);
+    }
+
+    @Get('quick-replies/me')
+    @UseGuards(JWTGuard)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Get quick replies for current actor role' })
+    async getMyQuickReplies(@GetUser('role') role: ENUMROLE) {
+        return this.chatService.getMyQuickReplies(role);
     }
 
     @Get('admin/conversations')
@@ -112,5 +125,53 @@ export class ChatController {
         @Param('conversationId', ParseIntPipe) conversationId: number,
     ) {
         return this.chatService.markAdminConversationAsRead(conversationId);
+    }
+
+    @Get('admin/quick-replies')
+    @UseGuards(JWTGuard, RolesGuard)
+    @Roles(ENUMROLE.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Admin gets quick reply list' })
+    async getAdminQuickReplies(@Query() query: AdminQuickRepliesQueryDto) {
+        return this.chatService.getAdminQuickReplies(query);
+    }
+
+    @Get('admin/quick-replies/:id')
+    @UseGuards(JWTGuard, RolesGuard)
+    @Roles(ENUMROLE.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Admin gets quick reply detail' })
+    async getAdminQuickReplyById(@Param('id', ParseIntPipe) id: number) {
+        return this.chatService.getAdminQuickReplyById(id);
+    }
+
+    @Post('admin/quick-replies')
+    @UseGuards(JWTGuard, RolesGuard)
+    @Roles(ENUMROLE.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Admin creates quick reply' })
+    async createQuickReply(@Body() dto: CreateChatQuickReplyDto) {
+        return this.chatService.createQuickReply(dto);
+    }
+
+    @Patch('admin/quick-replies/:id')
+    @UseGuards(JWTGuard, RolesGuard)
+    @Roles(ENUMROLE.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Admin updates quick reply' })
+    async updateQuickReply(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateChatQuickReplyDto,
+    ) {
+        return this.chatService.updateQuickReply(id, dto);
+    }
+
+    @Delete('admin/quick-replies/:id')
+    @UseGuards(JWTGuard, RolesGuard)
+    @Roles(ENUMROLE.ADMIN)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Admin deletes quick reply' })
+    async removeQuickReply(@Param('id', ParseIntPipe) id: number) {
+        return this.chatService.removeQuickReply(id);
     }
 }
