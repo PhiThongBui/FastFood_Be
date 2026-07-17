@@ -174,6 +174,23 @@ export class ProductService {
                 await this.modelProductIngredient.bulkCreate(productIngredient as any, { transaction })
             }
 
+            if (newProduct && newProduct.dataValues.id && productDto.productVariants && productDto.productVariants.length > 0) {
+                const productId = newProduct.id || newProduct.dataValues.id
+                
+                const variantsToCreate = productDto.productVariants.map(variant => ({
+                    name: variant.name || productDto.name,
+                    type: variant.type || PRODUCTVARIANTTYPE.DEFAULT,
+                    size: variant.size || PRODUCTVARIANTSIZE.DEFAULT,
+                    modifiedPrice: variant.modifiedPrice || 0,
+                    isActive: (variant as any).isActive ?? true,
+                    productId,
+                    isComboItem: false
+                }))
+                
+                await this.modelProductVariant.bulkCreate(variantsToCreate as any, { transaction })
+            }
+
+
             await transaction.commit()
             return {
                 message: 'Tạo sản phẩm thành công',
@@ -184,26 +201,29 @@ export class ProductService {
             throw error
         }
     }
+    
     async updateProduct(id: number, productDto: UpdateProductDto) {
         const transaction = await this.sequelize.transaction()
         try {
             const alreadyExistedProduct = await this.findOneProductById(id)
             if (!alreadyExistedProduct) throw new BadRequestException('Sản phẩm chưa được tìm thấy!')
 
-
-
             const whereClause: Record<string, any> = {}
-            if (productDto.name) whereClause.name = productDto.name
-            if (productDto.description) whereClause.description = productDto.description
-            if (productDto.imageUrl) whereClause.imageUrl = productDto.imageUrl
-            if (productDto.isFeatured) whereClause.isFeatured = productDto.isFeatured
-            if (productDto.categoryId) {
+            if (productDto.name !== undefined) whereClause.name = productDto.name
+            if (productDto.description !== undefined) whereClause.description = productDto.description
+            if (productDto.imageUrl !== undefined) whereClause.imageUrl = productDto.imageUrl
+            if (productDto.isFeatured !== undefined) whereClause.isFeatured = productDto.isFeatured
+            if (productDto.categoryId !== undefined) {
                 const alreadyExistedCategory = await this.categoryService.findOneCategory(productDto.categoryId as any)
                 if (!alreadyExistedCategory) throw new BadRequestException('Category ứng với product chưa được tìm thấy!')
                 whereClause.categoryId = productDto.categoryId
             }
-            if (productDto.basePrice) whereClause.basePrice = productDto.basePrice
-            await this.modelProduct.update(whereClause, { where: { id }, transaction, individualHooks: true })
+            if (productDto.basePrice !== undefined) whereClause.basePrice = productDto.basePrice
+            if (productDto.isActive !== undefined) whereClause.isActive = productDto.isActive
+            
+            if (Object.keys(whereClause).length > 0) {
+                await this.modelProduct.update(whereClause, { where: { id }, transaction, individualHooks: true })
+            }
 
             if (productDto.productVariants && productDto.productVariants.length > 0) {
                 for (const variantDto of productDto.productVariants) {
@@ -216,8 +236,20 @@ export class ProductService {
                             name: variantDto.name,
                             type: variantDto.type,
                             size: variantDto.size,
-                            modifiedPrice: variantDto.modifiedPrice
+                            modifiedPrice: variantDto.modifiedPrice,
+                            isActive: variantDto.isActive
                         }, { where: { id: variantDto.id }, transaction })
+                    } else {
+                        // Create new variant if no id provided
+                        await this.modelProductVariant.create({
+                            name: variantDto.name || productDto.name || alreadyExistedProduct.name,
+                            type: variantDto.type || PRODUCTVARIANTTYPE.DEFAULT,
+                            size: variantDto.size || PRODUCTVARIANTSIZE.DEFAULT,
+                            modifiedPrice: variantDto.modifiedPrice || 0,
+                            isActive: variantDto.isActive ?? true,
+                            productId: id,
+                            isComboItem: false
+                        } as any, { transaction })
                     }
                 }
             }
@@ -252,6 +284,7 @@ export class ProductService {
             throw error
         }
     }
+
     async findAllProducts(filterSearch: filterProductDto) {
         const { name, categoryId, isFeatured, page, limit, sortBy, sortOrder, minPrice, maxPrice } = filterSearch
         const whereClause: Record<string, any> = {}
@@ -319,6 +352,62 @@ export class ProductService {
             page: currentPage,
             numberData: result.rows.length,
             data: result.rows.map((product) => product.get({ plain: true })),
+        }
+    }
+
+    async getAdminProducts(filterSearch: filterProductDto) {
+        const { name, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder } = filterSearch
+        const whereClause: Record<string, any> = {}
+
+        if (name !== undefined) {
+            whereClause.name = {
+                [Op.iLike]: `%${name}%`
+            }
+        }
+        if (categoryId !== undefined) whereClause.categoryId = categoryId
+        if (isFeatured !== undefined) whereClause.isFeatured = isFeatured
+        if (isActive !== undefined) whereClause.isActive = isActive
+
+        const currentPage = Number(page || 1)
+        const limitPage = Number(limit || 10)
+        const offsetPage = Number(currentPage - 1) * limitPage
+
+        let orderClause: any[]
+        if (sortBy !== undefined) {
+            orderClause = [[sortBy, sortOrder || "DESC"]]
+        } else {
+            orderClause = [["createdAt", "DESC"]]
+        }
+
+        const result = await this.modelProduct.findAndCountAll({
+            where: whereClause,
+            limit: limitPage,
+            offset: offsetPage,
+            order: orderClause,
+            distinct: true,
+            attributes: ['id', 'name', 'slug', 'description', 'basePrice', 'imageUrl', 'isFeatured', 'isActive', 'categoryId', 'createdAt'],
+            include: [
+                {
+                    model: this.modelCategory,
+                    as: 'category',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: this.modelProductVariant,
+                    as: 'variants',
+                    required: false
+                }
+            ]
+        })
+
+        return {
+            items: result.rows.map((product) => product.get({ plain: true })),
+            meta: {
+                total: result.count,
+                page: currentPage,
+                limit: limitPage,
+                totalPages: Math.ceil(result.count / limitPage)
+            }
         }
     }
 

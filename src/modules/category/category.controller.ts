@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CategoryFilterDto } from './dto/category-filter.dto';
 
 @Controller('category')
 export class CategoryController {
@@ -30,6 +31,11 @@ export class CategoryController {
     return this.categoryService.findAllCategories();
   }
 
+  @Get('admin/list')
+  @ApiOperation({ summary: 'Lấy danh sách danh mục cho admin (có filter, search, sort, pagination)' })
+  getAdminCategories(@Query() query: CategoryFilterDto) {
+    return this.categoryService.getAdminCategories(query);
+  }
 
   @Get('one/:id')
   @ApiOperation({ summary: 'Lấy danh mục theo id' })

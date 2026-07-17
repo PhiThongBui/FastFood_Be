@@ -4,6 +4,8 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from '@/models';
 import { InjectModel } from '@nestjs/sequelize';
 import { Helper } from '@/utils/helper';
+import { Op } from 'sequelize';
+import { CategoryFilterDto } from './dto/category-filter.dto';
 
 @Injectable()
 export class CategoryService {
@@ -53,6 +55,52 @@ export class CategoryService {
             data,
             message:"Xin tạm biệt"
         }
+    }
+
+    async getAdminCategories(query: CategoryFilterDto) {
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+            sortBy = 'sortOrder',
+            sortOrder = 'ASC',
+            isActive
+        } = query;
+
+        const offset = (page - 1) * limit;
+        const whereClause: any = {};
+
+        if (search) {
+            whereClause[Op.or] = [
+                { name: { [Op.iLike]: `%${search}%` } },
+                { slug: { [Op.iLike]: `%${search}%` } },
+                { description: { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        if (isActive !== undefined) {
+            whereClause.isActive = isActive;
+        }
+
+        const { count, rows } = await this.categoryModel.findAndCountAll({
+            where: whereClause,
+            order: [[sortBy, sortOrder]],
+            limit,
+            offset,
+        });
+
+        return {
+            data: {
+                items: rows,
+                meta: {
+                    total: count,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(count / limit),
+                }
+            },
+            message: 'Lấy danh sách danh mục (Admin) thành công'
+        };
     }
 
     async findOneCategory(id: number) {

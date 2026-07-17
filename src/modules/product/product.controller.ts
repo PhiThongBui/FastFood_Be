@@ -32,13 +32,11 @@ export class ProductController {
     return await this.productService.findAllProducts(filterSearch)
   }
 
-  // @Get('/get-all-pizza')
-  // @ApiOperation({ summary: 'Lay danh sach san pham pizza' })
-  // @ApiResponse({ status: 200, description: 'Lay danh sach san pham pizza' })
-  // @ApiResponse({ status: 404, description: 'Khong tim thay san pham pizza' })
-  // async getAllPizza(@Query() filterSearch: filterPizzaDto) {
-  //   return await this.productService.findPizzaProducts(filterSearch)
-  // }
+  @Get('admin/list')
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm cho admin (có filter, search, sort, pagination)' })
+  getAdminProducts(@Query() query: filterProductDto) {
+    return this.productService.getAdminProducts(query);
+  }
 
   @Delete('/softdelete/:id')
   @ApiOperation({ summary: 'Xóa mềm sản phẩm' })
@@ -98,7 +96,6 @@ export class ProductController {
   async getPizzaDetailById(@Param('id', ParseIntPipe) id: number) {
     return await this.productService.getPizzaDetailById(id)
   }
-
 
   @Get('/get-by-id-custom/:id/combovariant')
   @ApiOperation({ summary: 'Lấy danh sách variant và ingredient dùng cho combo detail' })

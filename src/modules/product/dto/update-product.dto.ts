@@ -16,6 +16,9 @@ export class UpdateProductVariantDto {
 
     @NumberNotRequired
     modifiedPrice?: number
+
+    @BooleanNotRequired
+    isActive?: boolean
 }
 
 export class UpdateProductIngredientDto {
@@ -51,6 +54,9 @@ export class UpdateProductDto {
 
     @NumberNotRequired
     categoryId?: number
+
+    @BooleanNotRequired
+    isActive?: boolean
 
     @ArrayNotRequired(UpdateProductVariantDto)
     productVariants?: UpdateProductVariantDto[]
