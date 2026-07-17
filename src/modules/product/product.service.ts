@@ -5,7 +5,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CategoryService } from '../category/category.service';
 import { Helper } from '@/utils/helper';
-import { Op } from 'sequelize';
+import { Op, ValidationError } from 'sequelize';
 import { filterProductDto } from './dto/filter-product.dto';
 import { ConfigService } from '@nestjs/config';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -47,6 +47,35 @@ export class ProductService {
 
         return result
     }
+
+    private async findDuplicateProductByIdentity(name: string, excludeProductId?: number) {
+        const normalizedName = name.trim()
+        const normalizedSlug = Helper.converttoSlug(normalizedName)
+
+        return this.modelProduct.findOne({
+            where: {
+                [Op.or]: [
+                    { name: normalizedName },
+                    { slug: normalizedSlug }
+                ],
+                ...(excludeProductId ? { id: { [Op.ne]: excludeProductId } } : {})
+            }
+        })
+    }
+
+    private throwReadableProductUniqueError(error: unknown): never {
+        if (error instanceof ValidationError) {
+            const isDuplicatedProductIdentity = error.errors.some(
+                (item) => item.path === 'name' || item.path === 'slug' || item.validatorKey === 'not_unique'
+            )
+
+            if (isDuplicatedProductIdentity) {
+                throw new BadRequestException('Ten san pham da ton tai. Vui long chon ten khac.')
+            }
+        }
+
+        throw error
+    }
     async findOneProductById(id: number): Promise<ResponseProductDetailDto> {
         const result = await this.modelProduct.findByPk(id, {
             include: [
@@ -85,9 +114,11 @@ export class ProductService {
             let slug: string | undefined
             if (productDto.name) {
                 slug = Helper.converttoSlug(productDto.name)
+                const duplicatedProduct = await this.findDuplicateProductByIdentity(productDto.name)
+                if (duplicatedProduct) {
+                    throw new BadRequestException('Ten san pham da ton tai. Vui long chon ten khac.')
+                }
             }
-            const product = await this.findOneProductBySlug(slug as string)
-            if (product) throw new BadRequestException('Sản phẩm đã tồn tại!')
 
             const payload: Record<string, any> = {
                 name: productDto.name,
@@ -198,7 +229,7 @@ export class ProductService {
         } catch (error: any) {
             console.log(error);
             await transaction.rollback()
-            throw error
+            this.throwReadableProductUniqueError(error)
         }
     }
     
@@ -209,6 +240,12 @@ export class ProductService {
             if (!alreadyExistedProduct) throw new BadRequestException('Sản phẩm chưa được tìm thấy!')
 
             const whereClause: Record<string, any> = {}
+            if (productDto.name !== undefined) {
+                const duplicatedProduct = await this.findDuplicateProductByIdentity(productDto.name, id)
+                if (duplicatedProduct) {
+                    throw new BadRequestException('Ten san pham da ton tai. Vui long chon ten khac.')
+                }
+            }
             if (productDto.name !== undefined) whereClause.name = productDto.name
             if (productDto.description !== undefined) whereClause.description = productDto.description
             if (productDto.imageUrl !== undefined) whereClause.imageUrl = productDto.imageUrl
@@ -281,7 +318,7 @@ export class ProductService {
         } catch (error: any) {
             console.log(error);
             await transaction.rollback()
-            throw error
+            this.throwReadableProductUniqueError(error)
         }
     }
 
@@ -774,3 +811,4 @@ export class ProductService {
 
 
 }
+

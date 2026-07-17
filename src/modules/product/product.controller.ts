@@ -1,12 +1,20 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { filterProductDto } from './dto/filter-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GetProductFeaturedDto } from './dto/getProductFeatured';
 import { Serialize } from '@/common/interceptors/serialize.interceptor';
 import { GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.dto';
+import { JWTGuard } from '../auth/guards/verifyjwt.guard';
+import { RolesGuard } from '@/common/guards/role.guards';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { ENUMROLE } from '@/models';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { mkdirSync } from 'fs';
+import { extname } from 'path';
 
 @Controller('product')
 export class ProductController {
@@ -18,6 +26,51 @@ export class ProductController {
   @ApiResponse({ status: 201, description: 'Tạo sản phẩm th thành công.' })
   async createProduct(@Body() createData: CreateProductDto) {
     return this.productService.createProduct(createData)
+  }
+
+  @Post('/upload-image')
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload ảnh sản phẩm' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: (_req, _file, callback) => {
+          const uploadPath = './uploads/products';
+          mkdirSync(uploadPath, { recursive: true });
+          callback(null, uploadPath);
+        },
+        filename: (_req, file, callback) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          callback(null, `product-${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+      fileFilter: (_req, file, callback) => {
+        if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {
+          return callback(new BadRequestException('Chi ho tro file anh'), false);
+        }
+
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadProductImage(@UploadedFile() file: { filename: string } | undefined, @Req() req: any) {
+    if (!file) throw new BadRequestException('Image file is required');
+
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const imageUrl = `${protocol}://${host}/uploads/products/${file.filename}`;
+
+    return {
+      message: 'Upload product image successfully',
+      data: {
+        imageUrl,
+      },
+    };
   }
 
   @Get('/getone/:id')
