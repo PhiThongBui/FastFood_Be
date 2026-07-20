@@ -6,7 +6,9 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
 import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
-import { Op } from 'sequelize';
+import { Op, col, fn } from 'sequelize';
+import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 interface MyOrdersQuery {
     page?: string | number;
@@ -17,6 +19,8 @@ interface MyOrdersQuery {
     orderStatus?: string;
     paymentStatus?: string;
 }
+
+type AdminOrderDateRange = Pick<AdminOrderDateRangeQueryDto, 'fromDate' | 'toDate'>;
 
 @Injectable()
 export class OrderService {
@@ -33,6 +37,367 @@ export class OrderService {
         private readonly addressService: AddressService,
         private readonly sequelize: Sequelize
     ) { }
+
+    async getAdminOrders(query: AdminOrderListQueryDto = {}) {
+        const currentPage = Math.max(Number(query.page || 1), 1);
+        const limitPage = this.parseLimit(query.limit, 10, 50);
+        const offsetPage = (currentPage - 1) * limitPage;
+        const search = query.search?.trim();
+        const whereClause: any = this.buildAdminOrderDateWhere(query);
+
+        if (query.orderStatus) {
+            whereClause.orderStatus = query.orderStatus;
+        }
+
+        if (query.paymentStatus) {
+            whereClause.paymentStatus = query.paymentStatus;
+        }
+
+        if (search) {
+            whereClause[Op.or] = [
+                { orderNumber: { [Op.iLike]: `%${search}%` } },
+                { '$user.name$': { [Op.iLike]: `%${search}%` } },
+                { '$user.email$': { [Op.iLike]: `%${search}%` } },
+                { '$user.phone$': { [Op.iLike]: `%${search}%` } },
+                { '$address.recipientName$': { [Op.iLike]: `%${search}%` } },
+                { '$address.recipientPhone$': { [Op.iLike]: `%${search}%` } },
+                { '$orderItems.product.name$': { [Op.iLike]: `%${search}%` } },
+                { '$orderItems.combo.name$': { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        const result = await this.orderModel.findAndCountAll({
+            where: whereClause,
+            attributes: [
+                'id',
+                'orderNumber',
+                'orderStatus',
+                'paymentMethod',
+                'paymentStatus',
+                'subTotal',
+                'deliveryFee',
+                'discount',
+                'finalTotal',
+                'notes',
+                'paidAt',
+                'createdAt',
+                'updatedAt'
+            ],
+            include: this.buildAdminOrderInclude(),
+            distinct: true,
+            subQuery: false,
+            limit: limitPage,
+            offset: offsetPage,
+            order: [['createdAt', 'DESC']]
+        });
+
+        return {
+            items: result.rows.map((order) => this.mapAdminOrder(order)),
+            pagination: {
+                page: currentPage,
+                limit: limitPage,
+                totalItems: result.count,
+                totalPages: Math.ceil(result.count / limitPage)
+            }
+        };
+    }
+
+    async updateAdminOrderStatus(id: number, dto: UpdateOrderStatusDto) {
+        const order = await this.orderModel.findByPk(id);
+        if (!order) {
+            throw new BadRequestException('Order not found');
+        }
+
+        order.setDataValue('orderStatus', dto.orderStatus);
+
+        if (dto.orderStatus === ORDERSTATUS.CANCELLED) {
+            order.setDataValue('cancelledReason', dto.cancelledReason || null);
+            order.setDataValue('cancelledAt', new Date());
+        }
+
+        await order.save();
+
+        const updatedOrder = await this.orderModel.findByPk(id, {
+            attributes: [
+                'id',
+                'orderNumber',
+                'orderStatus',
+                'paymentMethod',
+                'paymentStatus',
+                'subTotal',
+                'deliveryFee',
+                'discount',
+                'finalTotal',
+                'notes',
+                'paidAt',
+                'cancelledReason',
+                'cancelledAt',
+                'createdAt',
+                'updatedAt'
+            ],
+            include: this.buildAdminOrderInclude()
+        });
+
+        if (!updatedOrder) {
+            throw new BadRequestException('Order not found');
+        }
+
+        return this.mapAdminOrder(updatedOrder);
+    }
+
+    async getAdminOrderOverview(query: AdminOrderDateRangeQueryDto = {}) {
+        const whereClause = this.buildAdminOrderDateWhere(query);
+        const todayWhere = this.buildTodayOrderWhere();
+
+        const [
+            totalOrders,
+            pendingOrders,
+            preparingOrders,
+            deliveredOrders,
+            cancelledOrders,
+            totalRevenue,
+            paidRevenue,
+            pendingPaymentAmount,
+            totalOrderAmount,
+            todayOrders,
+            todayRevenue
+        ] = await Promise.all([
+            this.orderModel.count({ where: whereClause }),
+            this.orderModel.count({ where: { ...whereClause, orderStatus: ORDERSTATUS.PENDING } }),
+            this.orderModel.count({ where: { ...whereClause, orderStatus: ORDERSTATUS.PREPARING } }),
+            this.orderModel.count({ where: { ...whereClause, orderStatus: ORDERSTATUS.DELIVERED } }),
+            this.orderModel.count({ where: { ...whereClause, orderStatus: ORDERSTATUS.CANCELLED } }),
+            this.orderModel.sum('finalTotal', { where: { ...whereClause, orderStatus: ORDERSTATUS.DELIVERED } }),
+            this.orderModel.sum('finalTotal', { where: { ...whereClause, paymentStatus: PAYMENTSTATUS.PAID } }),
+            this.orderModel.sum('finalTotal', { where: { ...whereClause, paymentStatus: PAYMENTSTATUS.PENDING } }),
+            this.orderModel.sum('finalTotal', { where: whereClause }),
+            this.orderModel.count({ where: todayWhere }),
+            this.orderModel.sum('finalTotal', { where: { ...todayWhere, orderStatus: ORDERSTATUS.DELIVERED } })
+        ]);
+
+        return {
+            totalOrders,
+            pendingOrders,
+            preparingOrders,
+            deliveredOrders,
+            cancelledOrders,
+            totalRevenue: this.toNumber(totalRevenue),
+            paidRevenue: this.toNumber(paidRevenue),
+            pendingPaymentAmount: this.toNumber(pendingPaymentAmount),
+            averageOrderValue: totalOrders > 0 ? Math.round(this.toNumber(totalOrderAmount) / totalOrders) : 0,
+            todayOrders,
+            todayRevenue: this.toNumber(todayRevenue)
+        };
+    }
+
+    async getAdminRevenueStatistics(query: AdminOrderRevenueQueryDto = {}) {
+        const groupBy = query.groupBy || 'day';
+        const bucketExpression = fn('date_trunc', groupBy, col('createdAt'));
+        const rows = await this.orderModel.findAll({
+            attributes: [
+                [bucketExpression, 'bucket'],
+                [fn('COUNT', col('id')), 'totalOrders'],
+                [fn('SUM', col('finalTotal')), 'revenue']
+            ],
+            where: {
+                ...this.buildAdminOrderDateWhere(query),
+                orderStatus: ORDERSTATUS.DELIVERED
+            },
+            group: [bucketExpression],
+            order: [[bucketExpression as any, 'ASC']],
+            raw: true
+        });
+
+        return {
+            groupBy,
+            items: rows.map((row: any) => ({
+                label: this.formatRevenueBucket(row.bucket, groupBy),
+                totalOrders: this.toNumber(row.totalOrders),
+                revenue: this.toNumber(row.revenue)
+            }))
+        };
+    }
+
+    async getAdminOrderStatusStatistics(query: AdminOrderDateRangeQueryDto = {}) {
+        const rows = await this.orderModel.findAll({
+            attributes: [
+                'orderStatus',
+                [fn('COUNT', col('id')), 'count'],
+                [fn('SUM', col('finalTotal')), 'amount']
+            ],
+            where: this.buildAdminOrderDateWhere(query),
+            group: ['orderStatus'],
+            raw: true
+        });
+
+        const statsByStatus = new Map(
+            rows.map((row: any) => [
+                row.orderStatus,
+                {
+                    status: row.orderStatus,
+                    count: this.toNumber(row.count),
+                    amount: this.toNumber(row.amount)
+                }
+            ])
+        );
+
+        return {
+            items: Object.values(ORDERSTATUS).map((status) => (
+                statsByStatus.get(status) || { status, count: 0, amount: 0 }
+            ))
+        };
+    }
+
+    async getAdminPaymentStatistics(query: AdminOrderDateRangeQueryDto = {}) {
+        const rows = await this.orderModel.findAll({
+            attributes: [
+                'paymentStatus',
+                [fn('COUNT', col('id')), 'count'],
+                [fn('SUM', col('finalTotal')), 'amount']
+            ],
+            where: this.buildAdminOrderDateWhere(query),
+            group: ['paymentStatus'],
+            raw: true
+        });
+
+        const statsByStatus = new Map(
+            rows.map((row: any) => [
+                row.paymentStatus,
+                {
+                    paymentStatus: row.paymentStatus,
+                    count: this.toNumber(row.count),
+                    amount: this.toNumber(row.amount)
+                }
+            ])
+        );
+
+        return {
+            items: Object.values(PAYMENTSTATUS).map((paymentStatus) => (
+                statsByStatus.get(paymentStatus) || { paymentStatus, count: 0, amount: 0 }
+            ))
+        };
+    }
+
+    async getAdminTopProducts(query: AdminOrderLimitQueryDto = {}) {
+        const limit = this.parseLimit(query.limit, 5, 20);
+        const orders = await this.orderModel.findAll({
+            where: {
+                ...this.buildAdminOrderDateWhere(query),
+                orderStatus: ORDERSTATUS.DELIVERED
+            },
+            attributes: ['id'],
+            include: [
+                {
+                    model: OrderItems,
+                    attributes: ['id', 'productId', 'comboId', 'quantity', 'metadata'],
+                    include: [
+                        {
+                            model: Product,
+                            attributes: ['id', 'name', 'imageUrl']
+                        },
+                        {
+                            model: Combo,
+                            attributes: ['id', 'name', 'imageUrl']
+                        }
+                    ]
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        const stats = new Map<string, any>();
+
+        for (const order of orders) {
+            const plain = order.get({ plain: true }) as any;
+            for (const item of plain.orderItems || []) {
+                const metadata = item.metadata || {};
+                const type = item.comboId ? 'COMBO' : 'PRODUCT';
+                const itemId = item.comboId || item.productId;
+                if (!itemId) continue;
+
+                const key = `${type}:${itemId}`;
+                const quantity = Math.max(this.toNumber(item.quantity), 1);
+                const finalPrice = this.resolveTopItemFinalPrice(metadata);
+                const current = stats.get(key) || {
+                    id: itemId,
+                    productId: item.productId || null,
+                    comboId: item.comboId || null,
+                    type,
+                    name: metadata.itemName || item.product?.name || item.combo?.name || 'Item',
+                    imageUrl: item.product?.imageUrl || item.combo?.imageUrl || null,
+                    quantitySold: 0,
+                    revenue: 0
+                };
+
+                current.quantitySold += quantity;
+                current.revenue += finalPrice * quantity;
+                stats.set(key, current);
+            }
+        }
+
+        return {
+            items: Array.from(stats.values())
+                .sort((a, b) => b.quantitySold - a.quantitySold || b.revenue - a.revenue)
+                .slice(0, limit)
+        };
+    }
+
+    async getAdminRecentOrders(query: AdminOrderLimitQueryDto = {}) {
+        const limit = this.parseLimit(query.limit, 8, 20);
+        const orders = await this.orderModel.findAll({
+            where: this.buildAdminOrderDateWhere(query),
+            attributes: ['id', 'orderNumber', 'orderStatus', 'paymentMethod', 'paymentStatus', 'finalTotal', 'createdAt'],
+            include: [
+                {
+                    model: User,
+                    attributes: ['id', 'name', 'email', 'phone', 'avatar']
+                },
+                {
+                    model: Address,
+                    attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city']
+                },
+                {
+                    model: OrderItems,
+                    attributes: ['id', 'quantity']
+                }
+            ],
+            limit,
+            order: [['createdAt', 'DESC']]
+        });
+
+        return {
+            items: orders.map((order) => {
+                const plain = order.get({ plain: true }) as any;
+                const itemCount = (plain.orderItems || []).reduce(
+                    (total: number, item: any) => total + Math.max(this.toNumber(item.quantity), 1),
+                    0
+                );
+
+                return {
+                    id: plain.id,
+                    orderNumber: plain.orderNumber,
+                    customer: plain.user ? {
+                        id: plain.user.id,
+                        name: plain.user.name,
+                        email: plain.user.email,
+                        phone: plain.user.phone,
+                        avatar: plain.user.avatar
+                    } : null,
+                    recipient: plain.address ? {
+                        name: plain.address.recipientName,
+                        phone: plain.address.recipientPhone
+                    } : null,
+                    address: plain.address ? this.formatAddress(plain.address) : null,
+                    orderStatus: plain.orderStatus,
+                    paymentMethod: plain.paymentMethod,
+                    paymentStatus: plain.paymentStatus,
+                    finalTotal: this.toNumber(plain.finalTotal),
+                    itemCount,
+                    createdAt: plain.createdAt
+                };
+            })
+        };
+    }
 
     async getMyOrders(userId: number, query: MyOrdersQuery = {}) {
         if (!userId) throw new BadRequestException('User id not found');
@@ -172,6 +537,182 @@ export class OrderService {
                 totalPages: Math.ceil(count / limitPage)
             }
         };
+    }
+
+    private buildAdminOrderDateWhere(query: AdminOrderDateRange = {}) {
+        const whereClause: any = {};
+        const fromDate = this.parseDateBoundary(query.fromDate, 'fromDate', false);
+        const toDate = this.parseDateBoundary(query.toDate, 'toDate', true);
+
+        if (fromDate && toDate && fromDate.getTime() > toDate.getTime()) {
+            throw new BadRequestException('fromDate must be before toDate');
+        }
+
+        if (fromDate || toDate) {
+            whereClause.createdAt = {};
+            if (fromDate) whereClause.createdAt[Op.gte] = fromDate;
+            if (toDate) whereClause.createdAt[Op.lte] = toDate;
+        }
+
+        return whereClause;
+    }
+
+    private buildTodayOrderWhere() {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        end.setMilliseconds(end.getMilliseconds() - 1);
+
+        return {
+            createdAt: {
+                [Op.gte]: start,
+                [Op.lte]: end
+            }
+        };
+    }
+
+    private parseDateBoundary(value: string | undefined, fieldName: string, endOfDay: boolean) {
+        if (!value) return null;
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            throw new BadRequestException(`${fieldName} is invalid`);
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+        }
+
+        return date;
+    }
+
+    private parseLimit(value: string | number | undefined, fallback: number, max: number) {
+        const limit = Number(value || fallback);
+        if (Number.isNaN(limit)) return fallback;
+
+        return Math.min(Math.max(Math.floor(limit), 1), max);
+    }
+
+    private toNumber(value: unknown) {
+        const numberValue = Number(value || 0);
+        return Number.isNaN(numberValue) ? 0 : numberValue;
+    }
+
+    private formatRevenueBucket(bucket: string | Date, groupBy: 'day' | 'week' | 'month') {
+        const date = new Date(bucket);
+        if (Number.isNaN(date.getTime())) return String(bucket);
+
+        const isoDate = date.toISOString();
+        if (groupBy === 'month') return isoDate.slice(0, 7);
+
+        return isoDate.slice(0, 10);
+    }
+
+    private resolveTopItemFinalPrice(metadata: any) {
+        const comboPricing = metadata?.comboPricing;
+        if (comboPricing) {
+            return this.toNumber(comboPricing.changedPrice || comboPricing.priceAfterChange || metadata.finalPrice);
+        }
+
+        return this.toNumber(metadata?.finalPrice || metadata?.originalPrice);
+    }
+
+    private buildAdminOrderInclude() {
+        return [
+            {
+                model: User,
+                attributes: ['id', 'name', 'email', 'phone', 'avatar']
+            },
+            {
+                model: Address,
+                attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city']
+            },
+            {
+                model: OrderItems,
+                attributes: ['id', 'productId', 'productVariantId', 'comboId', 'quantity', 'metadata'],
+                include: [
+                    {
+                        model: Product,
+                        attributes: ['id', 'name', 'imageUrl']
+                    },
+                    {
+                        model: ProductVariant,
+                        attributes: ['id', 'name', 'size', 'type', 'modifiedPrice']
+                    },
+                    {
+                        model: Combo,
+                        attributes: ['id', 'name', 'imageUrl']
+                    }
+                ]
+            }
+        ];
+    }
+
+    private mapAdminOrder(order: Order) {
+        const plain = order.get({ plain: true }) as any;
+        const items = (plain.orderItems || []).map((item: any) => {
+            const metadata = item.metadata || {};
+            const name = metadata.itemName || item.product?.name || item.combo?.name || 'San pham';
+            const price = this.resolveTopItemFinalPrice(metadata);
+            const comboItems = this.buildLegacyComboItems(metadata.items || []);
+            const ingredients = metadata.singleItemMetadata?.ingredients || [];
+
+            return {
+                id: item.id,
+                productId: item.productId || null,
+                productVariantId: item.productVariantId || null,
+                comboId: item.comboId || null,
+                name,
+                imageUrl: item.product?.imageUrl || item.combo?.imageUrl || null,
+                variantName: metadata.singleItemMetadata?.variantName || this.buildVariantName(item.productVariant),
+                quantity: Math.max(this.toNumber(item.quantity), 1),
+                originalPrice: this.toNumber(metadata.originalPrice || price),
+                price,
+                comboPricing: metadata.comboPricing || null,
+                comboItems,
+                ingredients,
+                metadata
+            };
+        });
+        const itemCount = items.reduce((total: number, item: any) => total + item.quantity, 0);
+
+        return {
+            id: plain.id,
+            orderNumber: plain.orderNumber,
+            customer: plain.user ? {
+                id: plain.user.id,
+                name: plain.user.name,
+                email: plain.user.email,
+                phone: plain.user.phone,
+                avatar: plain.user.avatar
+            } : null,
+            recipient: plain.address ? {
+                name: plain.address.recipientName,
+                phone: plain.address.recipientPhone
+            } : null,
+            address: plain.address ? this.formatAddress(plain.address) : null,
+            orderStatus: plain.orderStatus,
+            paymentMethod: plain.paymentMethod,
+            paymentStatus: plain.paymentStatus,
+            subTotal: this.toNumber(plain.subTotal),
+            deliveryFee: this.toNumber(plain.deliveryFee),
+            discount: this.toNumber(plain.discount),
+            finalTotal: this.toNumber(plain.finalTotal),
+            notes: plain.notes,
+            paidAt: plain.paidAt,
+            itemCount,
+            items,
+            createdAt: plain.createdAt,
+            updatedAt: plain.updatedAt
+        };
+    }
+
+    private formatAddress(address: any) {
+        return [address.street, address.ward, address.district, address.city]
+            .filter(Boolean)
+            .join(', ');
     }
 
     private buildMyOrdersInclude(includeNormalized: boolean) {
@@ -408,9 +949,33 @@ export class OrderService {
     private buildLegacyComboItems(metadataItems: any[]) {
         if (!Array.isArray(metadataItems) || metadataItems.length === 0) return [];
 
-        return metadataItems.map((metadataItem: any) => {
-            const productName = metadataItem.productName || metadataItem.selectedProductName || metadataItem.changedProductName || 'San pham trong combo';
-            const variantName = metadataItem.variantName || metadataItem.selectedVariantName || metadataItem.changedVariantName || '';
+        const replacedOriginalItems = metadataItems
+            .filter((metadataItem: any) => metadataItem.changedProductName || metadataItem.changedVariantName)
+            .map((metadataItem: any) => ({
+                productName: metadataItem.originalProductName || metadataItem.productName,
+                variantName: metadataItem.originalVariantName || metadataItem.variantName
+            }))
+            .filter((metadataItem: any) => metadataItem.productName);
+
+        const visibleItems = metadataItems.filter((metadataItem: any) => {
+            if (metadataItem.changedProductName || metadataItem.changedVariantName) {
+                return true;
+            }
+
+            return !replacedOriginalItems.some((originalItem: any) => {
+                const sameProduct = originalItem.productName === metadataItem.productName ||
+                    originalItem.productName === metadataItem.selectedProductName ||
+                    originalItem.productName === metadataItem.displayName;
+                const originalVariant = originalItem.variantName || '';
+                const currentVariant = metadataItem.variantName || metadataItem.selectedVariantName || metadataItem.displayVariantName || '';
+
+                return sameProduct && (!originalVariant || !currentVariant || originalVariant === currentVariant);
+            });
+        });
+
+        return visibleItems.map((metadataItem: any) => {
+            const productName = metadataItem.changedProductName || metadataItem.selectedProductName || metadataItem.productName || 'San pham trong combo';
+            const variantName = metadataItem.changedVariantName || metadataItem.selectedVariantName || metadataItem.variantName || '';
 
             return {
                 ...metadataItem,
@@ -420,6 +985,10 @@ export class OrderService {
                 selectedVariantName: variantName,
                 displayName: productName,
                 displayVariantName: variantName,
+                originalProductName: undefined,
+                originalVariantName: undefined,
+                changedProductName: null,
+                changedVariantName: null,
                 isLegacySelectionOnly: true,
                 ingredients: Array.isArray(metadataItem.ingredients) ? metadataItem.ingredients : []
             };

@@ -38,13 +38,15 @@ import {
     CartItems,
     CartItemsIngredient,
     Order,
+    OrderItemComboOption,
     OrderItems,
     OrderItemIngredient,
     Reviews
 } from '@/models';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import * as bcrypt from 'bcryptjs';
+import { ORDERSTATUS, PAYMENTMETHOD, PAYMENTSTATUS } from '@/models/order.model';
 
 @Injectable()
 export class SeederService {
@@ -67,6 +69,7 @@ export class SeederService {
         @InjectModel(CartItemsIngredient) private readonly cartItemsIngredientModel: typeof CartItemsIngredient,
         @InjectModel(Order) private readonly orderModel: typeof Order,
         @InjectModel(OrderItems) private readonly orderItemsModel: typeof OrderItems,
+        @InjectModel(OrderItemComboOption) private readonly orderItemComboOptionModel: typeof OrderItemComboOption,
         @InjectModel(OrderItemIngredient) private readonly orderItemIngredientModel: typeof OrderItemIngredient,
         @InjectModel(Reviews) private readonly reviewsModel: typeof Reviews,
         private readonly sequelize: Sequelize
@@ -251,6 +254,302 @@ export class SeederService {
         });
         console.log(`âœ… Seeded ${result.length} reviews`);
         return result;
+    }
+
+    async seedDevOrders() {
+        const transaction = await this.sequelize.transaction();
+
+        try {
+            const user = await this.userModel.findOne({ transaction });
+            if (!user) throw new BadRequestException('Cannot seed dev orders: no user found');
+
+            let address = await this.addressModel.findOne({
+                where: { userId: user.dataValues.id },
+                transaction
+            });
+
+            if (!address) {
+                address = await this.addressModel.create({
+                    userId: user.dataValues.id,
+                    sessionId: null,
+                    recipientName: user.dataValues.name || 'Dev Customer',
+                    recipientPhone: user.dataValues.phone || '0987654324',
+                    street: 'Dev Street',
+                    ward: 'Dev Ward',
+                    district: 'Dev District',
+                    city: 'Dev City',
+                    latitude: 10.762622,
+                    longitude: 106.660172,
+                    isDefault: false
+                } as Address, { transaction });
+            }
+
+            const singleVariant = await this.productVariantModel.findOne({
+                include: [{ model: Product, required: true }],
+                transaction
+            });
+            if (!singleVariant?.dataValues.product) {
+                throw new BadRequestException('Cannot seed dev orders: no product variant found');
+            }
+
+            const comboItemRows = await this.comboItemModel.findAll({
+                include: [
+                    { model: Combo, required: true },
+                    { model: Product, required: true },
+                    { model: ProductVariant, required: true }
+                ],
+                order: [['comboId', 'ASC'], ['id', 'ASC']],
+                transaction
+            });
+            if (!comboItemRows.length || !comboItemRows[0].dataValues.combo) {
+                throw new BadRequestException('Cannot seed dev orders: no combo with items found');
+            }
+
+            const combo = comboItemRows[0].dataValues.combo;
+            const comboId = Number(combo.dataValues.id);
+            const comboItemsSource = comboItemRows.filter((item) => Number(item.dataValues.comboId) === comboId);
+            const firstComboItem = comboItemsSource[0];
+            const replacementVariant = await this.productVariantModel.findOne({
+                where: {
+                    productId: { [Op.ne]: firstComboItem.dataValues.productId }
+                },
+                include: [{ model: Product, required: true }],
+                transaction
+            });
+            if (!replacementVariant?.dataValues.product) {
+                throw new BadRequestException('Cannot seed dev orders: no replacement product variant found');
+            }
+
+            const timestamp = Date.now();
+            const singleOrder = await this.createDevSingleProductOrder(
+                user.dataValues.id,
+                address.dataValues.id,
+                singleVariant,
+                `DEV-SINGLE-${timestamp}`,
+                transaction
+            );
+            const originalComboOrder = await this.createDevComboOrder(
+                user.dataValues.id,
+                address.dataValues.id,
+                combo,
+                comboItemsSource,
+                null,
+                `DEV-COMBO-ORIGINAL-${timestamp}`,
+                transaction
+            );
+            const changedComboOrder = await this.createDevComboOrder(
+                user.dataValues.id,
+                address.dataValues.id,
+                combo,
+                comboItemsSource,
+                replacementVariant,
+                `DEV-COMBO-CHANGED-${timestamp}`,
+                transaction
+            );
+
+            await transaction.commit();
+
+            return {
+                message: 'Dev orders seeded successfully',
+                data: {
+                    singleProductOrder: singleOrder.dataValues.orderNumber,
+                    originalComboOrder: originalComboOrder.dataValues.orderNumber,
+                    changedComboOrder: changedComboOrder.dataValues.orderNumber
+                }
+            };
+        } catch (error: any) {
+            await transaction.rollback();
+            throw new BadRequestException(`Seed dev orders failed: ${error.message}`);
+        }
+    }
+
+    private async createDevSingleProductOrder(
+        userId: number,
+        addressId: number,
+        variant: ProductVariant,
+        orderNumber: string,
+        transaction: Transaction
+    ) {
+        const product = variant.dataValues.product;
+        const unitPrice = Number(product.dataValues.basePrice || 0) + Number(variant.dataValues.modifiedPrice || 0);
+        const order = await this.orderModel.create({
+            orderNumber,
+            userId,
+            addressId,
+            orderStatus: ORDERSTATUS.PENDING,
+            paymentMethod: PAYMENTMETHOD.CASH,
+            paymentStatus: PAYMENTSTATUS.PENDING,
+            subTotal: unitPrice,
+            deliveryFee: 15000,
+            discount: 0,
+            finalTotal: unitPrice + 15000,
+            notes: 'DEV seed: single product order',
+            paidAt: null,
+            cancelledReason: null
+        } as Order, { transaction });
+
+        await this.orderItemsModel.create({
+            orderId: order.dataValues.id,
+            productId: product.dataValues.id,
+            productVariantId: variant.dataValues.id,
+            comboId: null,
+            quantity: 1,
+            metadata: {
+                itemName: product.dataValues.name,
+                originalPrice: unitPrice,
+                finalPrice: unitPrice,
+                singleItemMetadata: {
+                    variantName: this.getVariantDisplayName(variant),
+                    ingredients: []
+                }
+            }
+        } as unknown as OrderItems, { transaction });
+
+        return order;
+    }
+
+    private async createDevComboOrder(
+        userId: number,
+        addressId: number,
+        combo: Combo,
+        comboItemsSource: ComboItem[],
+        replacementVariant: ProductVariant | null,
+        orderNumber: string,
+        transaction: Transaction
+    ) {
+        const comboBasePrice = Number(combo.dataValues.price || 0);
+        const discountedComboPrice = Math.ceil(
+            (comboBasePrice * (1 - Number(combo.dataValues.discountPercentage || 0) / 100)) / 1000
+        ) * 1000;
+        const firstComboItem = comboItemsSource[0];
+        const originalVariantPrice = Number(firstComboItem.dataValues.productVariant?.dataValues.modifiedPrice || 0);
+        const replacementVariantPrice = replacementVariant ? Number(replacementVariant.dataValues.modifiedPrice || 0) : originalVariantPrice;
+        const variantSurcharge = replacementVariant
+            ? Math.max(replacementVariantPrice - originalVariantPrice, 0)
+            : 0;
+        const finalPrice = discountedComboPrice + variantSurcharge;
+        const deliveryFee = 15000;
+        const comboMetadataItems = comboItemsSource.map((comboItem, index) => this.buildDevComboMetadataItem(
+            comboItem,
+            index,
+            replacementVariant && index === 0 ? replacementVariant : null
+        ));
+
+        const order = await this.orderModel.create({
+            orderNumber,
+            userId,
+            addressId,
+            orderStatus: ORDERSTATUS.PENDING,
+            paymentMethod: PAYMENTMETHOD.CASH,
+            paymentStatus: PAYMENTSTATUS.PENDING,
+            subTotal: finalPrice,
+            deliveryFee,
+            discount: 0,
+            finalTotal: finalPrice + deliveryFee,
+            notes: replacementVariant ? 'DEV seed: combo with replaced product' : 'DEV seed: original combo',
+            paidAt: null,
+            cancelledReason: null
+        } as Order, { transaction });
+
+        const orderItem = await this.orderItemsModel.create({
+            orderId: order.dataValues.id,
+            productId: null,
+            productVariantId: null,
+            comboId: combo.dataValues.id,
+            quantity: 1,
+            metadata: {
+                itemName: combo.dataValues.name,
+                originalPrice: discountedComboPrice,
+                finalPrice,
+                totalPrice: finalPrice,
+                comboPricing: {
+                    basePrice: comboBasePrice,
+                    discountedBasePrice: discountedComboPrice,
+                    originalPrice: discountedComboPrice,
+                    changedPrice: finalPrice,
+                    discountPercentage: Number(combo.dataValues.discountPercentage || 0),
+                    savedAmount: Math.max(comboBasePrice - discountedComboPrice, 0),
+                    variantSurcharge,
+                    ingredientSurcharge: 0,
+                    totalSurcharge: variantSurcharge,
+                    priceAfterChange: finalPrice
+                },
+                items: comboMetadataItems
+            }
+        } as unknown as OrderItems, { transaction });
+
+        for (const comboItem of comboItemsSource) {
+            const index = comboItemsSource.indexOf(comboItem);
+            const selectedVariant = replacementVariant && index === 0 ? replacementVariant : comboItem.dataValues.productVariant;
+            const selectedProduct = selectedVariant.dataValues.product || comboItem.dataValues.product;
+            const originalVariant = comboItem.dataValues.productVariant;
+            const optionVariantSurcharge = replacementVariant && index === 0
+                ? Math.max(Number(selectedVariant.dataValues.modifiedPrice || 0) - Number(originalVariant.dataValues.modifiedPrice || 0), 0)
+                : 0;
+
+            await this.orderItemComboOptionModel.create({
+                orderItemId: orderItem.dataValues.id,
+                comboItemId: comboItem.dataValues.id,
+                slotIndex: index,
+                selectedProductId: selectedProduct.dataValues.id,
+                selectedProductVariantId: selectedVariant.dataValues.id,
+                productNameSnapshot: selectedProduct.dataValues.name,
+                variantNameSnapshot: this.getVariantDisplayName(selectedVariant),
+                unitPriceSnapshot: Number(selectedVariant.dataValues.modifiedPrice || 0),
+                originalProductNameSnapshot: comboItem.dataValues.product.dataValues.name,
+                originalVariantNameSnapshot: this.getVariantDisplayName(originalVariant),
+                selectedProductNameSnapshot: selectedProduct.dataValues.name,
+                selectedVariantNameSnapshot: this.getVariantDisplayName(selectedVariant),
+                originalVariantModifiedPriceSnapshot: Number(originalVariant.dataValues.modifiedPrice || 0),
+                selectedVariantModifiedPriceSnapshot: Number(selectedVariant.dataValues.modifiedPrice || 0),
+                variantSurchargeSnapshot: optionVariantSurcharge,
+                ingredientSurchargeSnapshot: 0,
+                surchargeSnapshot: optionVariantSurcharge
+            } as OrderItemComboOption, { transaction });
+        }
+
+        return order;
+    }
+
+    private buildDevComboMetadataItem(
+        comboItem: ComboItem,
+        slotIndex: number,
+        replacementVariant: ProductVariant | null
+    ) {
+        const originalProduct = comboItem.dataValues.product;
+        const originalVariant = comboItem.dataValues.productVariant;
+        const selectedVariant = replacementVariant || originalVariant;
+        const selectedProduct = replacementVariant?.dataValues.product || originalProduct;
+        const isChanged = Boolean(replacementVariant);
+        const variantSurcharge = isChanged
+            ? Math.max(Number(selectedVariant.dataValues.modifiedPrice || 0) - Number(originalVariant.dataValues.modifiedPrice || 0), 0)
+            : 0;
+
+        return {
+            comboItemId: Number(comboItem.dataValues.id),
+            slotIndex,
+            productId: Number(selectedProduct.dataValues.id),
+            productName: selectedProduct.dataValues.name,
+            variantId: Number(selectedVariant.dataValues.id),
+            variantName: this.getVariantDisplayName(selectedVariant),
+            originalProductName: originalProduct.dataValues.name,
+            originalVariantName: this.getVariantDisplayName(originalVariant),
+            changedProductName: isChanged ? selectedProduct.dataValues.name : null,
+            changedVariantName: isChanged ? this.getVariantDisplayName(selectedVariant) : null,
+            unitPrice: Number(selectedVariant.dataValues.modifiedPrice || 0),
+            originalVariantModifiedPrice: Number(originalVariant.dataValues.modifiedPrice || 0),
+            selectedVariantModifiedPrice: Number(selectedVariant.dataValues.modifiedPrice || 0),
+            variantSurcharge,
+            ingredientSurcharge: 0,
+            surcharge: variantSurcharge,
+            ingredients: []
+        };
+    }
+
+    private getVariantDisplayName(variant: ProductVariant) {
+        return [variant.dataValues.size, variant.dataValues.type]
+            .filter((value) => value && value !== 'DEFAULT')
+            .join(' - ');
     }
 
     async runAllSeeder() {

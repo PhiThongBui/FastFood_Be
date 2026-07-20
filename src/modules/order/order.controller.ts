@@ -1,11 +1,91 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { OrderService } from './order.service';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { RolesGuard } from '@/common/guards/role.guards';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { ENUMROLE } from '@/models';
+import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Controller('order')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/orders')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin order list' })
+  getAdminOrders(@Query() query: AdminOrderListQueryDto) {
+    return this.orderService.getAdminOrders(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Patch('admin/orders/:id/status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update admin order status' })
+  updateAdminOrderStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
+    return this.orderService.updateAdminOrderStatus(id, dto);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/overview')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin order statistics overview' })
+  getAdminOrderOverview(@Query() query: AdminOrderDateRangeQueryDto) {
+    return this.orderService.getAdminOrderOverview(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/revenue')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin revenue chart statistics' })
+  getAdminRevenueStatistics(@Query() query: AdminOrderRevenueQueryDto) {
+    return this.orderService.getAdminRevenueStatistics(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/status')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin order status statistics' })
+  getAdminOrderStatusStatistics(@Query() query: AdminOrderDateRangeQueryDto) {
+    return this.orderService.getAdminOrderStatusStatistics(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/payment')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin payment statistics' })
+  getAdminPaymentStatistics(@Query() query: AdminOrderDateRangeQueryDto) {
+    return this.orderService.getAdminPaymentStatistics(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/top-products')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin top selling order items' })
+  getAdminTopProducts(@Query() query: AdminOrderLimitQueryDto) {
+    return this.orderService.getAdminTopProducts(query);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Get('admin/statistics/recent-orders')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get admin recent orders' })
+  getAdminRecentOrders(@Query() query: AdminOrderLimitQueryDto) {
+    return this.orderService.getAdminRecentOrders(query);
+  }
 
   @UseGuards(JWTGuard)
   @Get('my-orders')

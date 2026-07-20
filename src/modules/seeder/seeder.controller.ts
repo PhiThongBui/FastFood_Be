@@ -17,4 +17,13 @@ export class SeederController {
       return { message: 'Seeder failed', error: error.message };
     }
   }
+
+  @Post('/dev-orders')
+  async seedDevOrders() {
+    try {
+      return await this.seederService.seedDevOrders();
+    } catch (error: any) {
+      return { message: 'Seed dev orders failed', error: error.message };
+    }
+  }
 }
