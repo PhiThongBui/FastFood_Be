@@ -23,3 +23,4 @@ export { Address } from './address.model';
 export { ChatConversation, CHAT_CONVERSATION_STATUS } from './chat-conversation.model';
 export { ChatMessage, CHAT_MESSAGE_TYPE, CHAT_SENDER_ROLE } from './chat-message.model';
 export { ChatQuickReply, CHAT_QUICK_REPLY_ROLE } from './chat-quick-reply.model';
+export { StorePolicySetting } from './store-policy-setting.model';

@@ -1,4 +1,4 @@
-import { Address, CartItemComboOption, CartItemComboOptionIngredient, CartItems, CartItemsIngredient, Carts, Category, ChatConversation, ChatMessage, ChatQuickReply, Coupons, Ingredient, Order, OrderItemComboOption, OrderItemComboOptionIngredient, OrderItemIngredient, OrderItems, Product, ProductIngredient, ProductVariant, Reviews, User, UserCoupons } from "@/models";
+import { Address, CartItemComboOption, CartItemComboOptionIngredient, CartItems, CartItemsIngredient, Carts, Category, ChatConversation, ChatMessage, ChatQuickReply, Coupons, Ingredient, Order, OrderItemComboOption, OrderItemComboOptionIngredient, OrderItemIngredient, OrderItems, Product, ProductIngredient, ProductVariant, Reviews, StorePolicySetting, User, UserCoupons } from "@/models";
 import { ComboItem } from "@/models/combo-item.model";
 import { Combo } from "@/models/combo.model";
 import { ConfigService } from "@nestjs/config";
@@ -32,6 +32,6 @@ export const sequelizeConfig = (config: ConfigService) => {
       // Thêm keepAlive để giữ kết nối ổn định hơn trên môi trường cloud
       keepAlive: true, 
     },
-    models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, OrderItemComboOption, OrderItemComboOptionIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient, ChatConversation, ChatMessage, ChatQuickReply],
+    models: [User, Product, Category, ProductVariant, ProductIngredient, Ingredient, CartItems, Carts, Order, OrderItems, OrderItemIngredient, OrderItemComboOption, OrderItemComboOptionIngredient, CartItemsIngredient, Reviews, UserCoupons, Coupons, Address, Combo, ComboItem, CartItemComboOption, CartItemComboOptionIngredient, ChatConversation, ChatMessage, ChatQuickReply, StorePolicySetting],
   }
 }

@@ -21,6 +21,7 @@ async function bootstrap() {
   await ensureProductVariantDefaultEnumValues(sequelize, logger);
   await ensureOrderSnapshotColumns(sequelize, logger);
   await ensureUserCouponColumns(sequelize, logger);
+  await ensureStorePolicySettingColumns(sequelize, logger);
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
@@ -169,6 +170,31 @@ async function ensureUserCouponColumns(sequelize: Sequelize, logger: Logger) {
     logger.log('User coupon schema columns are ready.');
   } catch (error) {
     logger.error('Failed to ensure user coupon schema columns.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
+
+async function ensureStorePolicySettingColumns(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping store policy setting schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      ALTER TABLE IF EXISTS "store_policy_settings"
+        ADD COLUMN IF NOT EXISTS "storeName" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "storeAddress" TEXT,
+        ADD COLUMN IF NOT EXISTS "storePhone" VARCHAR(30),
+        ADD COLUMN IF NOT EXISTS "storeEmail" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "openingHours" VARCHAR(255);
+    `);
+
+    logger.log('Store policy setting schema columns are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure store policy setting schema columns.', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

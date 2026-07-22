@@ -11,6 +11,7 @@ import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQue
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { RedisService } from '../redis/redis.service';
+import { StorePolicySettingService } from '../store-policy-setting/store-policy-setting.service';
 
 interface MyOrdersQuery {
     page?: string | number;
@@ -38,6 +39,7 @@ export class OrderService {
         @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
         private readonly addressService: AddressService,
         private readonly redisService: RedisService,
+        private readonly storePolicySettingService: StorePolicySettingService,
         private readonly sequelize: Sequelize
     ) { }
 
@@ -115,6 +117,10 @@ export class OrderService {
         const order = await this.orderModel.findByPk(id);
         if (!order) {
             throw new BadRequestException('Order not found');
+        }
+
+        if (order.orderStatus === ORDERSTATUS.CANCELLED) {
+            throw new BadRequestException('Cancelled order cannot be updated');
         }
 
         order.setDataValue('orderStatus', dto.orderStatus);
@@ -588,13 +594,7 @@ export class OrderService {
         }
 
         if (options.actor === 'user') {
-            if (order.orderStatus !== ORDERSTATUS.PENDING) {
-                throw new BadRequestException('Only pending orders can be cancelled by customer');
-            }
-
-            if (order.paymentStatus === PAYMENTSTATUS.PAID) {
-                throw new BadRequestException('Paid order cannot be cancelled by customer');
-            }
+            await this.storePolicySettingService.assertUserCanCancelOrder(order);
         }
 
         const reason = options.reason?.trim()
