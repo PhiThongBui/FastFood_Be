@@ -9,6 +9,8 @@ import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
 import { Op, col, fn } from 'sequelize';
 import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
+import { RedisService } from '../redis/redis.service';
 
 interface MyOrdersQuery {
     page?: string | number;
@@ -35,6 +37,7 @@ export class OrderService {
         @InjectModel(Product) private readonly productModel: typeof Product,
         @InjectModel(Ingredient) private readonly ingredientModel: typeof Ingredient,
         private readonly addressService: AddressService,
+        private readonly redisService: RedisService,
         private readonly sequelize: Sequelize
     ) { }
 
@@ -80,6 +83,8 @@ export class OrderService {
                 'finalTotal',
                 'notes',
                 'paidAt',
+                'cancelledReason',
+                'cancelledAt',
                 'createdAt',
                 'updatedAt'
             ],
@@ -103,17 +108,16 @@ export class OrderService {
     }
 
     async updateAdminOrderStatus(id: number, dto: UpdateOrderStatusDto) {
+        if (dto.orderStatus === ORDERSTATUS.CANCELLED) {
+            return this.cancelAdminOrder(id, { reason: dto.cancelledReason });
+        }
+
         const order = await this.orderModel.findByPk(id);
         if (!order) {
             throw new BadRequestException('Order not found');
         }
 
         order.setDataValue('orderStatus', dto.orderStatus);
-
-        if (dto.orderStatus === ORDERSTATUS.CANCELLED) {
-            order.setDataValue('cancelledReason', dto.cancelledReason || null);
-            order.setDataValue('cancelledAt', new Date());
-        }
 
         await order.save();
 
@@ -143,6 +147,23 @@ export class OrderService {
         }
 
         return this.mapAdminOrder(updatedOrder);
+    }
+
+    async cancelMyOrder(userId: number, id: number, dto: CancelOrderDto = {}) {
+        if (!userId) throw new BadRequestException('User id not found');
+
+        return this.cancelOrder(id, {
+            actor: 'user',
+            userId,
+            reason: dto.reason
+        });
+    }
+
+    async cancelAdminOrder(id: number, dto: CancelOrderDto = {}) {
+        return this.cancelOrder(id, {
+            actor: 'admin',
+            reason: dto.reason
+        });
     }
 
     async getAdminOrderOverview(query: AdminOrderDateRangeQueryDto = {}) {
@@ -521,6 +542,8 @@ export class OrderService {
                 finalTotal: effectiveSubTotal - discount + deliveryFee,
                 notes: plain.notes,
                 paidAt: plain.paidAt,
+                cancelledReason: plain.cancelledReason,
+                cancelledAt: plain.cancelledAt,
                 createdAt: plain.createdAt,
                 updatedAt: plain.updatedAt,
                 address: plain.address,
@@ -537,6 +560,73 @@ export class OrderService {
                 totalPages: Math.ceil(count / limitPage)
             }
         };
+    }
+
+    private async cancelOrder(
+        id: number,
+        options: {
+            actor: 'admin' | 'user';
+            userId?: number;
+            reason?: string;
+        }
+    ) {
+        const order = await this.orderModel.findByPk(id);
+        if (!order) {
+            throw new BadRequestException('Order not found');
+        }
+
+        if (options.actor === 'user' && order.userId !== options.userId) {
+            throw new BadRequestException('Order not found');
+        }
+
+        if (order.orderStatus === ORDERSTATUS.CANCELLED) {
+            throw new BadRequestException('Order already cancelled');
+        }
+
+        if (order.orderStatus === ORDERSTATUS.DELIVERED) {
+            throw new BadRequestException('Delivered order cannot be cancelled');
+        }
+
+        if (options.actor === 'user') {
+            if (order.orderStatus !== ORDERSTATUS.PENDING) {
+                throw new BadRequestException('Only pending orders can be cancelled by customer');
+            }
+
+            if (order.paymentStatus === PAYMENTSTATUS.PAID) {
+                throw new BadRequestException('Paid order cannot be cancelled by customer');
+            }
+        }
+
+        const reason = options.reason?.trim()
+            || (options.actor === 'admin' ? 'Admin cancelled order' : 'Customer cancelled order');
+        const nextPaymentStatus = order.paymentStatus === PAYMENTSTATUS.PAID
+            ? PAYMENTSTATUS.REFUNDED
+            : order.paymentStatus === PAYMENTSTATUS.PENDING
+                ? PAYMENTSTATUS.FAILED
+                : order.paymentStatus;
+
+        await order.update({
+            orderStatus: ORDERSTATUS.CANCELLED,
+            paymentStatus: nextPaymentStatus,
+            cancelledReason: reason,
+            cancelledAt: new Date()
+        } as Partial<Order>);
+
+        try {
+            await this.redisService.removePendingOrder(order.orderNumber);
+        } catch (error: any) {
+            this.logger.warn(`Cannot remove pending order ${order.orderNumber} from Redis: ${error.message}`);
+        }
+
+        const updatedOrder = await this.orderModel.findByPk(id, {
+            include: this.buildAdminOrderInclude()
+        });
+
+        if (!updatedOrder) {
+            throw new BadRequestException('Order not found');
+        }
+
+        return this.mapAdminOrder(updatedOrder);
     }
 
     private buildAdminOrderDateWhere(query: AdminOrderDateRange = {}) {
@@ -702,6 +792,8 @@ export class OrderService {
             finalTotal: this.toNumber(plain.finalTotal),
             notes: plain.notes,
             paidAt: plain.paidAt,
+            cancelledReason: plain.cancelledReason,
+            cancelledAt: plain.cancelledAt,
             itemCount,
             items,
             createdAt: plain.createdAt,

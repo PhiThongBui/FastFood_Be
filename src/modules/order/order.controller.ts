@@ -7,6 +7,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { ENUMROLE } from '@/models';
 import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 
 @Controller('order')
 export class OrderController {
@@ -31,6 +32,18 @@ export class OrderController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.orderService.updateAdminOrderStatus(id, dto);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Roles(ENUMROLE.ADMIN)
+  @Patch('admin/orders/:id/cancel')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Cancel order by admin' })
+  cancelAdminOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CancelOrderDto,
+  ) {
+    return this.orderService.cancelAdminOrder(id, dto);
   }
 
   @UseGuards(JWTGuard, RolesGuard)
@@ -100,5 +113,17 @@ export class OrderController {
   @ApiQuery({ name: 'paymentStatus', required: false, description: 'Trạng thái thanh toán' })
   getMyOrders(@Req() req: any, @Query() query: Record<string, string>) {
     return this.orderService.getMyOrders(Number(req.user?.uid), query);
+  }
+
+  @UseGuards(JWTGuard)
+  @Patch('my-orders/:id/cancel')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Cancel my order' })
+  cancelMyOrder(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CancelOrderDto,
+  ) {
+    return this.orderService.cancelMyOrder(Number(req.user?.uid), id, dto);
   }
 }
