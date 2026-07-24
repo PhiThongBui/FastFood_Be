@@ -3,6 +3,9 @@ export class filterProductDto{
     @StringNotRequired
     name?: string
 
+    @StringNotRequired
+    search?: string
+
     @NumberNotRequired
     categoryId?:number
 

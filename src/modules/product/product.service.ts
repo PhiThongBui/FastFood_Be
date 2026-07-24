@@ -393,13 +393,24 @@ export class ProductService {
     }
 
     async getAdminProducts(filterSearch: filterProductDto) {
-        const { name, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder } = filterSearch
-        const whereClause: Record<string, any> = {}
+        const { name, search, categoryId, isFeatured, isActive, page, limit, sortBy, sortOrder } = filterSearch
+        const whereClause: any = {}
+        const searchTerm = String(search || name || '').trim()
 
-        if (name !== undefined) {
-            whereClause.name = {
-                [Op.iLike]: `%${name}%`
+        if (searchTerm) {
+            const likeSearch = `%${searchTerm}%`
+            const searchConditions: Record<string, any>[] = [
+                { name: { [Op.iLike]: likeSearch } },
+                { slug: { [Op.iLike]: likeSearch } },
+                { description: { [Op.iLike]: likeSearch } },
+                { '$category.name$': { [Op.iLike]: likeSearch } },
+                { '$category.slug$': { [Op.iLike]: likeSearch } }
+            ]
+            const searchId = Number(searchTerm)
+            if (Number.isInteger(searchId) && searchId > 0) {
+                searchConditions.unshift({ id: searchId })
             }
+            whereClause[Op.or] = searchConditions
         }
         if (categoryId !== undefined) whereClause.categoryId = categoryId
         if (isFeatured !== undefined) whereClause.isFeatured = isFeatured
@@ -427,12 +438,15 @@ export class ProductService {
                 {
                     model: this.modelCategory,
                     as: 'category',
+                    required: false,
                     attributes: ['id', 'name']
                 },
                 {
                     model: this.modelProductVariant,
                     as: 'variants',
-                    required: false
+                    required: false,
+                    separate: true,
+                    order: [['id', 'ASC']]
                 }
             ]
         })
