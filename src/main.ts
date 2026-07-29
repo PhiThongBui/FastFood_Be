@@ -18,6 +18,7 @@ async function bootstrap() {
   const logger = new Logger(bootstrap.name);
   const sequelize = app.get(Sequelize);
 
+  await ensureCartItemsIngredientSchema(sequelize, logger);
   await ensureProductVariantDefaultEnumValues(sequelize, logger);
   await ensureOrderSnapshotColumns(sequelize, logger);
   await ensureUserCouponColumns(sequelize, logger);
@@ -79,6 +80,38 @@ async function bootstrap() {
   logger.log(`Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`);
 }
 void bootstrap();
+
+async function ensureCartItemsIngredientSchema(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping cart item ingredient schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_CartItemsIngredients_type') THEN
+          CREATE TYPE "enum_CartItemsIngredients_type" AS ENUM ('ADD', 'REMOVE');
+        ELSE
+          ALTER TYPE "enum_CartItemsIngredients_type" ADD VALUE IF NOT EXISTS 'ADD';
+          ALTER TYPE "enum_CartItemsIngredients_type" ADD VALUE IF NOT EXISTS 'REMOVE';
+        END IF;
+      END $$;
+
+      ALTER TABLE IF EXISTS "CartItemsIngredients"
+        ADD COLUMN IF NOT EXISTS "quantity" INTEGER DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS "type" "enum_CartItemsIngredients_type" NOT NULL DEFAULT 'ADD';
+    `);
+
+    logger.log('Cart item ingredient schema columns are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure cart item ingredient schema columns.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
 
 async function ensureProductVariantDefaultEnumValues(sequelize: Sequelize, logger: Logger) {
   const dialect = sequelize.getDialect();
@@ -215,25 +248,35 @@ async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
         IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Users_role') THEN
           ALTER TYPE "enum_Users_role" ADD VALUE IF NOT EXISTS 'STAFF';
         END IF;
-        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Orders_orderType') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Orders_orderType') THEN
+          CREATE TYPE "enum_Orders_orderType" AS ENUM ('DELIVERY', 'DINE_IN');
+        ELSE
           ALTER TYPE "enum_Orders_orderType" ADD VALUE IF NOT EXISTS 'DELIVERY';
           ALTER TYPE "enum_Orders_orderType" ADD VALUE IF NOT EXISTS 'DINE_IN';
         END IF;
-        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_DiningTables_status') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_DiningTables_status') THEN
+          CREATE TYPE "enum_DiningTables_status" AS ENUM ('AVAILABLE', 'OCCUPIED', 'DISABLED');
+        ELSE
           ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'AVAILABLE';
           ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'OCCUPIED';
           ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'DISABLED';
         END IF;
-        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_TableSessions_status') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_TableSessions_status') THEN
+          CREATE TYPE "enum_TableSessions_status" AS ENUM ('OPEN', 'PAID', 'CANCELLED');
+        ELSE
           ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'OPEN';
           ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'PAID';
           ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'CANCELLED';
         END IF;
-        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_source') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_source') THEN
+          CREATE TYPE "enum_KitchenTickets_source" AS ENUM ('QR', 'STAFF');
+        ELSE
           ALTER TYPE "enum_KitchenTickets_source" ADD VALUE IF NOT EXISTS 'QR';
           ALTER TYPE "enum_KitchenTickets_source" ADD VALUE IF NOT EXISTS 'STAFF';
         END IF;
-        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_status') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_status') THEN
+          CREATE TYPE "enum_KitchenTickets_status" AS ENUM ('NEW', 'PREPARING', 'READY', 'SERVED', 'CANCELLED');
+        ELSE
           ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'NEW';
           ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'PREPARING';
           ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'READY';
@@ -241,6 +284,44 @@ async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
           ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'CANCELLED';
         END IF;
       END $$;
+
+      CREATE TABLE IF NOT EXISTS "DiningTables" (
+        "id" SERIAL PRIMARY KEY,
+        "code" VARCHAR(255) NOT NULL UNIQUE,
+        "name" VARCHAR(255) NOT NULL,
+        "area" VARCHAR(255),
+        "status" "enum_DiningTables_status" NOT NULL DEFAULT 'AVAILABLE',
+        "qrToken" VARCHAR(255) NOT NULL UNIQUE,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS "TableSessions" (
+        "id" SERIAL PRIMARY KEY,
+        "tableId" INTEGER NOT NULL,
+        "cartId" INTEGER NOT NULL UNIQUE,
+        "orderId" INTEGER UNIQUE,
+        "openedByUserId" INTEGER,
+        "closedByUserId" INTEGER,
+        "status" "enum_TableSessions_status" NOT NULL DEFAULT 'OPEN',
+        "sessionToken" VARCHAR(255) NOT NULL,
+        "closedAt" TIMESTAMPTZ,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS "KitchenTickets" (
+        "id" SERIAL PRIMARY KEY,
+        "tableSessionId" INTEGER NOT NULL,
+        "orderId" INTEGER NOT NULL,
+        "createdByUserId" INTEGER,
+        "ticketNumber" VARCHAR(255) NOT NULL,
+        "source" "enum_KitchenTickets_source" NOT NULL,
+        "status" "enum_KitchenTickets_status" NOT NULL DEFAULT 'NEW',
+        "notes" TEXT,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
 
       ALTER TABLE IF EXISTS "Users"
         ADD COLUMN IF NOT EXISTS "permissions" JSONB NOT NULL DEFAULT '[]'::jsonb;
@@ -255,6 +336,38 @@ async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
 
       ALTER TABLE IF EXISTS "OrderItems"
         ADD COLUMN IF NOT EXISTS "kitchenTicketId" INTEGER;
+
+      ALTER TABLE IF EXISTS "DiningTables"
+        ADD COLUMN IF NOT EXISTS "code" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "name" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "area" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "status" "enum_DiningTables_status" NOT NULL DEFAULT 'AVAILABLE',
+        ADD COLUMN IF NOT EXISTS "qrToken" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+      ALTER TABLE IF EXISTS "TableSessions"
+        ADD COLUMN IF NOT EXISTS "tableId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "cartId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "orderId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "openedByUserId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "closedByUserId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "status" "enum_TableSessions_status" NOT NULL DEFAULT 'OPEN',
+        ADD COLUMN IF NOT EXISTS "sessionToken" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "closedAt" TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+      ALTER TABLE IF EXISTS "KitchenTickets"
+        ADD COLUMN IF NOT EXISTS "tableSessionId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "orderId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "createdByUserId" INTEGER,
+        ADD COLUMN IF NOT EXISTS "ticketNumber" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "source" "enum_KitchenTickets_source",
+        ADD COLUMN IF NOT EXISTS "status" "enum_KitchenTickets_status" NOT NULL DEFAULT 'NEW',
+        ADD COLUMN IF NOT EXISTS "notes" TEXT,
+        ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
       CREATE UNIQUE INDEX IF NOT EXISTS "dining_tables_qr_token_unique"
         ON "DiningTables" ("qrToken");

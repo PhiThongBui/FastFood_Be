@@ -5,6 +5,10 @@ import { ConfigService } from "@nestjs/config";
 
 export const sequelizeConfig = (config: ConfigService) => {
   const isLocal = config.get('DB_HOST') === 'localhost';
+  const shouldSynchronize =
+    config.get('DB_SYNCHRONIZE') === 'true' ||
+    config.get('DB_SYNC') === 'true' ||
+    isLocal;
 
   const maxConn = parseInt(config.get('DB_MAX_CONN') || '5', 10);
   return {
@@ -15,7 +19,7 @@ export const sequelizeConfig = (config: ConfigService) => {
     password: config.get<string>('DB_PASSWORD'),
     database: config.get('DB_NAME'),
     autoLoadModels: true,
-    synchronize: true,
+    synchronize: shouldSynchronize,
     logging: false, // Tắt SQL logging,
     benchmark: false,
     pool: {
