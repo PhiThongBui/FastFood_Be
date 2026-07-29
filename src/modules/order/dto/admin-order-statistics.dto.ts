@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional } from 'class-validator';
+import { ORDERTYPE } from '@/models/order.model';
 
 export class AdminOrderDateRangeQueryDto {
   @ApiPropertyOptional({ example: '2026-07-01', description: 'Start date, ISO date or date-time' })
@@ -9,6 +10,11 @@ export class AdminOrderDateRangeQueryDto {
   @ApiPropertyOptional({ example: '2026-07-31', description: 'End date, ISO date or date-time' })
   @IsOptional()
   toDate?: string;
+
+  @ApiPropertyOptional({ enum: Object.values(ORDERTYPE), description: 'DELIVERY or DINE_IN' })
+  @IsOptional()
+  @IsIn(Object.values(ORDERTYPE))
+  orderType?: ORDERTYPE;
 }
 
 export class AdminOrderRevenueQueryDto extends AdminOrderDateRangeQueryDto {
@@ -44,4 +50,5 @@ export class AdminOrderListQueryDto extends AdminOrderDateRangeQueryDto {
   @ApiPropertyOptional({ description: 'Payment status value' })
   @IsOptional()
   paymentStatus?: string;
+
 }

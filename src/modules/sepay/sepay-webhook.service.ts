@@ -1,7 +1,9 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Order } from '@/models';
-import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
+import { DiningTable, Order, TableSession } from '@/models';
+import { DINING_TABLE_STATUS } from '@/models/dining-table.model';
+import { ORDERTYPE, ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
+import { TABLE_SESSION_STATUS } from '@/models/table-session.model';
 import { RedisService } from '../redis/redis.service';
 import { SepayService } from './sepay.service';
 
@@ -11,6 +13,8 @@ export class SepayWebhookService {
 
     constructor(
         @InjectModel(Order) private orderModel: typeof Order,
+        @InjectModel(TableSession) private tableSessionModel: typeof TableSession,
+        @InjectModel(DiningTable) private diningTableModel: typeof DiningTable,
         private readonly redisService: RedisService,
         private readonly sepayService: SepayService
     ) { }
@@ -70,6 +74,7 @@ export class SepayWebhookService {
                 momoTransId: String(normalized.transactionId || orderNumber),
                 paidAt: normalized.transactionDate ? new Date(normalized.transactionDate) : new Date()
             });
+            await this.closeDineInSessionForPaidOrder(order);
 
             this.logger.log(`[ORDER UPDATED] ${orderNumber} marked as PAID`);
 
@@ -144,5 +149,21 @@ export class SepayWebhookService {
             ),
             content
         };
+    }
+
+    private async closeDineInSessionForPaidOrder(order: Order) {
+        if (order.dataValues.orderType !== ORDERTYPE.DINE_IN || !order.dataValues.tableSessionId) return;
+
+        const session = await this.tableSessionModel.findByPk(order.dataValues.tableSessionId);
+        if (!session || session.dataValues.status !== TABLE_SESSION_STATUS.OPEN) return;
+
+        await session.update({
+            status: TABLE_SESSION_STATUS.PAID,
+            closedAt: new Date()
+        });
+        await this.diningTableModel.update(
+            { status: DINING_TABLE_STATUS.AVAILABLE },
+            { where: { id: session.dataValues.tableId } }
+        );
     }
 }

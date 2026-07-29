@@ -46,6 +46,6 @@ export class Reviews extends Model<Reviews> {
     @BelongsTo(() => Product)
     product: Product
 
-    @BelongsTo(() => Order)
+    @BelongsTo(() => Order, { constraints: false })
     order: Order
 }

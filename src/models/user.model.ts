@@ -9,6 +9,7 @@ import * as crypto from 'crypto'
 
 export enum ENUMROLE {
     ADMIN = 'ADMIN',
+    STAFF = 'STAFF',
     User = 'USER',
 }
 
@@ -58,6 +59,12 @@ export class User extends Model<User> {
     })
     declare role: ENUMROLE;
 
+    @Column({
+        allowNull: false,
+        defaultValue: [],
+        type: DataType.JSON,
+    })
+    declare permissions: string[];
 
     @Column({
         allowNull: false,

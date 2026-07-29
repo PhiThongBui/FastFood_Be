@@ -1,11 +1,11 @@
-import { Address, Combo, ComboItem, Ingredient, Order, OrderItemComboOption, OrderItemComboOptionIngredient, OrderItemIngredient, OrderItems, Product, ProductVariant, User } from '@/models';
+import { Address, Combo, ComboItem, DiningTable, Ingredient, KitchenTicket, Order, OrderItemComboOption, OrderItemComboOptionIngredient, OrderItemIngredient, OrderItems, Product, ProductVariant, TableSession, User } from '@/models';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { AddressService } from '../address/address.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Helper } from '@/utils/helper';
-import { ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
+import { ORDERTYPE, ORDERSTATUS, PAYMENTSTATUS } from '@/models/order.model';
 import { Op, col, fn } from 'sequelize';
 import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -58,6 +58,10 @@ export class OrderService {
             whereClause.paymentStatus = query.paymentStatus;
         }
 
+        if (query.orderType) {
+            whereClause.orderType = query.orderType;
+        }
+
         if (search) {
             whereClause[Op.or] = [
                 { orderNumber: { [Op.iLike]: `%${search}%` } },
@@ -66,6 +70,8 @@ export class OrderService {
                 { '$user.phone$': { [Op.iLike]: `%${search}%` } },
                 { '$address.recipientName$': { [Op.iLike]: `%${search}%` } },
                 { '$address.recipientPhone$': { [Op.iLike]: `%${search}%` } },
+                { '$tableSession.table.code$': { [Op.iLike]: `%${search}%` } },
+                { '$tableSession.table.name$': { [Op.iLike]: `%${search}%` } },
                 { '$orderItems.product.name$': { [Op.iLike]: `%${search}%` } },
                 { '$orderItems.combo.name$': { [Op.iLike]: `%${search}%` } }
             ];
@@ -76,6 +82,7 @@ export class OrderService {
             attributes: [
                 'id',
                 'orderNumber',
+                'orderType',
                 'orderStatus',
                 'paymentMethod',
                 'paymentStatus',
@@ -87,6 +94,7 @@ export class OrderService {
                 'paidAt',
                 'cancelledReason',
                 'cancelledAt',
+                'tableSessionId',
                 'createdAt',
                 'updatedAt'
             ],
@@ -131,6 +139,7 @@ export class OrderService {
             attributes: [
                 'id',
                 'orderNumber',
+                'orderType',
                 'orderStatus',
                 'paymentMethod',
                 'paymentStatus',
@@ -142,6 +151,7 @@ export class OrderService {
                 'paidAt',
                 'cancelledReason',
                 'cancelledAt',
+                'tableSessionId',
                 'createdAt',
                 'updatedAt'
             ],
@@ -373,7 +383,7 @@ export class OrderService {
         const limit = this.parseLimit(query.limit, 8, 20);
         const orders = await this.orderModel.findAll({
             where: this.buildAdminOrderDateWhere(query),
-            attributes: ['id', 'orderNumber', 'orderStatus', 'paymentMethod', 'paymentStatus', 'finalTotal', 'createdAt'],
+            attributes: ['id', 'orderNumber', 'orderType', 'orderStatus', 'paymentMethod', 'paymentStatus', 'finalTotal', 'createdAt'],
             include: [
                 {
                     model: User,
@@ -381,7 +391,19 @@ export class OrderService {
                 },
                 {
                     model: Address,
-                    attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city']
+                    attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city'],
+                    required: false
+                },
+                {
+                    model: TableSession,
+                    attributes: ['id', 'tableId', 'status'],
+                    required: false,
+                    include: [
+                        {
+                            model: DiningTable,
+                            attributes: ['id', 'code', 'name', 'area']
+                        }
+                    ]
                 },
                 {
                     model: OrderItems,
@@ -403,6 +425,7 @@ export class OrderService {
                 return {
                     id: plain.id,
                     orderNumber: plain.orderNumber,
+                    orderType: plain.orderType || ORDERTYPE.DELIVERY,
                     customer: plain.user ? {
                         id: plain.user.id,
                         name: plain.user.name,
@@ -415,6 +438,12 @@ export class OrderService {
                         phone: plain.address.recipientPhone
                     } : null,
                     address: plain.address ? this.formatAddress(plain.address) : null,
+                    table: plain.tableSession?.table ? {
+                        id: plain.tableSession.table.id,
+                        code: plain.tableSession.table.code,
+                        name: plain.tableSession.table.name,
+                        area: plain.tableSession.table.area,
+                    } : null,
                     orderStatus: plain.orderStatus,
                     paymentMethod: plain.paymentMethod,
                     paymentStatus: plain.paymentStatus,
@@ -717,11 +746,28 @@ export class OrderService {
             },
             {
                 model: Address,
-                attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city']
+                attributes: ['id', 'recipientName', 'recipientPhone', 'street', 'ward', 'district', 'city'],
+                required: false
+            },
+            {
+                model: TableSession,
+                attributes: ['id', 'tableId', 'status', 'openedByUserId', 'closedByUserId', 'closedAt'],
+                required: false,
+                include: [
+                    {
+                        model: DiningTable,
+                        attributes: ['id', 'code', 'name', 'area', 'status']
+                    }
+                ]
+            },
+            {
+                model: KitchenTicket,
+                attributes: ['id', 'ticketNumber', 'status', 'source', 'createdAt'],
+                required: false
             },
             {
                 model: OrderItems,
-                attributes: ['id', 'productId', 'productVariantId', 'comboId', 'quantity', 'metadata'],
+                attributes: ['id', 'productId', 'productVariantId', 'comboId', 'kitchenTicketId', 'quantity', 'metadata'],
                 include: [
                     {
                         model: Product,
@@ -754,6 +800,7 @@ export class OrderService {
                 productId: item.productId || null,
                 productVariantId: item.productVariantId || null,
                 comboId: item.comboId || null,
+                kitchenTicketId: item.kitchenTicketId || null,
                 name,
                 imageUrl: item.product?.imageUrl || item.combo?.imageUrl || null,
                 variantName: metadata.singleItemMetadata?.variantName || this.buildVariantName(item.productVariant),
@@ -771,6 +818,7 @@ export class OrderService {
         return {
             id: plain.id,
             orderNumber: plain.orderNumber,
+            orderType: plain.orderType || ORDERTYPE.DELIVERY,
             customer: plain.user ? {
                 id: plain.user.id,
                 name: plain.user.name,
@@ -783,6 +831,21 @@ export class OrderService {
                 phone: plain.address.recipientPhone
             } : null,
             address: plain.address ? this.formatAddress(plain.address) : null,
+            table: plain.tableSession?.table ? {
+                id: plain.tableSession.table.id,
+                code: plain.tableSession.table.code,
+                name: plain.tableSession.table.name,
+                area: plain.tableSession.table.area,
+                status: plain.tableSession.table.status,
+            } : null,
+            tableSession: plain.tableSession ? {
+                id: plain.tableSession.id,
+                tableId: plain.tableSession.tableId,
+                status: plain.tableSession.status,
+                openedByUserId: plain.tableSession.openedByUserId,
+                closedByUserId: plain.tableSession.closedByUserId,
+                closedAt: plain.tableSession.closedAt,
+            } : null,
             orderStatus: plain.orderStatus,
             paymentMethod: plain.paymentMethod,
             paymentStatus: plain.paymentStatus,
@@ -795,6 +858,14 @@ export class OrderService {
             cancelledReason: plain.cancelledReason,
             cancelledAt: plain.cancelledAt,
             itemCount,
+            ticketCount: Array.isArray(plain.kitchenTickets) ? plain.kitchenTickets.length : 0,
+            kitchenTickets: (plain.kitchenTickets || []).map((ticket: any) => ({
+                id: ticket.id,
+                ticketNumber: ticket.ticketNumber,
+                status: ticket.status,
+                source: ticket.source,
+                createdAt: ticket.createdAt,
+            })),
             items,
             createdAt: plain.createdAt,
             updatedAt: plain.updatedAt

@@ -22,6 +22,7 @@ async function bootstrap() {
   await ensureOrderSnapshotColumns(sequelize, logger);
   await ensureUserCouponColumns(sequelize, logger);
   await ensureStorePolicySettingColumns(sequelize, logger);
+  await ensureDineInSchema(sequelize, logger);
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
@@ -195,6 +196,76 @@ async function ensureStorePolicySettingColumns(sequelize: Sequelize, logger: Log
     logger.log('Store policy setting schema columns are ready.');
   } catch (error) {
     logger.error('Failed to ensure store policy setting schema columns.', error instanceof Error ? error.stack : String(error));
+    throw error;
+  }
+}
+
+async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(`Skipping dine-in schema patch for dialect: ${dialect}`);
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Users_role') THEN
+          ALTER TYPE "enum_Users_role" ADD VALUE IF NOT EXISTS 'STAFF';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Orders_orderType') THEN
+          ALTER TYPE "enum_Orders_orderType" ADD VALUE IF NOT EXISTS 'DELIVERY';
+          ALTER TYPE "enum_Orders_orderType" ADD VALUE IF NOT EXISTS 'DINE_IN';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_DiningTables_status') THEN
+          ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'AVAILABLE';
+          ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'OCCUPIED';
+          ALTER TYPE "enum_DiningTables_status" ADD VALUE IF NOT EXISTS 'DISABLED';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_TableSessions_status') THEN
+          ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'OPEN';
+          ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'PAID';
+          ALTER TYPE "enum_TableSessions_status" ADD VALUE IF NOT EXISTS 'CANCELLED';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_source') THEN
+          ALTER TYPE "enum_KitchenTickets_source" ADD VALUE IF NOT EXISTS 'QR';
+          ALTER TYPE "enum_KitchenTickets_source" ADD VALUE IF NOT EXISTS 'STAFF';
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_KitchenTickets_status') THEN
+          ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'NEW';
+          ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'PREPARING';
+          ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'READY';
+          ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'SERVED';
+          ALTER TYPE "enum_KitchenTickets_status" ADD VALUE IF NOT EXISTS 'CANCELLED';
+        END IF;
+      END $$;
+
+      ALTER TABLE IF EXISTS "Users"
+        ADD COLUMN IF NOT EXISTS "permissions" JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+      ALTER TABLE IF EXISTS "Orders"
+        ADD COLUMN IF NOT EXISTS "orderType" "enum_Orders_orderType" NOT NULL DEFAULT 'DELIVERY',
+        ADD COLUMN IF NOT EXISTS "tableSessionId" INTEGER;
+
+      ALTER TABLE IF EXISTS "Orders"
+        ALTER COLUMN "addressId" DROP NOT NULL,
+        ALTER COLUMN "deliveryFee" SET DEFAULT 0;
+
+      ALTER TABLE IF EXISTS "OrderItems"
+        ADD COLUMN IF NOT EXISTS "kitchenTicketId" INTEGER;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "dining_tables_qr_token_unique"
+        ON "DiningTables" ("qrToken");
+      CREATE UNIQUE INDEX IF NOT EXISTS "table_sessions_active_table_unique"
+        ON "TableSessions" ("tableId")
+        WHERE "status" = 'OPEN';
+    `);
+
+    logger.log('Dine-in schema columns are ready.');
+  } catch (error) {
+    logger.error('Failed to ensure dine-in schema columns.', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }

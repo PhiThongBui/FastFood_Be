@@ -6,7 +6,7 @@ export { ProductIngredient } from './product-ingredient.model';
 export { Ingredient } from './ingredient.model';
 export { CartItems } from './cart-items.model';
 export { Carts } from './carts.model';
-export { Order } from './order.model';
+export { Order, ORDERTYPE, ORDERSTATUS, PAYMENTMETHOD, PAYMENTSTATUS } from './order.model';
 export { OrderItems } from './order-items.model';
 export { OrderItemIngredient } from './order-items-ingredient.model';
 export { OrderItemComboOption } from './order-item-combo-option.model';
@@ -24,3 +24,6 @@ export { ChatConversation, CHAT_CONVERSATION_STATUS } from './chat-conversation.
 export { ChatMessage, CHAT_MESSAGE_TYPE, CHAT_SENDER_ROLE } from './chat-message.model';
 export { ChatQuickReply, CHAT_QUICK_REPLY_ROLE } from './chat-quick-reply.model';
 export { StorePolicySetting } from './store-policy-setting.model';
+export { DiningTable, DINING_TABLE_STATUS } from './dining-table.model';
+export { TableSession, TABLE_SESSION_STATUS } from './table-session.model';
+export { KitchenTicket, KITCHEN_TICKET_SOURCE, KITCHEN_TICKET_STATUS } from './kitchen-ticket.model';

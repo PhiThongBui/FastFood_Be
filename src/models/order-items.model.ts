@@ -5,6 +5,7 @@ import { ProductVariant } from './product-variant.model';
 import { OrderItemIngredient } from './order-items-ingredient.model';
 import { Combo } from './combo.model';
 import { OrderItemComboOption } from './order-item-combo-option.model';
+import { KitchenTicket } from './kitchen-ticket.model';
 export interface OrderItemMetadata {
     itemName: string;
     originalPrice: number;
@@ -66,6 +67,13 @@ export class OrderItems extends Model<OrderItems> {
     })
     declare comboId: number | null;
 
+    @ForeignKey(() => KitchenTicket)
+    @Column({
+        allowNull: true,
+        type: DataType.INTEGER,
+    })
+    declare kitchenTicketId: number | null;
+
     @BelongsTo(() => Combo)
     combo!: Combo;
 
@@ -78,6 +86,9 @@ export class OrderItems extends Model<OrderItems> {
 
     @BelongsTo(() => ProductVariant)
     productVariant!: ProductVariant;
+
+    @BelongsTo(() => KitchenTicket)
+    kitchenTicket!: KitchenTicket | null;
 
     @Column({
         defaultValue: 1,

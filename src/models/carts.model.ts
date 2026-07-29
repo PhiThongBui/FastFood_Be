@@ -2,6 +2,7 @@ import { BeforeValidate, BelongsTo, Column, DataType, ForeignKey, HasMany, Model
 import { User } from './user.model';
 import { BadRequestException } from '@nestjs/common';
 import { CartItems } from './cart-items.model';
+import { TableSession } from './table-session.model';
 
 @Table
 export class Carts extends Model<Carts> {
@@ -27,6 +28,9 @@ export class Carts extends Model<Carts> {
         hooks: false
     })
     cartItems!: CartItems[];
+
+    @HasMany(() => TableSession)
+    tableSessions!: TableSession[];
 
     
     @BeforeValidate

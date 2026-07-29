@@ -4,17 +4,9 @@ import { Sequelize } from 'sequelize-typescript';
 import { Transaction } from 'sequelize';
 import {
     Order,
-    OrderItems,
-    OrderItemComboOption,
-    OrderItemComboOptionIngredient,
-    OrderItemIngredient,
     Carts,
     CartItems,
-    CartItemsIngredient,
-    CartItemComboOption,
-    CartItemComboOptionIngredient,
     Address,
-    Ingredient,
 } from '@/models';
 import { ORDERSTATUS, PAYMENTMETHOD, PAYMENTSTATUS } from '@/models/order.model';
 import { CartPreviewService } from '../cart-preview/cart-preview.service';
@@ -24,6 +16,7 @@ import { SepayService } from '../sepay/sepay.service';
 import { Op } from 'sequelize';
 import { CouponService } from '../coupon/coupon.service';
 import { CartPreviewItem } from '../cart-preview/types/cart-prev.type';
+import { OrderItemSnapshotService } from '../order-item-snapshot/order-item-snapshot.service';
 
 @Injectable()
 export class CheckoutService {
@@ -31,20 +24,14 @@ export class CheckoutService {
 
     constructor(
         @InjectModel(Order) private orderModel: typeof Order,
-        @InjectModel(OrderItems) private orderItemsModel: typeof OrderItems,
-        @InjectModel(OrderItemComboOption) private orderItemComboOptionModel: typeof OrderItemComboOption,
-        @InjectModel(OrderItemComboOptionIngredient) private orderItemComboOptionIngredientModel: typeof OrderItemComboOptionIngredient,
-        @InjectModel(OrderItemIngredient) private orderItemIngredientModel: typeof OrderItemIngredient,
         @InjectModel(Carts) private cartsModel: typeof Carts,
         @InjectModel(CartItems) private cartItemsModel: typeof CartItems,
-        @InjectModel(CartItemsIngredient) private cartItemsIngredientModel: typeof CartItemsIngredient,
-        @InjectModel(CartItemComboOption) private cartItemComboOptionModel: typeof CartItemComboOption,
-        @InjectModel(CartItemComboOptionIngredient) private cartItemComboOptionIngredientModel: typeof CartItemComboOptionIngredient,
         @InjectModel(Address) private addressModel: typeof Address,
         private readonly cartPreviewService: CartPreviewService,
         private readonly couponService: CouponService,
         private readonly redisService: RedisService,
         private readonly sepayService: SepayService,
+        private readonly orderItemSnapshotService: OrderItemSnapshotService,
         private readonly sequelize: Sequelize
     ) { }
 
@@ -146,100 +133,22 @@ export class CheckoutService {
                 throw new BadRequestException('No cart items found');
             }
 
-            const cartItemIngredients = await this.cartItemsIngredientModel.findAll({
-                where: {
-                    cartItemId: {
-                        [Op.in]: cartItemIds
-                    }
-                },
-                include: [
-                    {
-                        model: Ingredient,
-                        attributes: ['id', 'name', 'price']
-                    }
-                ],
-                transaction
-            });
-            const ingredientMap = new Map<number, CartItemsIngredient[]>();
-            cartItemIngredients.forEach(ingredient => {
-                const cartItemId = Number(ingredient.dataValues.cartItemId);
-                const ingredients = ingredientMap.get(cartItemId) || [];
-                ingredients.push(ingredient);
-                ingredientMap.set(cartItemId, ingredients);
-            });
-
-            for (const cartItem of cartItems) {
-                const previewItem = previewItemMap.get(Number(cartItem.dataValues.id));
-                if (!previewItem) {
-                    throw new BadRequestException(`Cart item ${cartItem.dataValues.id} is not available for checkout`);
-                }
-
-                const orderItem = await this.orderItemsModel.create({
-                    orderId: createdOrder.dataValues.id,
-                    productId: cartItem.dataValues.productId,
-                    productVariantId: cartItem.dataValues.productVariantId,
-                    comboId: cartItem.dataValues.comboId,
-                    quantity: cartItem.dataValues.quantity,
-                    metadata: this.buildOrderItemMetadata(previewItem)
-                } as OrderItems, { transaction });
-
-                const ingredients = ingredientMap.get(Number(cartItem.dataValues.id)) || [];
-                await this.persistOrderItemRelations(orderItem, previewItem, ingredients, transaction);
-            }
+            await this.orderItemSnapshotService.createOrderItemsFromCartItems(
+                Number(createdOrder.dataValues.id),
+                cartItems,
+                previewItemMap,
+                transaction,
+            );
 
             if (dto.couponCode) {
                 await this.couponService.markCouponUsed(userId, dto.couponCode, transaction);
             }
 
-            const comboOptions = await this.cartItemComboOptionModel.findAll({
-                where: {
-                    cartItemId: {
-                        [Op.in]: cartItemIds
-                    }
-                },
-                attributes: ['id'],
-                transaction
-            });
-            const comboOptionIds = comboOptions.map(option => Number(option.id));
-
-            if (comboOptionIds.length > 0) {
-                await this.cartItemComboOptionIngredientModel.destroy({
-                    where: {
-                        cartItemComboOptionId: {
-                            [Op.in]: comboOptionIds
-                        }
-                    },
-                    transaction
-                });
-                await this.cartItemComboOptionModel.destroy({
-                    where: {
-                        id: {
-                            [Op.in]: comboOptionIds
-                        }
-                    },
-                    transaction
-                });
-            }
-
-            //⭐ BƯỚC 7: Xóa item trong cartItem và cartItemIngredient
-            await this.cartItemsIngredientModel.destroy({
-                where: {
-                    cartItemId: {
-                        [Op.in]: cartItemIds
-                    }
-                },
-                transaction
-            })
-
-            const deletedCount = await this.cartItemsModel.destroy({
-                where: {
-                    id: {
-                        [Op.in]: cartItemIds,
-                    },
-                    cartId
-                },
-                transaction
-            });
+            const deletedCount = await this.orderItemSnapshotService.clearCartItems(
+                cartId,
+                cartItemIds,
+                transaction,
+            );
 
             this.logger.log(`âœ… Deleted ${deletedCount} cart items`)
 
@@ -313,151 +222,6 @@ export class CheckoutService {
         } as Address, { transaction });
 
         return Number(address.dataValues.id);
-    }
-
-    private buildOrderItemMetadata(previewItem: CartPreviewItem) {
-        const originalPrice = Number(previewItem.details?.originalPrice || previewItem.unitPrice || 0);
-        const finalPrice = Number(previewItem.unitPrice || 0);
-
-        if (previewItem.type === 'COMBO') {
-            const comboPricing = {
-                basePrice: Number(previewItem.details?.basePrice || 0),
-                discountedBasePrice: Number(previewItem.details?.discountedBasePrice || 0),
-                originalPrice: Number(previewItem.details?.discountedBasePrice || finalPrice),
-                changedPrice: Number(previewItem.details?.priceAfterChange || finalPrice),
-                discountPercentage: Number(previewItem.details?.discountPercentage || 0),
-                savedAmount: Number(previewItem.details?.savedAmount || 0),
-                variantSurcharge: Number(previewItem.details?.variantSurcharge || 0),
-                ingredientSurcharge: Number(previewItem.details?.ingredientSurcharge || 0),
-                totalSurcharge: Number(previewItem.details?.totalSurcharge || 0),
-                priceAfterChange: Number(previewItem.details?.priceAfterChange || finalPrice)
-            };
-
-            return {
-                itemName: previewItem.name,
-                originalPrice,
-                finalPrice,
-                totalPrice: Number(previewItem.totalPrice || finalPrice * previewItem.quantity),
-                comboPricing,
-                items: (previewItem.rawData?.comboOptions || []).map(option => ({
-                    comboItemId: Number(option.comboItemId || 0),
-                    slotIndex: Number(option.slotIndex || 0),
-                    productId: Number(option.productId),
-                    productName: option.product?.name || '',
-                    variantId: Number(option.productVariantId),
-                    variantName: option.variant
-                        ? `${option.variant.size} - ${option.variant.type}`
-                        : '',
-                    originalProductName: option.originalProductName || '',
-                    originalVariantName: option.originalVariantName || '',
-                    changedProductName: Number(option.productId) !== Number(option.originalProductId) || Number(option.productVariantId) !== Number(option.originalProductVariantId)
-                        ? (option.selectedProductName || option.product?.name || '')
-                        : null,
-                    changedVariantName: Number(option.productId) !== Number(option.originalProductId) || Number(option.productVariantId) !== Number(option.originalProductVariantId)
-                        ? (option.selectedVariantName || (option.variant ? `${option.variant.size} - ${option.variant.type}` : ''))
-                        : null,
-                    unitPrice: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
-                    originalVariantModifiedPrice: Number(option.originalVariantModifiedPrice || 0),
-                    selectedVariantModifiedPrice: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
-                    variantSurcharge: Number(option.variantSurcharge || 0),
-                    ingredientSurcharge: Number(option.ingredientSurcharge || 0),
-                    surcharge: Number(option.surcharge || 0),
-                    ingredients: (option.ingredients || []).map(ingredient => ({
-                        name: ingredient.name || `Ingredient ${ingredient.ingredientId}`,
-                        quantity: Number(ingredient.quantity || 1),
-                        price: Number(ingredient.price || 0),
-                        totalPrice: ingredient.type === 'ADD'
-                            ? Number(ingredient.price || 0) * Number(ingredient.quantity || 1)
-                            : 0,
-                        type: ingredient.type
-                    }))
-                }))
-            };
-        }
-
-        return {
-            itemName: previewItem.name,
-            originalPrice,
-            finalPrice,
-            singleItemMetadata: {
-                variantName: previewItem.details?.variantName || '',
-                ingredients: (previewItem.details?.ingredients || []).map(ingredient => ({
-                    name: ingredient.name || `Ingredient`,
-                    quantity: Number(ingredient.quantity || 1),
-                    price: Number(ingredient.price || 0),
-                    type: ingredient.type || 'ADD'
-                }))
-            }
-        };
-    }
-
-    private async persistOrderItemRelations(
-        orderItem: OrderItems,
-        previewItem: CartPreviewItem,
-        cartIngredients: CartItemsIngredient[],
-        transaction: Transaction
-    ) {
-        const orderItemId = Number(orderItem.dataValues.id);
-
-        if (previewItem.type === 'COMBO') {
-            const comboOptions = previewItem.rawData?.comboOptions || [];
-
-            for (const option of comboOptions) {
-                if (!option.comboItemId) {
-                    throw new BadRequestException(`Combo option for order item ${orderItemId} is missing comboItemId`);
-                }
-
-                const orderItemComboOption = await this.orderItemComboOptionModel.create({
-                    orderItemId,
-                    comboItemId: Number(option.comboItemId),
-                    slotIndex: Number(option.slotIndex || 0),
-                    selectedProductId: Number(option.productId),
-                    selectedProductVariantId: Number(option.productVariantId),
-                    productNameSnapshot: option.product?.name || `Product ${option.productId}`,
-                    variantNameSnapshot: option.variant
-                        ? `${option.variant.size} - ${option.variant.type}`
-                        : '',
-                    unitPriceSnapshot: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
-                    originalProductNameSnapshot: option.originalProductName || null,
-                    originalVariantNameSnapshot: option.originalVariantName || null,
-                    selectedProductNameSnapshot: option.selectedProductName || option.product?.name || null,
-                    selectedVariantNameSnapshot: option.selectedVariantName || (option.variant ? `${option.variant.size} - ${option.variant.type}` : null),
-                    originalVariantModifiedPriceSnapshot: Number(option.originalVariantModifiedPrice || 0),
-                    selectedVariantModifiedPriceSnapshot: Number(option.selectedVariantModifiedPrice ?? option.variant?.modifiedPrice ?? 0),
-                    variantSurchargeSnapshot: Number(option.variantSurcharge || 0),
-                    ingredientSurchargeSnapshot: Number(option.ingredientSurcharge || 0),
-                    surchargeSnapshot: Number(option.surcharge || 0)
-                } as OrderItemComboOption, { transaction });
-
-                for (const ingredient of option.ingredients || []) {
-                    await this.orderItemComboOptionIngredientModel.create({
-                        orderItemComboOptionId: Number(orderItemComboOption.dataValues.id),
-                        ingredientId: Number(ingredient.ingredientId),
-                        ingredientNameSnapshot: ingredient.name || `Ingredient ${ingredient.ingredientId}`,
-                        quantity: Number(ingredient.quantity || 1),
-                        priceSnapshot: Number(ingredient.price || 0),
-                        type: ingredient.type || 'ADD'
-                    } as OrderItemComboOptionIngredient, { transaction });
-                }
-            }
-
-            return;
-        }
-
-        for (const ingredient of cartIngredients) {
-            const ingredientSnapshot = ingredient.dataValues.ingredient?.dataValues || ingredient.dataValues.ingredient;
-
-            await this.orderItemIngredientModel.create({
-                orderItemId,
-                ingredientId: ingredient.dataValues.ingredientId,
-                quantity: ingredient.dataValues.quantity,
-                type: ingredient.dataValues.type,
-                ingredientNameSnapshot: ingredientSnapshot?.name || null,
-                priceSnapshot: ingredient.dataValues.type === 'REMOVE'
-                    ? 0
-                    : Number(ingredientSnapshot?.price || 0)
-            } as OrderItemIngredient, { transaction });
-        }
     }
 
     /**

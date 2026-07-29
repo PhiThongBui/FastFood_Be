@@ -3,6 +3,8 @@ import { User } from './user.model';
 import { Address } from './address.model';
 import { Reviews } from './reviews.model';
 import { OrderItems } from './order-items.model';
+import { KitchenTicket } from './kitchen-ticket.model';
+import { TableSession } from './table-session.model';
 
 
 export enum ORDERSTATUS {
@@ -25,6 +27,11 @@ export enum PAYMENTSTATUS {
     REFUNDED = 'Hoàn tiền'
 }
 
+export enum ORDERTYPE {
+    DELIVERY = 'DELIVERY',
+    DINE_IN = 'DINE_IN',
+}
+
 @Table
 export class Order extends Model<Order> {
     @Column({
@@ -33,6 +40,13 @@ export class Order extends Model<Order> {
         type: DataType.STRING,
     })
     declare orderNumber: string;
+
+    @Column({
+        allowNull: false,
+        defaultValue: ORDERTYPE.DELIVERY,
+        type: DataType.ENUM(...Object.values(ORDERTYPE)),
+    })
+    declare orderType: ORDERTYPE;
 
     @Column({
         allowNull: false,
@@ -129,17 +143,30 @@ export class Order extends Model<Order> {
 
     @ForeignKey(() => Address)
     @Column({
-        allowNull: false,
+        allowNull: true,
         type: DataType.INTEGER,
     })
-    declare addressId: number
+    declare addressId: number | null
 
     @BelongsTo(() => Address)
-    address: Address
+    address: Address | null
 
-    @HasMany(() => Reviews)
+    @ForeignKey(() => TableSession)
+    @Column({
+        allowNull: true,
+        type: DataType.INTEGER,
+    })
+    declare tableSessionId: number | null
+
+    @BelongsTo(() => TableSession, 'tableSessionId')
+    tableSession: TableSession | null
+
+    @HasMany(() => Reviews, { constraints: false })
     review: Reviews
 
     @HasMany(() => OrderItems)
     orderItems: OrderItems
+
+    @HasMany(() => KitchenTicket)
+    kitchenTickets: KitchenTicket[]
 }
