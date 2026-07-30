@@ -21,6 +21,7 @@ import {
     TABLE_SESSION_STATUS,
     User,
 } from '@/models';
+import { DINE_IN_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { Helper } from '@/utils/helper';
 import { CartItemService } from '../cart-item/cart-item.service';
 import { CartPreviewService } from '../cart-preview/cart-preview.service';
@@ -29,12 +30,6 @@ import { RedisService } from '../redis/redis.service';
 import { SepayService } from '../sepay/sepay.service';
 import { CreateDiningTableDto, UpdateDiningTableDto } from './dto/dining-table.dto';
 import { DineInAddItemDto, PayTableSessionDto, StaffOpenTableSessionDto, SubmitKitchenTicketDto } from './dto/dine-in.dto';
-
-export const DINE_IN_PERMISSIONS = {
-    ORDER_CREATE: 'DINE_IN_ORDER_CREATE',
-    TABLE_MANAGE: 'DINE_IN_TABLE_MANAGE',
-    PAYMENT_CONFIRM: 'DINE_IN_PAYMENT_CONFIRM',
-} as const;
 
 type StaffActor = {
     uid?: number;

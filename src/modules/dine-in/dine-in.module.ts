@@ -18,6 +18,7 @@ import { DiningTableController } from './dining-table.controller';
 import { DineInController } from './dine-in.controller';
 import { DineInService } from './dine-in.service';
 import { StaffDineInController } from './staff-dine-in.controller';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
 
 @Module({
     imports: [
@@ -37,7 +38,7 @@ import { StaffDineInController } from './staff-dine-in.controller';
         SepayModule,
     ],
     controllers: [DiningTableController, DineInController, StaffDineInController],
-    providers: [DineInService],
+    providers: [DineInService, PermissionsGuard],
     exports: [DineInService],
 })
 export class DineInModule {}

@@ -1,0 +1,16 @@
+export const DINE_IN_PERMISSIONS = {
+  ORDER_CREATE: 'DINE_IN_ORDER_CREATE',
+  TABLE_MANAGE: 'DINE_IN_TABLE_MANAGE',
+  PAYMENT_CONFIRM: 'DINE_IN_PAYMENT_CONFIRM',
+} as const;
+
+export const USER_PERMISSIONS = {
+  ACCESS_MANAGE: 'USER_ACCESS_MANAGE',
+} as const;
+
+export const PERMISSIONS = {
+  ...DINE_IN_PERMISSIONS,
+  ...USER_PERMISSIONS,
+} as const;
+
+export type PermissionValue = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

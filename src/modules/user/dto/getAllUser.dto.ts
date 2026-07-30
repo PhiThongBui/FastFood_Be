@@ -53,6 +53,10 @@ export class UserDto {
     @Expose()
     role: ENUMROLE;
 
+    @ApiProperty({ example: ['DINE_IN_ORDER_CREATE'], description: 'Dynamic permissions' })
+    @Expose()
+    permissions: string[];
+
     @ApiProperty({ example: true, description: 'Trạng thái hoạt động' })
     @Expose()
     isActive: boolean;

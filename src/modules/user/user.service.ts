@@ -1,4 +1,5 @@
 ﻿import { User } from '@/models';
+import { ENUMROLE } from '@/models';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateUserDto } from './dto/register.dto';
@@ -12,6 +13,7 @@ import { ResponseUserByIdDto } from './dto/getUserById.dto';
 import * as crypto from 'crypto'
 import { MailService } from '../mail/mail.service';
 import { ResendRegistationDto, VerifyRegistationDto } from './dto/verifyRegistation.dto';
+import { UpdateUserAccessDto } from './dto/update-user-access.dto';
 
 @Injectable()
 export class UserService {
@@ -302,5 +304,29 @@ export class UserService {
             excludeExtraneousValues: true
         });
         return response
+    }
+
+    async updateUserAccess(id: number, dto: UpdateUserAccessDto) {
+        if (Object.keys(dto).length === 0) throw new BadRequestException('Vui lòng nhập dữ liệu');
+
+        const user = await this.UserModel.findByPk(id);
+        if (!user) throw new NotFoundException('Không tìm thấy người dùng này');
+
+        const nextRole = dto.role ?? user.dataValues.role;
+        const updates: Record<string, unknown> = {};
+
+        if (dto.role !== undefined) updates.role = dto.role;
+        if (dto.isActive !== undefined) updates.isActive = dto.isActive;
+        if (dto.permissions !== undefined || dto.role !== undefined) {
+            updates.permissions = nextRole === ENUMROLE.User ? [] : Array.from(new Set(dto.permissions || user.dataValues.permissions || []));
+        }
+
+        await user.update(updates);
+        await user.reload();
+
+        return {
+            message: 'Updated user access successfully',
+            data: user.getUserProfile(),
+        };
     }
 }

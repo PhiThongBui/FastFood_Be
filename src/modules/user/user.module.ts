@@ -4,10 +4,11 @@ import { UserController } from './user.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { User } from '@/models';
 import { MailModule } from '../mail/mail.module';
+import { RolesGuard } from '@/common/guards/role.guards';
 
 @Module({
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, RolesGuard],
   imports: [
     SequelizeModule.forFeature([User]),MailModule
   ],

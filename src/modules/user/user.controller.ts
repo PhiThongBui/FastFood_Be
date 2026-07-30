@@ -1,5 +1,9 @@
 ﻿import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
+import { ParseIntPipe, Patch } from '@nestjs/common';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { RolesGuard } from '@/common/guards/role.guards';
+import { ENUMROLE } from '@/models';
 import { CreateUserDto } from './dto/register.dto';
 import { GetCurrentResponseDto } from './dto/getCurrent.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -13,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { mkdirSync } from 'fs';
+import { UpdateUserAccessDto } from './dto/update-user-access.dto';
 
 @Controller('user')
 export class UserController {
@@ -178,6 +183,15 @@ export class UserController {
   })
   async getUserById(@Param('id') id: number) {
     return this.userService.findById(id);
+  }
+
+  @UseGuards(JWTGuard, RolesGuard)
+  @Patch('admin/:id/access')
+  @Roles(ENUMROLE.ADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Cập nhật role, permissions và trạng thái tài khoản' })
+  updateUserAccess(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserAccessDto) {
+    return this.userService.updateUserAccess(id, dto);
   }
 
 }
