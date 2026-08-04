@@ -24,14 +24,18 @@ export class StaffDineInController {
     constructor(private readonly dineInService: DineInService) {}
 
     @Post('sessions')
-    @Permissions(DINE_IN_PERMISSIONS.ORDER_CREATE, DINE_IN_PERMISSIONS.TABLE_MANAGE)
+    @Permissions(
+        DINE_IN_PERMISSIONS.ORDER_VIEW,
+        DINE_IN_PERMISSIONS.ORDER_CREATE,
+        DINE_IN_PERMISSIONS.TABLE_MANAGE,
+    )
     @ApiOperation({ summary: 'Staff opens or gets active dine-in table session' })
     openSession(@Body() dto: StaffOpenTableSessionDto, @Req() req: any) {
         return this.dineInService.openStaffSession(dto, req.user);
     }
 
     @Post('sessions/:sessionId/items')
-    @Permissions(DINE_IN_PERMISSIONS.ORDER_CREATE)
+    @Permissions(DINE_IN_PERMISSIONS.KITCHEN_UPDATE)
     @ApiOperation({ summary: 'Staff adds item to dine-in table session' })
     addItem(
         @Param('sessionId', ParseIntPipe) sessionId: number,

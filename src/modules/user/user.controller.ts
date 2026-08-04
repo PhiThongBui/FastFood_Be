@@ -1,18 +1,42 @@
-﻿import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+﻿import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { ParseIntPipe, Patch } from '@nestjs/common';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
 import { RolesGuard } from '@/common/guards/role.guards';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { USER_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { ENUMROLE } from '@/models';
 import { CreateUserDto } from './dto/register.dto';
 import { GetCurrentResponseDto } from './dto/getCurrent.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateProfileDto } from './dto/updateProfile.dto';
 import { GetAllUserDto, UserResponseDto } from './dto/getAllUser.dto';
-import { ResendRegistationDto, VerifyRegistationDto } from './dto/verifyRegistation.dto';
+import {
+  ResendRegistationDto,
+  VerifyRegistationDto,
+} from './dto/verifyRegistation.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -24,29 +48,28 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
-  ) { }
+    private readonly configService: ConfigService,
+  ) {}
   @Post('/create')
   @ApiOperation({ summary: 'Tạo mới người dùng' })
   @ApiBody({ type: CreateUserDto, required: true })
   Register(@Body() createData: CreateUserDto) {
-    return this.userService.register(createData)
+    return this.userService.register(createData);
   }
 
   @Post('verify')
   @ApiBody({ type: VerifyRegistationDto, required: true })
   @ApiOperation({ summary: 'Xác thực người dùng' })
   verifyRegistation(@Body() data: VerifyRegistationDto) {
-    return this.userService.verifyRegistation(data)
+    return this.userService.verifyRegistation(data);
   }
 
   @Post('resend-verify')
   @ApiBody({ type: ResendRegistationDto, required: true })
   @ApiOperation({ summary: 'Resend verification email' })
   resendVerificationEmail(@Body() data: ResendRegistationDto) {
-    return this.userService.resendVerificationEmail(data)
+    return this.userService.resendVerificationEmail(data);
   }
-
 
   @UseGuards(JWTGuard)
   @Post('upload-avatar')
@@ -67,7 +90,10 @@ export class UserController {
       }),
       fileFilter: (_req, file, callback) => {
         if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {
-          return callback(new BadRequestException('Chỉ hỗ trợ file ảnh'), false);
+          return callback(
+            new BadRequestException('Chỉ hỗ trợ file ảnh'),
+            false,
+          );
         }
 
         callback(null, true);
@@ -77,7 +103,10 @@ export class UserController {
       },
     }),
   )
-  uploadAvatar(@UploadedFile() file: { filename: string } | undefined, @Req() req: any) {
+  uploadAvatar(
+    @UploadedFile() file: { filename: string } | undefined,
+    @Req() req: any,
+  ) {
     if (!file) throw new BadRequestException('Avatar file is required');
 
     const protocol = req.protocol;
@@ -99,25 +128,28 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Thông tin người dùng',
-    type: GetCurrentResponseDto
+    type: GetCurrentResponseDto,
   })
   @ApiResponse({
     status: 401,
-    description: 'Chưa được xác thực'
+    description: 'Chưa được xác thực',
   })
   async getCurrent(@Req() req: any) {
-    let userId: number | null = null
-    const authBearer = req.headers?.authorization
+    let userId: number | null = null;
+    const authBearer = req.headers?.authorization;
     if (authBearer && authBearer.startsWith('Bearer ')) {
       try {
-        const token = authBearer.substring(7)
-        const decoded = this.jwtService.verify(token, this.configService.get('JWT_SECRET')) as any
-        userId = decoded.uid
+        const token = authBearer.substring(7);
+        const decoded = this.jwtService.verify(
+          token,
+          this.configService.get('JWT_SECRET'),
+        ) as any;
+        userId = decoded.uid;
       } catch (error: any) {
-        userId = null
+        userId = null;
       }
     }
-    if (!userId) throw new BadRequestException('User id not found!!!')
+    if (!userId) throw new BadRequestException('User id not found!!!');
     return this.userService.getCurrentUser(userId);
   }
 
@@ -127,30 +159,35 @@ export class UserController {
   @ApiOperation({ summary: 'Cập nhật thông tin người dùng' })
   @ApiResponse({
     status: 200,
-    description: 'Cập nhật thông tin người dùng'
+    description: 'Cập nhật thông tin người dùng',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' }) // Thêm cho auth fail
   @ApiResponse({ status: 404, description: 'Người dùng không tồn tại' })
   @ApiResponse({ status: 409, description: 'Email hoặc phone đã tồn tại' })
   async updateProfileUser(@Body() data: UpdateProfileDto, @Req() req: any) {
-    let userId: number | null = null
-    const authBearer = req.headers?.authorization
+    let userId: number | null = null;
+    const authBearer = req.headers?.authorization;
     if (authBearer && authBearer.startsWith('Bearer ')) {
       try {
-        const token = authBearer.substring(7)
-        const decoded = this.jwtService.verify(token, this.configService.get('JWT_SECRET')) as any
-        userId = decoded.uid
+        const token = authBearer.substring(7);
+        const decoded = this.jwtService.verify(
+          token,
+          this.configService.get('JWT_SECRET'),
+        ) as any;
+        userId = decoded.uid;
       } catch (error: any) {
-        userId = null
+        userId = null;
       }
     }
-    if (!userId) throw new BadRequestException('User id not found!!!')
+    if (!userId) throw new BadRequestException('User id not found!!!');
     return this.userService.updateProfile(data, userId);
   }
 
-  // @UseGuards(JWTGuard)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
   @Get('getUsers')
-  // @ApiBearerAuth('access-token')
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(USER_PERMISSIONS.ACCESS_VIEW, USER_PERMISSIONS.ACCESS_MANAGE)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Lấy danh sách người dùng' })
   @ApiResponse({
     status: 200,
@@ -179,19 +216,34 @@ export class UserController {
   @ApiResponse({
     status: 200,
     type: UserResponseDto,
-    description: 'Thông tin người dùng'
+    description: 'Thông tin người dùng',
   })
   async getUserById(@Param('id') id: number) {
     return this.userService.findById(id);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Patch('admin/:id/access')
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Get('admin/permissions')
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(USER_PERMISSIONS.ACCESS_VIEW, USER_PERMISSIONS.ACCESS_MANAGE)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Cập nhật role, permissions và trạng thái tài khoản' })
-  updateUserAccess(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserAccessDto) {
-    return this.userService.updateUserAccess(id, dto);
+  @ApiOperation({ summary: 'Lấy danh sách nhóm quyền động từ database' })
+  getPermissionGroups() {
+    return this.userService.getPermissionGroups();
   }
 
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Patch('admin/:id/access')
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(USER_PERMISSIONS.ACCESS_MANAGE)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Cập nhật role, permissions và trạng thái tài khoản',
+  })
+  updateUserAccess(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUserAccessDto,
+  ) {
+    return this.userService.updateUserAccess(id, dto);
+  }
 }

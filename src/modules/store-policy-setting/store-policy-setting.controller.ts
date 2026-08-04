@@ -2,7 +2,10 @@ import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ENUMROLE } from '@/models';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
 import { RolesGuard } from '@/common/guards/role.guards';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { STORE_POLICY_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { UpdateStorePolicySettingDto } from './dto/update-store-policy-setting.dto';
 import { StorePolicySettingService } from './store-policy-setting.service';
@@ -17,8 +20,9 @@ export class StorePolicySettingController {
         return this.storePolicySettingService.getSetting();
     }
 
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(STORE_POLICY_PERMISSIONS.VIEW)
     @Get('admin')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Get store policy settings for admin' })
@@ -26,8 +30,9 @@ export class StorePolicySettingController {
         return this.storePolicySettingService.getSetting();
     }
 
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(STORE_POLICY_PERMISSIONS.UPDATE)
     @Patch('admin')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Update store policy settings' })

@@ -8,6 +8,7 @@ import * as bcrypt from 'bcryptjs'
 import * as crypto from 'crypto'
 
 export enum ENUMROLE {
+    SUPER_ADMIN = 'SUPER_ADMIN',
     ADMIN = 'ADMIN',
     STAFF = 'STAFF',
     User = 'USER',

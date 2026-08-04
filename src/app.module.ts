@@ -8,7 +8,7 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 
-import { MailerModule } from '@nestjs-modules/mailer'
+import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
 
@@ -39,6 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ChatModule } from './modules/chat/chat.module';
 import { StorePolicySettingModule } from './modules/store-policy-setting/store-policy-setting.module';
 import { DineInModule } from './modules/dine-in/dine-in.module';
+import { PermissionModule } from './modules/permission/permission.module';
 
 @Module({
   imports: [
@@ -59,10 +60,10 @@ import { DineInModule } from './modules/dine-in/dine-in.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('JWT_SCRECT'),
         signOptions: {
-          expiresIn: configService.get('JWT_EXPIRESIN') as number
-        }
+          expiresIn: configService.get('JWT_EXPIRESIN') as number,
+        },
       }),
-      global: true
+      global: true,
     }),
 
     MailerModule.forRootAsync({
@@ -71,7 +72,7 @@ import { DineInModule } from './modules/dine-in/dine-in.module';
         transport: {
           host: configService.get<string>('MAIL_HOST'),
           port: Number(configService.get<string>('MAIL_PORT') || 587),
-               secure: configService.get<string>('MAIL_SECURE') === 'true', // ép kiểu boolean
+          secure: configService.get<string>('MAIL_SECURE') === 'true', // ép kiểu boolean
 
           auth: {
             user: configService.get('MAIL_USER'),
@@ -79,10 +80,13 @@ import { DineInModule } from './modules/dine-in/dine-in.module';
           },
           tls: {
             // Dev/local hay dính self-signed cert khi SMTP bị proxy hoặc máy chèn certificate.
-            rejectUnauthorized: configService.get<string>('MAIL_TLS_REJECT_UNAUTHORIZED')
-              ? configService.get<string>('MAIL_TLS_REJECT_UNAUTHORIZED') !== 'false'
+            rejectUnauthorized: configService.get<string>(
+              'MAIL_TLS_REJECT_UNAUTHORIZED',
+            )
+              ? configService.get<string>('MAIL_TLS_REJECT_UNAUTHORIZED') !==
+                'false'
               : configService.get<string>('NODE_ENV') === 'production',
-          }
+          },
         },
         defaults: {
           from: `"${configService.get('MAIL_DEFAULT_NAME')}" <${configService.get('MAIL_DEFAULT_EMAIL')}>`,
@@ -119,11 +123,10 @@ import { DineInModule } from './modules/dine-in/dine-in.module';
     LookupModule,
     ChatModule,
     StorePolicySettingModule,
-    DineInModule
+    DineInModule,
+    PermissionModule,
   ],
-  providers:[
-    RedisService
-  ]
+  providers: [RedisService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

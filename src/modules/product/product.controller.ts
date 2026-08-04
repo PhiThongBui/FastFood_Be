@@ -10,6 +10,9 @@ import { GetAllPizzaResponseDto, QueryGetAllPizzaDto } from './dto/getAllPizza.d
 import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { RolesGuard } from '@/common/guards/role.guards';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { PRODUCT_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { ENUMROLE } from '@/models';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -22,6 +25,10 @@ export class ProductController {
   }
 
   @Post('/create')
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.CREATE)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Tạo sản phẩm với biến thể và toping(ingredient)' })
   @ApiResponse({ status: 201, description: 'Tạo sản phẩm th thành công.' })
   async createProduct(@Body() createData: CreateProductDto) {
@@ -29,8 +36,9 @@ export class ProductController {
   }
 
   @Post('/upload-image')
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.IMAGE_UPLOAD)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Upload ảnh sản phẩm' })
   @UseInterceptors(
@@ -86,12 +94,20 @@ export class ProductController {
   }
 
   @Get('admin/list')
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.VIEW)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm cho admin (có filter, search, sort, pagination)' })
   getAdminProducts(@Query() query: filterProductDto) {
     return this.productService.getAdminProducts(query);
   }
 
   @Delete('/softdelete/:id')
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.UPDATE)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Xóa mềm sản phẩm' })
   @ApiResponse({ status: 200, description: 'Xóa mềm sản phẩm thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
@@ -100,6 +116,10 @@ export class ProductController {
   }
 
   @Delete('/harddelete/:id')
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.UPDATE)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Xóa cứng sản phẩm' })
   @ApiResponse({ status: 200, description: 'Xóa cứng sản phẩm thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })
@@ -108,6 +128,10 @@ export class ProductController {
   }
 
   @Put('/update/:id')
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(PRODUCT_PERMISSIONS.UPDATE)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Cập nhật sản phẩm' })
   @ApiResponse({ status: 200, description: 'Cập nhật sản phẩm thành công' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy sản phẩm' })

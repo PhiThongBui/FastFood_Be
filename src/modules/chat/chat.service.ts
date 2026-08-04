@@ -33,6 +33,8 @@ export interface ChatActor {
     role: ENUMROLE;
 }
 
+const isAdminActor = (role: ENUMROLE) => [ENUMROLE.SUPER_ADMIN, ENUMROLE.ADMIN].includes(role);
+
 type ChatRedisEventType = 'chat.message.new' | 'chat.read' | 'chat.typing';
 
 interface ChatRedisEvent {
@@ -234,7 +236,7 @@ export class ChatService {
 
     async getMyQuickReplies(role: ENUMROLE) {
         const quickReplyRole =
-            role === ENUMROLE.ADMIN ? CHAT_QUICK_REPLY_ROLE.ADMIN : CHAT_QUICK_REPLY_ROLE.USER;
+            isAdminActor(role) ? CHAT_QUICK_REPLY_ROLE.ADMIN : CHAT_QUICK_REPLY_ROLE.USER;
 
         const items = await this.chatQuickReplyModel.findAll({
             where: {
@@ -364,7 +366,7 @@ export class ChatService {
     }
 
     async resolveConversationForActor(actor: ChatActor, conversationId?: number) {
-        if (actor.role === ENUMROLE.ADMIN) {
+        if (isAdminActor(actor.role)) {
             if (!conversationId) {
                 throw new BadRequestException('Conversation id is required for admin');
             }
@@ -393,7 +395,7 @@ export class ChatService {
     }
 
     async sendMessageFromActor(actor: ChatActor, conversationId: number | undefined, dto: SendChatMessageDto) {
-        if (actor.role === ENUMROLE.ADMIN) {
+        if (isAdminActor(actor.role)) {
             if (!conversationId) {
                 throw new BadRequestException('Conversation id is required for admin');
             }
@@ -405,7 +407,7 @@ export class ChatService {
     }
 
     async markConversationAsRead(actor: ChatActor, conversationId?: number) {
-        if (actor.role === ENUMROLE.ADMIN) {
+        if (isAdminActor(actor.role)) {
             if (!conversationId) {
                 throw new BadRequestException('Conversation id is required for admin');
             }
@@ -650,7 +652,7 @@ export class ChatService {
     }
 
     private serializeQuickReply(quickReply: ChatQuickReply) {
-        const plainQuickReply = quickReply.get({ plain: true }) as ChatQuickReply;
+        const plainQuickReply = quickReply.get({ plain: true });
 
         return {
             id: plainQuickReply.id,

@@ -24,28 +24,27 @@ async function bootstrap() {
   await ensureUserCouponColumns(sequelize, logger);
   await ensureStorePolicySettingColumns(sequelize, logger);
   await ensureDineInSchema(sequelize, logger);
+  await ensurePermissionCatalogSchema(sequelize, logger);
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
   app.enableCors({
-    origin: [
-      'https://fast-food-fe-eosin.vercel.app',
-      'http://localhost:3000'
-    ],
+    origin: ['https://fast-food-fe-eosin.vercel.app', 'http://localhost:3000'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-
 
   app.use(cookieParser());
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalFilters(new AllExceptionFilter());
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger Setup
@@ -77,15 +76,22 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   logger.log(`Application is running on port: ${port}`);
-  logger.log(`Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`);
+  logger.log(
+    `Swagger documentation available at: http://localhost:5000/api/v1 or http://localhost:${port}/api/v1`,
+  );
 }
 void bootstrap();
 
-async function ensureCartItemsIngredientSchema(sequelize: Sequelize, logger: Logger) {
+async function ensureCartItemsIngredientSchema(
+  sequelize: Sequelize,
+  logger: Logger,
+) {
   const dialect = sequelize.getDialect();
 
   if (dialect !== 'postgres') {
-    logger.warn(`Skipping cart item ingredient schema patch for dialect: ${dialect}`);
+    logger.warn(
+      `Skipping cart item ingredient schema patch for dialect: ${dialect}`,
+    );
     return;
   }
 
@@ -108,16 +114,24 @@ async function ensureCartItemsIngredientSchema(sequelize: Sequelize, logger: Log
 
     logger.log('Cart item ingredient schema columns are ready.');
   } catch (error) {
-    logger.error('Failed to ensure cart item ingredient schema columns.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure cart item ingredient schema columns.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }
 
-async function ensureProductVariantDefaultEnumValues(sequelize: Sequelize, logger: Logger) {
+async function ensureProductVariantDefaultEnumValues(
+  sequelize: Sequelize,
+  logger: Logger,
+) {
   const dialect = sequelize.getDialect();
 
   if (dialect !== 'postgres') {
-    logger.warn(`Skipping product variant enum schema patch for dialect: ${dialect}`);
+    logger.warn(
+      `Skipping product variant enum schema patch for dialect: ${dialect}`,
+    );
     return;
   }
 
@@ -130,21 +144,31 @@ async function ensureProductVariantDefaultEnumValues(sequelize: Sequelize, logge
     `);
 
     if (Array.isArray(sizeEnumRows) && sizeEnumRows.length > 0) {
-      await sequelize.query(`ALTER TYPE "enum_ProductVariants_size" ADD VALUE IF NOT EXISTS 'DEFAULT';`);
+      await sequelize.query(
+        `ALTER TYPE "enum_ProductVariants_size" ADD VALUE IF NOT EXISTS 'DEFAULT';`,
+      );
     }
 
     if (Array.isArray(typeEnumRows) && typeEnumRows.length > 0) {
-      await sequelize.query(`ALTER TYPE "enum_ProductVariants_type" ADD VALUE IF NOT EXISTS 'DEFAULT';`);
+      await sequelize.query(
+        `ALTER TYPE "enum_ProductVariants_type" ADD VALUE IF NOT EXISTS 'DEFAULT';`,
+      );
     }
 
     logger.log('Product variant default enum values are ready.');
   } catch (error) {
-    logger.error('Failed to ensure product variant default enum values.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure product variant default enum values.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }
 
-async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) {
+async function ensureOrderSnapshotColumns(
+  sequelize: Sequelize,
+  logger: Logger,
+) {
   const dialect = sequelize.getDialect();
 
   if (dialect !== 'postgres') {
@@ -176,7 +200,10 @@ async function ensureOrderSnapshotColumns(sequelize: Sequelize, logger: Logger) 
 
     logger.log('Order snapshot schema columns are ready.');
   } catch (error) {
-    logger.error('Failed to ensure order snapshot schema columns.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure order snapshot schema columns.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }
@@ -203,16 +230,24 @@ async function ensureUserCouponColumns(sequelize: Sequelize, logger: Logger) {
 
     logger.log('User coupon schema columns are ready.');
   } catch (error) {
-    logger.error('Failed to ensure user coupon schema columns.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure user coupon schema columns.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }
 
-async function ensureStorePolicySettingColumns(sequelize: Sequelize, logger: Logger) {
+async function ensureStorePolicySettingColumns(
+  sequelize: Sequelize,
+  logger: Logger,
+) {
   const dialect = sequelize.getDialect();
 
   if (dialect !== 'postgres') {
-    logger.warn(`Skipping store policy setting schema patch for dialect: ${dialect}`);
+    logger.warn(
+      `Skipping store policy setting schema patch for dialect: ${dialect}`,
+    );
     return;
   }
 
@@ -228,7 +263,10 @@ async function ensureStorePolicySettingColumns(sequelize: Sequelize, logger: Log
 
     logger.log('Store policy setting schema columns are ready.');
   } catch (error) {
-    logger.error('Failed to ensure store policy setting schema columns.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure store policy setting schema columns.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }
@@ -246,6 +284,7 @@ async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Users_role') THEN
+          ALTER TYPE "enum_Users_role" ADD VALUE IF NOT EXISTS 'SUPER_ADMIN';
           ALTER TYPE "enum_Users_role" ADD VALUE IF NOT EXISTS 'STAFF';
         END IF;
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Orders_orderType') THEN
@@ -378,7 +417,85 @@ async function ensureDineInSchema(sequelize: Sequelize, logger: Logger) {
 
     logger.log('Dine-in schema columns are ready.');
   } catch (error) {
-    logger.error('Failed to ensure dine-in schema columns.', error instanceof Error ? error.stack : String(error));
+    logger.error(
+      'Failed to ensure dine-in schema columns.',
+      error instanceof Error ? error.stack : String(error),
+    );
+    throw error;
+  }
+}
+
+async function ensurePermissionCatalogSchema(
+  sequelize: Sequelize,
+  logger: Logger,
+) {
+  const dialect = sequelize.getDialect();
+
+  if (dialect !== 'postgres') {
+    logger.warn(
+      `Skipping permission catalog schema patch for dialect: ${dialect}`,
+    );
+    return;
+  }
+
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "PermissionGroups" (
+        "id" SERIAL PRIMARY KEY,
+        "key" VARCHAR(255) NOT NULL UNIQUE,
+        "label" VARCHAR(255) NOT NULL,
+        "description" TEXT,
+        "sortOrder" INTEGER NOT NULL DEFAULT 0,
+        "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS "Permissions" (
+        "id" SERIAL PRIMARY KEY,
+        "value" VARCHAR(255) NOT NULL UNIQUE,
+        "groupKey" VARCHAR(255) NOT NULL,
+        "label" VARCHAR(255) NOT NULL,
+        "description" TEXT,
+        "sortOrder" INTEGER NOT NULL DEFAULT 0,
+        "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      ALTER TABLE IF EXISTS "PermissionGroups"
+        ADD COLUMN IF NOT EXISTS "key" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "label" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "description" TEXT,
+        ADD COLUMN IF NOT EXISTS "sortOrder" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+      ALTER TABLE IF EXISTS "Permissions"
+        ADD COLUMN IF NOT EXISTS "value" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "groupKey" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "label" VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS "description" TEXT,
+        ADD COLUMN IF NOT EXISTS "sortOrder" INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+      CREATE UNIQUE INDEX IF NOT EXISTS "permission_groups_key_unique"
+        ON "PermissionGroups" ("key");
+      CREATE UNIQUE INDEX IF NOT EXISTS "permissions_value_unique"
+        ON "Permissions" ("value");
+      CREATE INDEX IF NOT EXISTS "permissions_group_key_index"
+        ON "Permissions" ("groupKey");
+    `);
+
+    logger.log('Permission catalog schema tables are ready.');
+  } catch (error) {
+    logger.error(
+      'Failed to ensure permission catalog schema tables.',
+      error instanceof Error ? error.stack : String(error),
+    );
     throw error;
   }
 }

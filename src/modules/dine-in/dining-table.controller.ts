@@ -18,7 +18,11 @@ export class DiningTableController {
     constructor(private readonly dineInService: DineInService) {}
 
     @Get()
-    @Permissions(DINE_IN_PERMISSIONS.ORDER_CREATE, DINE_IN_PERMISSIONS.TABLE_MANAGE)
+    @Permissions(
+        DINE_IN_PERMISSIONS.ORDER_VIEW,
+        DINE_IN_PERMISSIONS.ORDER_CREATE,
+        DINE_IN_PERMISSIONS.TABLE_MANAGE,
+    )
     @ApiOperation({ summary: 'List dining tables' })
     listTables(@Req() req: any) {
         return this.dineInService.listDiningTables(req.user);

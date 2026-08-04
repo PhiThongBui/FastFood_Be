@@ -4,6 +4,9 @@ import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { RolesGuard } from '@/common/guards/role.guards';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { ORDER_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { ENUMROLE } from '@/models';
 import { AdminOrderDateRangeQueryDto, AdminOrderLimitQueryDto, AdminOrderListQueryDto, AdminOrderRevenueQueryDto } from './dto/admin-order-statistics.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -13,8 +16,9 @@ import { CancelOrderDto } from './dto/cancel-order.dto';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.VIEW)
   @Get('admin/orders')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin order list' })
@@ -22,8 +26,9 @@ export class OrderController {
     return this.orderService.getAdminOrders(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATUS_UPDATE)
   @Patch('admin/orders/:id/status')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update admin order status' })
@@ -34,8 +39,9 @@ export class OrderController {
     return this.orderService.updateAdminOrderStatus(id, dto);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATUS_UPDATE)
   @Patch('admin/orders/:id/cancel')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Cancel order by admin' })
@@ -46,8 +52,9 @@ export class OrderController {
     return this.orderService.cancelAdminOrder(id, dto);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/overview')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin order statistics overview' })
@@ -55,8 +62,9 @@ export class OrderController {
     return this.orderService.getAdminOrderOverview(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/revenue')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin revenue chart statistics' })
@@ -64,8 +72,9 @@ export class OrderController {
     return this.orderService.getAdminRevenueStatistics(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/status')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin order status statistics' })
@@ -73,8 +82,9 @@ export class OrderController {
     return this.orderService.getAdminOrderStatusStatistics(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/payment')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin payment statistics' })
@@ -82,8 +92,9 @@ export class OrderController {
     return this.orderService.getAdminPaymentStatistics(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/top-products')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin top selling order items' })
@@ -91,8 +102,9 @@ export class OrderController {
     return this.orderService.getAdminTopProducts(query);
   }
 
-  @UseGuards(JWTGuard, RolesGuard)
-  @Roles(ENUMROLE.ADMIN)
+  @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+  @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+  @Permissions(ORDER_PERMISSIONS.STATISTICS_VIEW)
   @Get('admin/statistics/recent-orders')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get admin recent orders' })

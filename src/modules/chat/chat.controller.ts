@@ -16,6 +16,9 @@ import { JWTGuard } from '../auth/guards/verifyjwt.guard';
 import { GetUser } from '@/common/decorators/user.decorator';
 import { RolesGuard } from '@/common/guards/role.guards';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { CHAT_PERMISSIONS } from '@/common/constants/permissions.constant';
 import { ENUMROLE } from '@/models';
 import { AdminQuickRepliesQueryDto } from './dto/admin-quick-replies-query.dto';
 import { ChatPaginationDto } from './dto/chat-pagination.dto';
@@ -83,8 +86,9 @@ export class ChatController {
     }
 
     @Get('admin/conversations')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.VIEW)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin lấy danh sách conversation chat' })
     async getAdminConversations(@Query() query: AdminConversationsQueryDto) {
@@ -92,8 +96,9 @@ export class ChatController {
     }
 
     @Get('admin/conversations/:conversationId/messages')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.VIEW)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin lấy lịch sử tin nhắn của một conversation' })
     async getAdminConversationMessages(
@@ -104,8 +109,9 @@ export class ChatController {
     }
 
     @Post('admin/conversations/:conversationId/messages')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.REPLY_SEND)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin gửi tin nhắn vào conversation' })
     async sendAdminMessage(
@@ -117,8 +123,9 @@ export class ChatController {
     }
 
     @Post('admin/conversations/:conversationId/read')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.VIEW, CHAT_PERMISSIONS.REPLY_SEND)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin đánh dấu conversation đã đọc' })
     async markAdminConversationAsRead(
@@ -128,8 +135,9 @@ export class ChatController {
     }
 
     @Get('admin/quick-replies')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.QUICK_REPLY_MANAGE)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin gets quick reply list' })
     async getAdminQuickReplies(@Query() query: AdminQuickRepliesQueryDto) {
@@ -137,8 +145,9 @@ export class ChatController {
     }
 
     @Get('admin/quick-replies/:id')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.QUICK_REPLY_MANAGE)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin gets quick reply detail' })
     async getAdminQuickReplyById(@Param('id', ParseIntPipe) id: number) {
@@ -146,8 +155,9 @@ export class ChatController {
     }
 
     @Post('admin/quick-replies')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.QUICK_REPLY_MANAGE)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin creates quick reply' })
     async createQuickReply(@Body() dto: CreateChatQuickReplyDto) {
@@ -155,8 +165,9 @@ export class ChatController {
     }
 
     @Patch('admin/quick-replies/:id')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.QUICK_REPLY_MANAGE)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin updates quick reply' })
     async updateQuickReply(
@@ -167,8 +178,9 @@ export class ChatController {
     }
 
     @Delete('admin/quick-replies/:id')
-    @UseGuards(JWTGuard, RolesGuard)
-    @Roles(ENUMROLE.ADMIN)
+    @UseGuards(JWTGuard, RolesGuard, PermissionsGuard)
+    @Roles(ENUMROLE.ADMIN, ENUMROLE.STAFF)
+    @Permissions(CHAT_PERMISSIONS.QUICK_REPLY_MANAGE)
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Admin deletes quick reply' })
     async removeQuickReply(@Param('id', ParseIntPipe) id: number) {

@@ -1,6 +1,14 @@
 import { ForbiddenException, Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { ENUMROLE } from '@/models';
+
+interface AuthenticatedRequest {
+  user?: {
+    role?: string;
+  };
+}
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -19,10 +27,11 @@ export class RolesGuard implements CanActivate {
     }
 
     // 2. Context giúp Guard lấy User đang đăng nhập ra
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user; // User này có được nhờ bước AuthGuard trước đó
     // 3. So sánh
     if (!user?.role) throw new ForbiddenException('Authenticated role is required');
+    if (user.role === ENUMROLE.SUPER_ADMIN.toString()) return true;
     return requiredRoles.includes(user.role);
   }
 }

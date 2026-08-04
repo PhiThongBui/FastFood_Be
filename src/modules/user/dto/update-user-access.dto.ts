@@ -1,7 +1,12 @@
-import { PERMISSIONS, PermissionValue } from '@/common/constants/permissions.constant';
 import { ENUMROLE } from '@/models/user.model';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class UpdateUserAccessDto {
   @ApiPropertyOptional({ enum: ENUMROLE })
@@ -9,11 +14,11 @@ export class UpdateUserAccessDto {
   @IsEnum(ENUMROLE)
   role?: ENUMROLE;
 
-  @ApiPropertyOptional({ enum: Object.values(PERMISSIONS), isArray: true })
+  @ApiPropertyOptional({ type: String, isArray: true })
   @IsOptional()
   @IsArray()
-  @IsIn(Object.values(PERMISSIONS), { each: true })
-  permissions?: PermissionValue[];
+  @IsString({ each: true })
+  permissions?: string[];
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

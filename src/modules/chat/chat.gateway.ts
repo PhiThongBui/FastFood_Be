@@ -84,7 +84,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             const user = this.authenticateClient(client);
             (client.data as { user?: ChatActor }).user = user;
 
-            if (user.role === ENUMROLE.ADMIN) {
+            if ([ENUMROLE.SUPER_ADMIN, ENUMROLE.ADMIN].includes(user.role)) {
                 await client.join(this.adminRoom);
             }
 

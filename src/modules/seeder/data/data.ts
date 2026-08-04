@@ -1175,7 +1175,7 @@ export const users = [
     name: 'Nguyễn Văn Admin',
     avatar: 'https://i.pravatar.cc/150?img=1',
     phone: '0901234567',
-    role: 'ADMIN',
+    role: 'SUPER_ADMIN',
     isActive: true,
     googleId: null,
     authProvider: 'local',

@@ -5,6 +5,16 @@ import { ENUMROLE, User } from '@/models';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { PermissionValue } from '../constants/permissions.constant';
 
+interface AuthenticatedRequest {
+  user?: {
+    uid?: number;
+    role?: string;
+  };
+}
+
+const hasAdminPrivileges = (role?: string) =>
+  role === ENUMROLE.SUPER_ADMIN.toString() || role === ENUMROLE.ADMIN.toString();
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
@@ -20,11 +30,11 @@ export class PermissionsGuard implements CanActivate {
 
     if (!requiredPermissions?.length) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const actor = request.user;
     if (!actor?.uid) throw new ForbiddenException('Authenticated account is required');
 
-    if (actor.role === ENUMROLE.ADMIN) return true;
+    if (hasAdminPrivileges(actor.role)) return true;
 
     const user = await this.userModel.findByPk(actor.uid, {
       attributes: ['id', 'role', 'isActive', 'permissions'],

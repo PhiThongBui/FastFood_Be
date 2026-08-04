@@ -538,7 +538,7 @@ export class DineInService {
 
     private async assertStaffPermission(actor: StaffActor, ...permissions: string[]) {
         if (!actor?.uid) throw new ForbiddenException('Staff account is required');
-        if (actor.role === ENUMROLE.ADMIN) return;
+        if ([ENUMROLE.SUPER_ADMIN, ENUMROLE.ADMIN].includes(actor.role as ENUMROLE)) return;
 
         const user = await this.userModel.findByPk(actor.uid);
         if (!user || user.dataValues.role !== ENUMROLE.STAFF) {
