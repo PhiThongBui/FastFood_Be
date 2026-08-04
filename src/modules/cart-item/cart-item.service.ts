@@ -973,7 +973,11 @@ export class CartItemService {
         });
     };
 
-    async mergerCart(sessionId: string, userId: number) {
+    async mergerCart(sessionId: string | null | undefined, userId: number) {
+        if (!sessionId) {
+            return { message: 'Khong co gio hang khach de merge.' };
+        }
+
         // 1. Dùng transaction để đảm bảo an toàn
         const transaction = await this.sequelize.transaction();
 
