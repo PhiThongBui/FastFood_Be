@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Category } from '@/models';
+import { Category, Combo, Product } from '@/models';
 import { InjectModel } from '@nestjs/sequelize';
 import { Helper } from '@/utils/helper';
 import { Op } from 'sequelize';
@@ -51,8 +51,47 @@ export class CategoryService {
                 exclude: ["createdAt", "updatedAt", "isActive"]
             }
         })
+
+        const categoryIds = data.map((category) => category.getDataValue('id') as number)
+
+        if (categoryIds.length === 0) {
+            return {
+                data,
+                message:"Xin tam biet"
+            }
+        }
+
+        const [productCategoryRows, comboCategoryRows] = await Promise.all([
+            Product.findAll({
+                where: {
+                    categoryId: { [Op.in]: categoryIds },
+                    isActive: true
+                },
+                attributes: ['categoryId'],
+                group: ['categoryId']
+            }),
+            Combo.findAll({
+                where: {
+                    categoryId: { [Op.in]: categoryIds },
+                    isActive: true
+                },
+                attributes: ['categoryId'],
+                group: ['categoryId']
+            })
+        ])
+
+        const categoryIdsWithItems = new Set([
+            ...productCategoryRows.map((product) => product.getDataValue('categoryId') as number),
+            ...comboCategoryRows.map((combo) => combo.getDataValue('categoryId') as number)
+        ])
+
+        const visibleCategories = data.filter((category) => {
+            const id = category.getDataValue('id') as number
+            return categoryIdsWithItems.has(id)
+        })
+
         return {
-            data,
+            data: visibleCategories,
             message:"Xin tạm biệt"
         }
     }
