@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { CouponService } from './coupon.service';
 import { CreateCouponDto } from './dto/createCoupon.dto';
 import { CreateOutputCoupon } from './types/coupon.type';
@@ -12,10 +12,16 @@ import { QueryCouponDto } from './dto/query-coupon.dto';
 import { GetUser } from '@/common/decorators/user.decorator';
 import { ClaimCouponDto } from './dto/claim-coupon.dto';
 import { QueryUserCouponDto } from './dto/query-user-coupon.dto';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('coupon')
 export class CouponController {
-  constructor(private readonly couponService: CouponService) {}
+  constructor(
+    private readonly couponService: CouponService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
+  ) {}
 
   @Post('admin')
   @UseGuards(JWTGuard, RolesGuard)
@@ -69,12 +75,22 @@ export class CouponController {
   }
 
   @Get('available')
-  @UseGuards(JWTGuard)
-  @ApiBearerAuth('access-token')
   async getAvailableCoupons(
-    @GetUser('uid') userId: number,
+    @Req() req: any,
     @Query() query: QueryUserCouponDto
   ) {
+    let userId: number | null = null;
+    const authBearer = req.headers?.authorization;
+    if (authBearer && authBearer.startsWith('Bearer ')) {
+      try {
+        const token = authBearer.substring(7);
+        const secret = this.configService.get('JWT_SECRET') || this.configService.get('JWT_SCRECT');
+        const decoded = this.jwtService.verify(token, secret ? { secret } : undefined) as any;
+        userId = decoded?.uid || null;
+      } catch {
+        userId = null;
+      }
+    }
     return this.couponService.getAvailableCoupons(userId, query);
   }
 

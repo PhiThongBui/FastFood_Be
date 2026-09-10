@@ -235,8 +235,10 @@ export class CouponService {
         };
     }
 
-    async getAvailableCoupons(userId: number, query: QueryUserCouponDto) {
-        this.ensureUserId(userId);
+    async getAvailableCoupons(userId: number | null | undefined, query: QueryUserCouponDto) {
+        if (userId) {
+            this.ensureUserId(userId);
+        }
 
         const coupons = await this.modelCoupon.findAll({
             where: this.buildUserCouponWhereClause(query),
@@ -244,7 +246,7 @@ export class CouponService {
         });
 
         const couponIds = coupons.map(coupon => Number(coupon.dataValues.id));
-        const userCoupons = couponIds.length
+        const userCoupons = (userId && couponIds.length)
             ? await this.modelUserCoupon.findAll({
                 where: {
                     userId,
