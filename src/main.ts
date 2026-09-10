@@ -28,8 +28,25 @@ async function bootstrap() {
 
   // --- 1. QUAN TRỌNG: CẤU HÌNH CORS ---
   // Cho phép Frontend gọi vào Backend
+  const envFrontendUrl = configService.get<string>('FRONTEND_URL');
+  const allowedOrigins = [
+    'https://fast-food-fe-z1cq.vercel.app',
+    'https://fast-food-fe-eosin.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ];
+  if (envFrontendUrl && !allowedOrigins.includes(envFrontendUrl)) {
+    allowedOrigins.push(envFrontendUrl);
+  }
+
   app.enableCors({
-    origin: ['https://fast-food-fe-eosin.vercel.app', 'http://localhost:3000'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

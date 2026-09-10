@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   Body,
   Controller,
@@ -135,16 +135,14 @@ export class UserController {
     description: 'Chưa được xác thực',
   })
   async getCurrent(@Req() req: any) {
-    let userId: number | null = null;
+    let userId: number | null = req.user?.uid || null;
     const authBearer = req.headers?.authorization;
-    if (authBearer && authBearer.startsWith('Bearer ')) {
+    if (!userId && authBearer && authBearer.startsWith('Bearer ')) {
       try {
         const token = authBearer.substring(7);
-        const decoded = this.jwtService.verify(
-          token,
-          this.configService.get('JWT_SECRET'),
-        ) as any;
-        userId = decoded.uid;
+        const secret = this.configService.get('JWT_SECRET') || this.configService.get('JWT_SCRECT');
+        const decoded = this.jwtService.verify(token, secret ? { secret } : undefined) as any;
+        userId = decoded?.uid || null;
       } catch (error: any) {
         userId = null;
       }
@@ -165,16 +163,14 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'Người dùng không tồn tại' })
   @ApiResponse({ status: 409, description: 'Email hoặc phone đã tồn tại' })
   async updateProfileUser(@Body() data: UpdateProfileDto, @Req() req: any) {
-    let userId: number | null = null;
+    let userId: number | null = req.user?.uid || null;
     const authBearer = req.headers?.authorization;
-    if (authBearer && authBearer.startsWith('Bearer ')) {
+    if (!userId && authBearer && authBearer.startsWith('Bearer ')) {
       try {
         const token = authBearer.substring(7);
-        const decoded = this.jwtService.verify(
-          token,
-          this.configService.get('JWT_SECRET'),
-        ) as any;
-        userId = decoded.uid;
+        const secret = this.configService.get('JWT_SECRET') || this.configService.get('JWT_SCRECT');
+        const decoded = this.jwtService.verify(token, secret ? { secret } : undefined) as any;
+        userId = decoded?.uid || null;
       } catch (error: any) {
         userId = null;
       }
